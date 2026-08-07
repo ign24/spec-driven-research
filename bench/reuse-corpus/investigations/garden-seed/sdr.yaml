@@ -1,0 +1,19 @@
+slug: garden-seed
+title: Synthetic rooftop garden watering decision
+question: Which invented watering interval should the rooftop bed use?
+mode: light
+stage: reuse
+status: done
+owner: Bench Actor
+timebox: 1
+created: '2026-08-01'
+updated: '2026-08-01'
+tags: [synthetic, horticulture]
+schema_version: 2
+validation:
+  transfer: 3200fc20baa776194cb25bcfe8fdb30c85fdb80985dd70984329b8be579ce026
+judge: {}
+verify_probe: {}
+overrides: []
+reopens: []
+archived: false

@@ -73,7 +73,7 @@ packages = ["src/sdr"]
 "integrations/opencode/adapter.yaml" = "sdr/resources/integrations/opencode/adapter.yaml"
 
 [tool.hatch.build.targets.sdist]
-exclude = ["/openspec/changes"]
+exclude = ["/bench", "/openspec/changes"]
 
 [tool.hatch.version]
 path = "src/sdr/__init__.py"
@@ -90,4 +90,4 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]

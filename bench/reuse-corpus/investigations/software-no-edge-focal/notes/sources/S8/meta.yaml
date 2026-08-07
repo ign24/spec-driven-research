@@ -1,0 +1,13 @@
+schema_version: 2
+url: https://analysis.queue-lab.example/retry-interval-study
+declared_url: https://analysis.queue-lab.example/retry-interval-study
+final_url: https://analysis.queue-lab.example/retry-interval-study
+redirects: []
+title: Synthetic queue retry interval study
+captured_at: '2026-08-03T00:00:00+00:00'
+content_hash: a9734d00872123155a23049ff0b1b0b8bf651149272be98c032cd06ce7d214d1
+http_status: 200
+content_type: text/plain
+content_eligible: true
+org: queue-lab
+status: ok

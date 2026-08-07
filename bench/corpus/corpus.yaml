@@ -1,0 +1,11 @@
+version: "1"
+baseline_provenance:
+  version: 1
+  snapshot_schema_version: 2
+  decision_lineage_field: evidence_claim_ids
+  preserved_baseline: null
+title: SDR planted-defect corpus
+description: >-
+  Fully invented research items used to measure which planted defects the SDR controls
+  report. Defects are drawn from the failure taxonomy in docs/evidence-model.md, not from
+  the gate implementations, so the corpus retains defects no current control catches.

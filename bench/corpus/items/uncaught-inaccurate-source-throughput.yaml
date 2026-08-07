@@ -1,0 +1,195 @@
+id: uncaught-inaccurate-source-throughput
+mode: light
+title: Fuente inventada con una cifra de rendimiento inexacta
+question: >-
+  ¿Qué caudal sostiene el despachador inventado según sus fuentes de primera mano?
+planted_defects:
+  - inaccurate-source
+expected_detection:
+  inaccurate-source: uncaught
+notes: >-
+  Planted defect no current control is expected to catch. The note quotes its source
+  literally, so textual anchoring resolves the claim; the source is declared T1, current,
+  reachable and triangulated, so every evidential check passes. The defect is that the
+  source itself is wrong: the figure it publishes was never measured. docs/evidence-model.md
+  states this boundary explicitly under Confidence boundaries: a passing gate does not mean
+  a source is accurate. Scoring this item as `uncaught` is what keeps the harness from
+  reporting a perfect detection rate by construction.
+
+sources:
+  - id: S1
+    url: https://docs.despachador-lento.example/rendimiento/caudal
+    title: Ficha de rendimiento del Despachador Lento
+    tier: T1
+    date: "2026-05-21"
+    snapshot: |
+      Ficha de rendimiento
+
+      El despachador sostiene cuarenta mil mensajes por segundo en un solo nodo.
+      La ficha no describe el hardware, la duración de la prueba ni el tamaño del mensaje.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/despachadores/notas
+    title: Notas de despachadores de Métodos Abiertos
+    tier: T2
+    date: "2026-06-09"
+    snapshot: |
+      Notas de despachadores
+
+      El despachador alternativo publica su configuración de prueba completa.
+      Las cifras sin configuración declarada no pueden compararse entre despachadores.
+
+artifacts:
+  uncaught-inaccurate-source-throughput/notes/sources/S1/content.md: |
+    Ficha de rendimiento
+
+    El despachador sostiene cuarenta mil mensajes por segundo en un solo nodo.
+    La ficha no describe el hardware, la duración de la prueba ni el tamaño del mensaje.
+  uncaught-inaccurate-source-throughput/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.despachador-lento.example/rendimiento/caudal
+    declared_url: https://docs.despachador-lento.example/rendimiento/caudal
+    final_url: https://docs.despachador-lento.example/rendimiento/caudal
+    redirects: []
+    title: Ficha de rendimiento del Despachador Lento
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 666d8ff349a8d9f798685173d8fd4a5889bdee085bd8eed3ccc22e5aad32f2ce
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: despachador-lento
+    status: ok
+  uncaught-inaccurate-source-throughput/notes/sources/S2/content.md: |
+    Notas de despachadores
+
+    El despachador alternativo publica su configuración de prueba completa.
+    Las cifras sin configuración declarada no pueden compararse entre despachadores.
+  uncaught-inaccurate-source-throughput/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/despachadores/notas
+    declared_url: https://bench.metodos-abiertos.test/despachadores/notas
+    final_url: https://bench.metodos-abiertos.test/despachadores/notas
+    redirects: []
+    title: Notas de despachadores de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 4f1cffcd1acff474e8a5142864bc886713defccaad587c66c5bf6171f8e5b404
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  uncaught-inaccurate-source-throughput/brief.md: |
+    ---
+    research: uncaught-inaccurate-source-throughput
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 2
+    ---
+
+    ## Pregunta
+    ¿Qué caudal sostiene el despachador inventado según sus fuentes de primera mano?
+
+    ## Hipótesis
+    Las fichas de primera mano bastarán para comparar el caudal de los dos despachadores.
+
+    ## Contexto
+    El escenario es inventado y no describe ningún despachador ni ninguna medición real.
+
+    ## Alcance
+    Incluye dos despachadores inventados. No incluye hardware, red real ni producción.
+
+    ## Criterios de evaluación
+    - C1: cada cifra de caudal se atribuye a una fuente citada.
+    - C2: cada cifra de caudal declara la configuración con la que se obtuvo.
+
+    ## Riesgos de adopción
+    Una cifra publicada sin configuración puede ser exacta en la cita e inexacta en el fondo.
+  uncaught-inaccurate-source-throughput/notes/landscape.md: |
+    ---
+    research: uncaught-inaccurate-source-throughput
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.despachador-lento.example/rendimiento/caudal
+        tier: T1
+        date: 2026-05-21
+        alternative: despachador
+      - id: S2
+        url: https://bench.metodos-abiertos.test/despachadores/notas
+        tier: T2
+        date: 2026-06-09
+        alternative: despachador
+    ---
+
+    ## Alternativas evaluadas
+    El despachador sostiene cuarenta mil mensajes por segundo en un solo nodo [S1].
+
+    ## Madurez
+    La ficha de primera mano se publica junto con la documentación del producto [cf. S1].
+
+    ## Costos
+    El despachador alternativo publica su configuración de prueba completa [S2].
+
+    ## Riesgos
+    La cifra citada se reproduce con exactitud aunque nadie la haya medido nunca.
+
+    ## Contra-evidencia
+    Las cifras sin configuración declarada no pueden compararse entre despachadores [cf. S2].
+  uncaught-inaccurate-source-throughput/decision-memo.md: |
+    ---
+    research: uncaught-inaccurate-source-throughput
+    date: 2026-07-21
+    stage: transfer
+    ring: assess
+    audience: equipo
+    evidence_claim_ids:
+      - claim-0c17386d97c8104dc079fd79ea40d20d0fb8e356c32281d22ebc20880b7bf4ac
+      - claim-cc77a769d42ee59226d4550ad133996ed4fac3b0c455de7e3770eefa35780ab6
+    ---
+
+    ## Recomendación
+    En el contexto de los despachadores inventados, ante cifras publicadas sin configuración,
+    decidimos evaluar el despachador de la ficha para lograr una comparación de caudal,
+    porque la evidencia citada es de primera mano, aceptando el trade-off de que la cifra
+    no puede verificarse de forma independiente.
+
+    ## Alternativas evaluadas
+    Despachador con ficha de rendimiento y despachador con configuración publicada.
+
+    ## Criterios de selección
+    Atribución de cada cifra y disponibilidad de la configuración de prueba.
+
+    ## Riesgos y limitaciones
+    Ninguna verificación determinista distingue una cita exacta de una fuente inexacta.
+
+    ## Próximos pasos
+    Reproducir la cifra con una medición propia antes de usarla en cualquier comparación.
+
+    ## Audiencia
+    Equipo ficticio de plataforma interna.
+  uncaught-inaccurate-source-throughput/assets/playbook.md: |
+    ---
+    research: uncaught-inaccurate-source-throughput
+    date: 2026-07-21
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Leer cifras de rendimiento publicadas
+
+    1. Exigir la configuración de prueba junto con cada cifra.
+    2. Recordar que una cita exacta no vuelve exacta a la fuente.
+    3. Reproducir la cifra antes de compararla con otra.
+
+commands:
+  - [sdr, new, uncaught-inaccurate-source-throughput, --title, "Fuente inventada con una cifra de rendimiento inexacta",
+     --question, "¿Qué caudal sostiene el despachador inventado según sus fuentes de primera mano?",
+     --mode, light, --owner, "Bench Actor", --timebox, "2"]
+  - [sdr, check, uncaught-inaccurate-source-throughput, --json]
+  - [sdr, advance, uncaught-inaccurate-source-throughput]
+  - [sdr, verify-claims, uncaught-inaccurate-source-throughput, --json]
+  - [sdr, advance, uncaught-inaccurate-source-throughput]
+  - [sdr, approve, uncaught-inaccurate-source-throughput, --by, "Bench Reviewer"]
+  - [sdr, advance, uncaught-inaccurate-source-throughput]

@@ -1,0 +1,195 @@
+id: unanchored-claim-parser-metrics
+mode: light
+title: Analizador inventado de registros con una cita sin anclaje
+question: >-
+  ¿Un analizador de un solo recorrido mejora el tiempo de análisis de registros inventados?
+planted_defects:
+  - unanchored-claim
+expected_detection:
+  unanchored-claim: caught
+notes: >-
+  Planted defect: the note states a factual claim ending in `[S1]` that the snapshot of S1
+  does not contain. The snapshot exists, is plausible and does support other statements of
+  the note, so the failure is semantic rather than a missing snapshot: the claim sentence
+  "El analizador reduce a la mitad el tiempo de análisis en cargas mixtas." never appears
+  in the snapshot text, so exact normalized matching cannot recover it. The halving figure
+  is invented by the note, not by the source.
+
+sources:
+  - id: S1
+    url: https://docs.analizador-lento.example/registros/recorrido
+    title: Manual del analizador de registros de Analizador Lento
+    tier: T1
+    date: "2026-06-01"
+    snapshot: |
+      Manual del analizador de registros
+
+      El analizador procesa los registros en un solo recorrido.
+      No se publican tiempos de análisis por tipo de carga.
+      La documentación describe el formato de entrada y los códigos de salida.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/analizadores/notas
+    title: Notas de medición de analizadores de Métodos Abiertos
+    tier: T2
+    date: "2026-06-18"
+    snapshot: |
+      Notas de medición de analizadores
+
+      El analizador de dos pasadas separa la validación del cálculo.
+      Las mediciones publicadas usan un conjunto de registros sintéticos.
+
+artifacts:
+  unanchored-claim-parser-metrics/notes/sources/S1/content.md: |
+    Manual del analizador de registros
+
+    El analizador procesa los registros en un solo recorrido.
+    No se publican tiempos de análisis por tipo de carga.
+    La documentación describe el formato de entrada y los códigos de salida.
+  unanchored-claim-parser-metrics/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.analizador-lento.example/registros/recorrido
+    declared_url: https://docs.analizador-lento.example/registros/recorrido
+    final_url: https://docs.analizador-lento.example/registros/recorrido
+    redirects: []
+    title: Manual del analizador de registros de Analizador Lento
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 98af1d0c085ed0f4dcde4deee464a421d83323048523e15da76f09f775c4a423
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: analizador-lento
+    status: ok
+  unanchored-claim-parser-metrics/notes/sources/S2/content.md: |
+    Notas de medición de analizadores
+
+    El analizador de dos pasadas separa la validación del cálculo.
+    Las mediciones publicadas usan un conjunto de registros sintéticos.
+  unanchored-claim-parser-metrics/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/analizadores/notas
+    declared_url: https://bench.metodos-abiertos.test/analizadores/notas
+    final_url: https://bench.metodos-abiertos.test/analizadores/notas
+    redirects: []
+    title: Notas de medición de analizadores de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 0c1bbc33c45c0412a590d832e23f723ba9d51a3cabf202a95659fda804f11348
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  unanchored-claim-parser-metrics/brief.md: |
+    ---
+    research: unanchored-claim-parser-metrics
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 2
+    ---
+
+    ## Pregunta
+    ¿Un analizador de un solo recorrido mejora el tiempo de análisis de registros inventados?
+
+    ## Hipótesis
+    Un solo recorrido reducirá el tiempo de análisis frente a un analizador de dos pasadas.
+
+    ## Contexto
+    El escenario es inventado y no describe ningún producto ni ninguna medición real.
+
+    ## Alcance
+    Incluye dos analizadores inventados. No incluye formatos reales, red ni producción.
+
+    ## Criterios de evaluación
+    - C1: cada afirmación cuantitativa se apoya en una fuente citada.
+    - C2: cada alternativa declara al menos una fuente de primera mano.
+
+    ## Riesgos de adopción
+    Una mejora cuantitativa sin respaldo en la fuente citada puede propagarse al memo.
+  unanchored-claim-parser-metrics/notes/landscape.md: |
+    ---
+    research: unanchored-claim-parser-metrics
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.analizador-lento.example/registros/recorrido
+        tier: T1
+        date: 2026-06-01
+        alternative: analizador-de-registros
+      - id: S2
+        url: https://bench.metodos-abiertos.test/analizadores/notas
+        tier: T2
+        date: 2026-06-18
+        alternative: analizador-de-registros
+    ---
+
+    ## Alternativas evaluadas
+    Se comparan un analizador de un solo recorrido y uno de dos pasadas [cf. S1].
+
+    ## Madurez
+    El analizador reduce a la mitad el tiempo de análisis en cargas mixtas [S1].
+
+    ## Costos
+    El analizador de dos pasadas separa la validación del cálculo [S2].
+
+    ## Riesgos
+    Adoptar una cifra sin respaldo documental puede sesgar la comparación completa.
+
+    ## Contra-evidencia
+    La documentación consultada no publica tiempos por tipo de carga [cf. S1].
+  unanchored-claim-parser-metrics/decision-memo.md: |
+    ---
+    research: unanchored-claim-parser-metrics
+    date: 2026-07-21
+    stage: transfer
+    ring: assess
+    audience: equipo
+    evidence_claim_ids:
+      - claim-93ab6a0a3d56dd00a7a40de056c8decdb79d5dcae3ed33d6b250607cfffe0f1f
+    ---
+
+    ## Recomendación
+    En el contexto de los analizadores inventados, ante una cifra de mejora sin respaldo,
+    decidimos evaluar el analizador de un solo recorrido para lograr una comparación
+    honesta, porque la evidencia citada no sostiene la mejora declarada, aceptando el
+    trade-off de posponer cualquier afirmación cuantitativa.
+
+    ## Alternativas evaluadas
+    Analizador de un solo recorrido y analizador de dos pasadas.
+
+    ## Criterios de selección
+    Respaldo documental de cada cifra y disponibilidad de fuentes de primera mano.
+
+    ## Riesgos y limitaciones
+    La cifra de mejora del cincuenta por ciento no aparece en ninguna fuente citada.
+
+    ## Próximos pasos
+    Medir el tiempo de análisis con un probe propio antes de repetir la cifra.
+
+    ## Audiencia
+    Equipo ficticio de plataforma interna.
+  unanchored-claim-parser-metrics/assets/playbook.md: |
+    ---
+    research: unanchored-claim-parser-metrics
+    date: 2026-07-21
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Revisar cifras citadas
+
+    1. Buscar la oración citada dentro del snapshot local de la fuente.
+    2. Degradar la cita a contextual cuando la fuente no sostenga la afirmación.
+    3. Medir con un probe propio antes de publicar cualquier porcentaje.
+
+commands:
+  - [sdr, new, unanchored-claim-parser-metrics, --title, "Analizador inventado de registros con una cita sin anclaje",
+     --question, "¿Un analizador de un solo recorrido mejora el tiempo de análisis de registros inventados?",
+     --mode, light, --owner, "Bench Actor", --timebox, "2"]
+  - [sdr, check, unanchored-claim-parser-metrics, --json]
+  - [sdr, advance, unanchored-claim-parser-metrics]
+  - [sdr, verify-claims, unanchored-claim-parser-metrics, --json]
+  - [sdr, advance, unanchored-claim-parser-metrics]
+  - [sdr, approve, unanchored-claim-parser-metrics, --by, "Bench Reviewer"]
+  - [sdr, advance, unanchored-claim-parser-metrics]

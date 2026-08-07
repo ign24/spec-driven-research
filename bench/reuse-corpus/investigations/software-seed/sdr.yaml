@@ -1,0 +1,19 @@
+slug: software-seed
+title: Synthetic queue retry decision
+question: Which invented retry window should the queue use?
+mode: light
+stage: reuse
+status: done
+owner: Bench Actor
+timebox: 1
+created: '2026-08-01'
+updated: '2026-08-01'
+tags: [synthetic, software]
+schema_version: 2
+validation:
+  transfer: 07aebe5f1979a542eb97003f0f274cd3c67dc7075390fcf4dde65f47ab2f3cfd
+judge: {}
+verify_probe: {}
+overrides: []
+reopens: []
+archived: false

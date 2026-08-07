@@ -1,0 +1,233 @@
+id: uncaught-unrepresentative-benchmark-queue
+mode: full
+title: Probe inventado que pasa sin representar el criterio
+question: >-
+  ¿La cola inventada mantiene el orden de los mensajes bajo carga concurrente?
+planted_defects:
+  - unrepresentative-benchmark
+expected_detection:
+  unrepresentative-benchmark: uncaught
+notes: >-
+  Planted defect no current control is expected to catch. The probe declares an explicit
+  action, an argv, a matching expectation, and a result for every criterion, so executable
+  and evidential validation pass. The defect is that the benchmark answers a different
+  question from the one the brief asks: the question is about concurrent load and the probe
+  enqueues three messages from a single thread. docs/evidence-model.md states this boundary
+  under Confidence boundaries: a passing gate does not mean a benchmark is representative.
+
+sources:
+  - id: S1
+    url: https://docs.cola-quieta.example/orden/garantias
+    title: Garantías de orden de Cola Quieta
+    tier: T1
+    date: "2026-05-16"
+    snapshot: |
+      Garantías de orden
+
+      La cola preserva el orden de llegada dentro de un mismo productor.
+      No se documenta el comportamiento con productores concurrentes.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/colas/orden
+    title: Mediciones de orden en colas de Métodos Abiertos
+    tier: T2
+    date: "2026-06-07"
+    snapshot: |
+      Mediciones de orden en colas
+
+      Las pruebas de un solo productor no observan condiciones de carrera.
+      La medición concurrente exige varios productores y repeticiones.
+
+artifacts:
+  uncaught-unrepresentative-benchmark-queue/notes/sources/S1/content.md: |
+    Garantías de orden
+
+    La cola preserva el orden de llegada dentro de un mismo productor.
+    No se documenta el comportamiento con productores concurrentes.
+  uncaught-unrepresentative-benchmark-queue/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.cola-quieta.example/orden/garantias
+    declared_url: https://docs.cola-quieta.example/orden/garantias
+    final_url: https://docs.cola-quieta.example/orden/garantias
+    redirects: []
+    title: Garantías de orden de Cola Quieta
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 6bf71ad987a60e7326e9de4f85b77b3d15b0d96a0ca7ba56aede45c6740c7725
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: cola-quieta
+    status: ok
+  uncaught-unrepresentative-benchmark-queue/notes/sources/S2/content.md: |
+    Mediciones de orden en colas
+
+    Las pruebas de un solo productor no observan condiciones de carrera.
+    La medición concurrente exige varios productores y repeticiones.
+  uncaught-unrepresentative-benchmark-queue/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/colas/orden
+    declared_url: https://bench.metodos-abiertos.test/colas/orden
+    final_url: https://bench.metodos-abiertos.test/colas/orden
+    redirects: []
+    title: Mediciones de orden en colas de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: c3fa6d706cecaf6387d94599d66398e009d3f854d6b4ed6c6ac0a2fbc04d7d43
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  uncaught-unrepresentative-benchmark-queue/brief.md: |
+    ---
+    research: uncaught-unrepresentative-benchmark-queue
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 3
+    ---
+
+    ## Pregunta
+    ¿La cola inventada mantiene el orden de los mensajes bajo carga concurrente?
+
+    ## Hipótesis
+    La cola preservará el orden de llegada incluso con varios productores simultáneos.
+
+    ## Contexto
+    El escenario es inventado y no describe ninguna cola ni ninguna medición real.
+
+    ## Alcance
+    Incluye una cola inventada en memoria. No incluye red, persistencia ni producción.
+
+    ## Criterios de evaluación
+    - C1: los mensajes salen en el mismo orden en que entraron.
+    - C2: el resultado se repite de forma idéntica en dos ejecuciones.
+
+    ## Riesgos de adopción
+    Una prueba de un solo productor puede pasar sin decir nada sobre carga concurrente.
+  uncaught-unrepresentative-benchmark-queue/notes/landscape.md: |
+    ---
+    research: uncaught-unrepresentative-benchmark-queue
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.cola-quieta.example/orden/garantias
+        tier: T1
+        date: 2026-05-16
+        alternative: cola-en-memoria
+      - id: S2
+        url: https://bench.metodos-abiertos.test/colas/orden
+        tier: T2
+        date: 2026-06-07
+        alternative: cola-en-memoria
+    ---
+
+    ## Alternativas evaluadas
+    La cola preserva el orden de llegada dentro de un mismo productor [S1].
+
+    ## Madurez
+    La documentación inventada cubre el caso de un solo productor [cf. S1].
+
+    ## Costos
+    Las pruebas de un solo productor no observan condiciones de carrera [S2].
+
+    ## Riesgos
+    El probe disponible mide un escenario más simple que el de la pregunta del brief.
+
+    ## Contra-evidencia
+    La medición concurrente exige varios productores y repeticiones [cf. S2].
+  uncaught-unrepresentative-benchmark-queue/probe/check.py: |
+    from collections import deque
+
+
+    def drain(messages: list[str]) -> list[str]:
+        queue: deque[str] = deque()
+        for message in messages:
+            queue.append(message)
+        return [queue.popleft() for _ in range(len(queue))]
+
+
+    messages = ["alfa", "beta", "gamma"]
+    assert drain(messages) == messages
+    assert drain(messages) == drain(messages)
+    print("QUEUE_ORDER_OK")
+  uncaught-unrepresentative-benchmark-queue/probe/results.md: |
+    ---
+    research: uncaught-unrepresentative-benchmark-queue
+    date: 2026-07-21
+    stage: probe
+    verify:
+      action: run
+      argv: [python, check.py]
+      expect: QUEUE_ORDER_OK
+      environment: clean
+    ---
+
+    ## Resultados por criterio
+    | criterio | resultado | evidencia |
+    |---|---|---|
+    | C1 | cumple: los tres mensajes salen en orden de entrada | `probe/check.py` |
+    | C2 | cumple: dos ejecuciones devuelven la misma secuencia | `probe/check.py` |
+
+    ## Reproducción
+    ```bash
+    python check.py
+    ```
+  uncaught-unrepresentative-benchmark-queue/decision-memo.md: |
+    ---
+    research: uncaught-unrepresentative-benchmark-queue
+    date: 2026-07-22
+    stage: transfer
+    ring: trial
+    audience: equipo
+    evidence_claim_ids:
+      - claim-328d73e24588765d5c4047853e28ec8c293662269660e6219f66adb6108c5139
+      - claim-58d98835f8a21df465702710078c12cac3d84f1e7042300068186f475d2464b7
+    ---
+
+    ## Recomendación
+    En el contexto de la cola inventada, ante la necesidad de evidencia ejecutable,
+    decidimos probar la cola en memoria para lograr un orden previsible, porque el probe
+    determinista cumplió C1 y C2, aceptando el trade-off de que la prueba usa un único
+    productor y no representa la carga concurrente de la pregunta.
+
+    ## Alternativas evaluadas
+    Cola en memoria de un proceso y cola con varios productores simultáneos.
+
+    ## Criterios de selección
+    Orden de salida observado y repetibilidad exacta de la ejecución.
+
+    ## Riesgos y limitaciones
+    El probe no ejerce concurrencia, así que no responde la pregunta del brief.
+
+    ## Próximos pasos
+    Escribir una medición con varios productores antes de sostener cualquier garantía.
+
+    ## Audiencia
+    Equipo ficticio de plataforma interna.
+  uncaught-unrepresentative-benchmark-queue/assets/playbook.md: |
+    ---
+    research: uncaught-unrepresentative-benchmark-queue
+    date: 2026-07-22
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Revisar la representatividad de un probe
+
+    1. Releer la pregunta del brief antes de leer el resultado del probe.
+    2. Comprobar que el escenario medido contenga la condición preguntada.
+    3. Declarar como no respondida toda pregunta que el probe no ejerza.
+
+commands:
+  - [sdr, new, uncaught-unrepresentative-benchmark-queue, --title, "Probe inventado que pasa sin representar el criterio",
+     --question, "¿La cola inventada mantiene el orden de los mensajes bajo carga concurrente?",
+     --mode, full, --owner, "Bench Actor", --timebox, "3"]
+  - [sdr, check, uncaught-unrepresentative-benchmark-queue, --json]
+  - [sdr, advance, uncaught-unrepresentative-benchmark-queue]
+  - [sdr, verify-claims, uncaught-unrepresentative-benchmark-queue, --json]
+  - [sdr, advance, uncaught-unrepresentative-benchmark-queue]
+  - [sdr, verify-probe, uncaught-unrepresentative-benchmark-queue, --json]
+  - [sdr, advance, uncaught-unrepresentative-benchmark-queue]
+  - [sdr, approve, uncaught-unrepresentative-benchmark-queue, --by, "Bench Reviewer"]
+  - [sdr, advance, uncaught-unrepresentative-benchmark-queue]

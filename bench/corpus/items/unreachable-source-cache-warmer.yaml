@@ -1,0 +1,174 @@
+id: unreachable-source-cache-warmer
+mode: light
+title: Precalentador inventado de caché con una fuente inalcanzable
+question: >-
+  ¿Conviene precalentar una caché inventada al iniciar el proceso o al primer pedido?
+planted_defects:
+  - unreachable-source
+expected_detection:
+  unreachable-source: caught
+notes: >-
+  Planted defect: source S2 is unreachable by construction. Its host ends in the `.invalid`
+  top-level domain, which RFC 6761 reserves as guaranteed never to resolve, so the source
+  cannot become reachable through any DNS or hosting change and the item never depends on
+  an external site failing. S2 carries no snapshot, exactly as an unretrievable source
+  would. S2 is cited only with `[cf. S2]`, so the planted defect stays a reachability
+  failure and does not turn into an anchoring failure as well. The control that reports it
+  is `links_resolve` on the explore stage, so the item runs an explicit
+  `check --stage explore`. Offline that control is skipped, never passed, so an offline
+  replay must score this defect as not exercised rather than as missed.
+
+sources:
+  - id: S1
+    url: https://docs.precalentador.example/cache/arranque
+    title: Manual de arranque del Precalentador
+    tier: T1
+    date: "2026-05-04"
+    snapshot: |
+      Manual de arranque del Precalentador
+
+      El precalentado en el arranque agrega una espera fija antes de aceptar pedidos.
+      El precalentado perezoso traslada esa espera al primer pedido de cada clave.
+  - id: S2
+    url: https://archivo.cache-warmer.invalid/nota-2026
+    title: Nota archivada del taller Cache Warmer
+    tier: T3
+    date: "2026-05-15"
+
+artifacts:
+  unreachable-source-cache-warmer/notes/sources/S1/content.md: |
+    Manual de arranque del Precalentador
+
+    El precalentado en el arranque agrega una espera fija antes de aceptar pedidos.
+    El precalentado perezoso traslada esa espera al primer pedido de cada clave.
+  unreachable-source-cache-warmer/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.precalentador.example/cache/arranque
+    declared_url: https://docs.precalentador.example/cache/arranque
+    final_url: https://docs.precalentador.example/cache/arranque
+    redirects: []
+    title: Manual de arranque del Precalentador
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 5a12b63d61c8b3ec44b00b2d858d79e9be4d836530bddec785966742bcfa8a1c
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: precalentador
+    status: ok
+  unreachable-source-cache-warmer/brief.md: |
+    ---
+    research: unreachable-source-cache-warmer
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 2
+    ---
+
+    ## Pregunta
+    ¿Conviene precalentar una caché inventada al iniciar el proceso o al primer pedido?
+
+    ## Hipótesis
+    El precalentado en el arranque reducirá la latencia percibida del primer pedido.
+
+    ## Contexto
+    El escenario es inventado y no describe ningún sistema real ni ninguna organización real.
+
+    ## Alcance
+    Incluye dos estrategias de precalentado. No incluye invalidación, red real ni producción.
+
+    ## Criterios de evaluación
+    - C1: la estrategia elegida define cuándo se paga la espera de precalentado.
+    - C2: cada estrategia declara al menos una fuente consultable.
+
+    ## Riesgos de adopción
+    Una de las fuentes consultadas ya no es recuperable, lo que debilita la trazabilidad.
+  unreachable-source-cache-warmer/notes/landscape.md: |
+    ---
+    research: unreachable-source-cache-warmer
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.precalentador.example/cache/arranque
+        tier: T1
+        date: 2026-05-04
+        alternative: precalentado
+      - id: S2
+        url: https://archivo.cache-warmer.invalid/nota-2026
+        tier: T3
+        date: 2026-05-15
+        alternative: precalentado
+    ---
+
+    ## Alternativas evaluadas
+    Se comparan el precalentado en el arranque y el precalentado perezoso [cf. S1].
+    Una nota de taller archivada describía una tercera variante intermedia [cf. S2].
+
+    ## Madurez
+    El precalentado en el arranque agrega una espera fija antes de aceptar pedidos [S1].
+
+    ## Costos
+    El costo declarado por la nota archivada ya no puede reconstruirse desde la fuente [cf. S2].
+
+    ## Riesgos
+    La estrategia perezosa concentra la espera en usuarios reales del primer pedido.
+
+    ## Contra-evidencia
+    La única contra-evidencia disponible provenía de la nota archivada y hoy es irrecuperable.
+  unreachable-source-cache-warmer/decision-memo.md: |
+    ---
+    research: unreachable-source-cache-warmer
+    date: 2026-07-21
+    stage: transfer
+    ring: assess
+    audience: equipo
+    evidence_claim_ids:
+      - claim-0c2dab30fac3bdd962061789a6fa837fa57bbbcab5dd0bbf4b28fcafd8a9f7c5
+    ---
+
+    ## Recomendación
+    En el contexto del precalentado inventado, ante una fuente que ya no es recuperable,
+    decidimos evaluar el precalentado en el arranque para lograr una espera predecible,
+    porque la evidencia recuperable solo cubre esa estrategia, aceptando el trade-off de
+    apoyarnos en una única fuente verificable.
+
+    ## Alternativas evaluadas
+    Precalentado en el arranque y precalentado perezoso al primer pedido.
+
+    ## Criterios de selección
+    Momento en el que se paga la espera y disponibilidad de evidencia verificable.
+
+    ## Riesgos y limitaciones
+    Una de las dos fuentes es irrecuperable, así que la comparación queda incompleta.
+
+    ## Próximos pasos
+    Reemplazar la fuente irrecuperable antes de cualquier decisión de adopción.
+
+    ## Audiencia
+    Equipo ficticio de plataforma interna.
+  unreachable-source-cache-warmer/assets/playbook.md: |
+    ---
+    research: unreachable-source-cache-warmer
+    date: 2026-07-21
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Revisar fuentes irrecuperables
+
+    1. Verificar que cada fuente declarada siga siendo alcanzable.
+    2. Marcar como incompleta toda comparación que dependa de una fuente perdida.
+    3. Reemplazar la fuente antes de subir el anillo de la recomendación.
+
+commands:
+  - [sdr, new, unreachable-source-cache-warmer, --title, "Precalentador inventado de caché con una fuente inalcanzable",
+     --question, "¿Conviene precalentar una caché inventada al iniciar el proceso o al primer pedido?",
+     --mode, light, --owner, "Bench Actor", --timebox, "2"]
+  - [sdr, check, unreachable-source-cache-warmer, --json]
+  - [sdr, advance, unreachable-source-cache-warmer]
+  - [sdr, check, unreachable-source-cache-warmer, --stage, explore, --json]
+  - [sdr, verify-claims, unreachable-source-cache-warmer, --json]
+  - [sdr, advance, unreachable-source-cache-warmer]
+  - [sdr, approve, unreachable-source-cache-warmer, --by, "Bench Reviewer"]
+  - [sdr, advance, unreachable-source-cache-warmer]

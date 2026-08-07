@@ -1,0 +1,234 @@
+id: probe-expectation-mismatch-hash-guard
+mode: full
+title: Guarda de hash inventada cuya expectativa no coincide con su comando
+question: >-
+  ¿Una guarda local puede detectar cambios en tres cadenas inventadas de forma repetible?
+planted_defects:
+  - probe-expectation-mismatch
+expected_detection:
+  probe-expectation-mismatch: caught
+notes: >-
+  Planted defect: the probe declares `expect: HASH_GUARD_OK` while the command it declares
+  prints `HASH_GUARD_DONE`. The command succeeds and exits zero, so the mismatch is not an
+  execution failure: the declared expectation simply does not describe the declared command.
+  The marker is neither a substring nor a regular-expression match of the output, so the
+  mismatch is unambiguous. Every other artifact of the item is complete and consistent.
+
+sources:
+  - id: S1
+    url: https://docs.guarda-hash.example/guardas/marcadores
+    title: Manual de marcadores de la Guarda de Hash
+    tier: T1
+    date: "2026-05-08"
+    snapshot: |
+      Manual de marcadores
+
+      La guarda imprime un marcador único al terminar sin diferencias.
+      El marcador declarado debe coincidir exactamente con el que imprime el comando.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/guardas/comparativa
+    title: Comparativa de guardas de Métodos Abiertos
+    tier: T2
+    date: "2026-06-14"
+    snapshot: |
+      Comparativa de guardas
+
+      La guarda externa requiere un servicio adicional en ejecución.
+      La guarda local se limita a la biblioteca estándar del intérprete.
+
+artifacts:
+  probe-expectation-mismatch-hash-guard/notes/sources/S1/content.md: |
+    Manual de marcadores
+
+    La guarda imprime un marcador único al terminar sin diferencias.
+    El marcador declarado debe coincidir exactamente con el que imprime el comando.
+  probe-expectation-mismatch-hash-guard/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.guarda-hash.example/guardas/marcadores
+    declared_url: https://docs.guarda-hash.example/guardas/marcadores
+    final_url: https://docs.guarda-hash.example/guardas/marcadores
+    redirects: []
+    title: Manual de marcadores de la Guarda de Hash
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: aa2308e92cc2a2c592198ccc4b868132360e69a7b886832f418566fb3a800a1f
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: guarda-hash
+    status: ok
+  probe-expectation-mismatch-hash-guard/notes/sources/S2/content.md: |
+    Comparativa de guardas
+
+    La guarda externa requiere un servicio adicional en ejecución.
+    La guarda local se limita a la biblioteca estándar del intérprete.
+  probe-expectation-mismatch-hash-guard/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/guardas/comparativa
+    declared_url: https://bench.metodos-abiertos.test/guardas/comparativa
+    final_url: https://bench.metodos-abiertos.test/guardas/comparativa
+    redirects: []
+    title: Comparativa de guardas de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: a22df3f0a3dc4c7b81c6eb040bf0afc071e03a6e9871df25aea4e18b6978b726
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  probe-expectation-mismatch-hash-guard/brief.md: |
+    ---
+    research: probe-expectation-mismatch-hash-guard
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 3
+    ---
+
+    ## Pregunta
+    ¿Una guarda local puede detectar cambios en tres cadenas inventadas de forma repetible?
+
+    ## Hipótesis
+    Una guarda pequeña detectará cualquier cambio en las cadenas inventadas del fixture.
+
+    ## Contexto
+    El ejercicio es sintético y solo usa cadenas inventadas embebidas en el propio artefacto.
+
+    ## Alcance
+    Incluye tres cadenas inventadas. No incluye archivos de usuario, red ni producción.
+
+    ## Criterios de evaluación
+    - C1: la guarda detecta el cambio de una de las tres cadenas.
+    - C2: la guarda imprime el marcador declarado al terminar sin diferencias.
+
+    ## Riesgos de adopción
+    Una expectativa mal declarada puede dar por válida una verificación que nunca coincidió.
+  probe-expectation-mismatch-hash-guard/notes/landscape.md: |
+    ---
+    research: probe-expectation-mismatch-hash-guard
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.guarda-hash.example/guardas/marcadores
+        tier: T1
+        date: 2026-05-08
+        alternative: guarda-local
+      - id: S2
+        url: https://bench.metodos-abiertos.test/guardas/comparativa
+        tier: T2
+        date: 2026-06-14
+        alternative: guarda-local
+    ---
+
+    ## Alternativas evaluadas
+    Se comparan una guarda local y una guarda externa inventada [cf. S2].
+    La guarda imprime un marcador único al terminar sin diferencias [S1].
+
+    ## Madurez
+    Ambas guardas alcanzan para una demostración de capacitación [cf. S1].
+
+    ## Costos
+    La guarda externa requiere un servicio adicional en ejecución [S2].
+
+    ## Riesgos
+    Un marcador declarado con otro nombre invalida la lectura del resultado del probe.
+
+    ## Contra-evidencia
+    No se encontró evidencia en contra dentro de las dos fuentes inventadas declaradas.
+  probe-expectation-mismatch-hash-guard/probe/check.py: |
+    def digest(value: str) -> int:
+        return sum(ord(char) for char in value.strip())
+
+
+    baseline = ["alfa", "beta", "gamma"]
+    changed = ["alfa", "beta", "gamma!"]
+    assert [digest(value) for value in baseline] != [digest(value) for value in changed]
+    assert [digest(value) for value in baseline] == [digest(value) for value in baseline]
+    print("HASH_GUARD_DONE")
+  probe-expectation-mismatch-hash-guard/probe/results.md: |
+    ---
+    research: probe-expectation-mismatch-hash-guard
+    date: 2026-07-21
+    stage: probe
+    verify:
+      action: run
+      argv: [python, check.py]
+      expect: HASH_GUARD_OK
+      environment: clean
+    ---
+
+    ## Resultados por criterio
+    | criterio | resultado | evidencia |
+    |---|---|---|
+    | C1 | cumple: el cambio de una cadena altera la suma | `probe/check.py` |
+    | C2 | cumple: la guarda imprime su marcador final | `probe/check.py` |
+
+    ## Reproducción
+    ```bash
+    python check.py
+    ```
+  probe-expectation-mismatch-hash-guard/decision-memo.md: |
+    ---
+    research: probe-expectation-mismatch-hash-guard
+    date: 2026-07-22
+    stage: transfer
+    ring: trial
+    audience: equipo
+    evidence_claim_ids:
+      - claim-dcdafb26a8b1226cf81526f587310a038e542914076dfcebefd0cbe0ff81e8d9
+      - claim-c72e975fe77f1203fc9edcaafd64a990d054e0197d16e264693c70e5dcb3161e
+    ---
+
+    ## Recomendación
+    En el contexto de la guarda inventada, ante la necesidad de evidencia ejecutable,
+    decidimos probar la guarda local para lograr detección repetible de cambios, porque
+    el probe declarado cubre C1 y C2, aceptando el trade-off de que el fixture es diminuto.
+
+    ## Alternativas evaluadas
+    Guarda local sobre la biblioteca estándar y guarda externa con servicio adicional.
+
+    ## Criterios de selección
+    Detección de cambios y ausencia de servicios adicionales en ejecución.
+
+    ## Riesgos y limitaciones
+    El marcador declarado en el probe no es el que imprime el comando declarado.
+
+    ## Próximos pasos
+    Alinear la expectativa del probe con la salida real antes de repetir la verificación.
+
+    ## Audiencia
+    Equipo ficticio de capacitación interna.
+  probe-expectation-mismatch-hash-guard/assets/playbook.md: |
+    ---
+    research: probe-expectation-mismatch-hash-guard
+    date: 2026-07-22
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Declarar expectativas de probe
+
+    1. Copiar el marcador desde la salida real del comando, no desde la memoria.
+    2. Ejecutar el probe antes de escribir la tabla de resultados.
+    3. Tratar toda expectativa que no coincide como resultado no verificado.
+
+probe:
+  action: run
+  argv: [python, check.py]
+  expect: HASH_GUARD_OK
+  environment: clean
+  actual_marker: HASH_GUARD_DONE
+
+commands:
+  - [sdr, new, probe-expectation-mismatch-hash-guard, --title, "Guarda de hash inventada cuya expectativa no coincide con su comando",
+     --question, "¿Una guarda local puede detectar cambios en tres cadenas inventadas de forma repetible?",
+     --mode, full, --owner, "Bench Actor", --timebox, "3"]
+  - [sdr, check, probe-expectation-mismatch-hash-guard, --json]
+  - [sdr, advance, probe-expectation-mismatch-hash-guard]
+  - [sdr, verify-claims, probe-expectation-mismatch-hash-guard, --json]
+  - [sdr, advance, probe-expectation-mismatch-hash-guard]
+  - [sdr, verify-probe, probe-expectation-mismatch-hash-guard, --json]
+  - [sdr, advance, probe-expectation-mismatch-hash-guard]
+  - [sdr, approve, probe-expectation-mismatch-hash-guard, --by, "Bench Reviewer"]
+  - [sdr, advance, probe-expectation-mismatch-hash-guard]

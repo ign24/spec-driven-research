@@ -1,0 +1,191 @@
+id: clean-light-label-router
+mode: light
+title: Enrutador local de etiquetas inventadas
+question: >-
+  ¿Un enrutador local puede asignar tres categorías inventadas de forma estable sin red?
+planted_defects: []
+notes: >-
+  Clean light item. Every factual claim is a literal sentence of its snapshot, the two
+  sources live on different invented organizations, and no probe stage exists in light
+  mode. A finding on this item is a false positive.
+
+sources:
+  - id: S1
+    url: https://docs.router-lab.example/labels/routing
+    title: Guía de enrutamiento de etiquetas de Router Lab
+    tier: T1
+    date: "2026-05-12"
+    snapshot: |
+      Guía de enrutamiento de etiquetas
+
+      El enrutador declara tres categorías fijas y no admite categorías dinámicas.
+      La asignación se resuelve sin acceso a red y sin estado compartido entre
+      invocaciones. Las categorías inventadas son alfa, beta y gamma.
+  - id: S2
+    url: https://bench.taller-etiquetas.test/comparativa
+    title: Comparativa de asignadores de etiquetas del Taller de Etiquetas
+    tier: T2
+    date: "2026-06-02"
+    snapshot: |
+      Comparativa de asignadores
+
+      La tabla estática exige mantenimiento manual por cada categoría nueva.
+      El enrutador local recorre reglas ordenadas y devuelve la primera coincidencia.
+
+artifacts:
+  clean-light-label-router/notes/sources/S1/content.md: |
+    Guía de enrutamiento de etiquetas
+
+    El enrutador declara tres categorías fijas y no admite categorías dinámicas.
+    La asignación se resuelve sin acceso a red y sin estado compartido entre
+    invocaciones. Las categorías inventadas son alfa, beta y gamma.
+  clean-light-label-router/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.router-lab.example/labels/routing
+    declared_url: https://docs.router-lab.example/labels/routing
+    final_url: https://docs.router-lab.example/labels/routing
+    redirects: []
+    title: Guía de enrutamiento de etiquetas de Router Lab
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: bf6f94f9652abefd88cb0b984c7e940d4700c427e4741100b46f90ea252fdf6b
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: router-lab
+    status: ok
+  clean-light-label-router/notes/sources/S2/content.md: |
+    Comparativa de asignadores
+
+    La tabla estática exige mantenimiento manual por cada categoría nueva.
+    El enrutador local recorre reglas ordenadas y devuelve la primera coincidencia.
+  clean-light-label-router/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.taller-etiquetas.test/comparativa
+    declared_url: https://bench.taller-etiquetas.test/comparativa
+    final_url: https://bench.taller-etiquetas.test/comparativa
+    redirects: []
+    title: Comparativa de asignadores de etiquetas del Taller de Etiquetas
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 9ad16cf7dac6820401ac672d4571b44692f34eed56ed9116274d98015d642a49
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: taller-etiquetas
+    status: ok
+  clean-light-label-router/brief.md: |
+    ---
+    research: clean-light-label-router
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 2
+    ---
+
+    ## Pregunta
+    ¿Un enrutador local puede asignar tres categorías inventadas de forma estable sin red?
+
+    ## Hipótesis
+    Un conjunto de reglas ordenadas devolverá la misma categoría para las mismas entradas.
+
+    ## Contexto
+    El ejercicio es sintético y solo usa cadenas inventadas embebidas en el propio artefacto.
+
+    ## Alcance
+    Incluye tres categorías inventadas. No incluye red, persistencia, idiomas ni producción.
+
+    ## Criterios de evaluación
+    - C1: las tres entradas del fixture producen la categoría esperada.
+    - C2: dos ejecuciones consecutivas producen exactamente la misma salida.
+
+    ## Riesgos de adopción
+    El fixture es diminuto y no representa la variedad de etiquetas de un sistema real.
+  clean-light-label-router/notes/landscape.md: |
+    ---
+    research: clean-light-label-router
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.router-lab.example/labels/routing
+        tier: T1
+        date: 2026-05-12
+        alternative: enrutador-local
+      - id: S2
+        url: https://bench.taller-etiquetas.test/comparativa
+        tier: T2
+        date: 2026-06-02
+        alternative: enrutador-local
+    ---
+
+    ## Alternativas evaluadas
+    El espacio inventado compara un enrutador local con una tabla estática [cf. S2].
+    El enrutador declara tres categorías fijas y no admite categorías dinámicas [S1].
+
+    ## Madurez
+    Ambas alternativas se consideran suficientes para un ejercicio de capacitación [cf. S1].
+
+    ## Costos
+    La tabla estática exige mantenimiento manual por cada categoría nueva [S2].
+
+    ## Riesgos
+    Un conjunto fijo de reglas puede favorecer accidentalmente a una de las alternativas.
+
+    ## Contra-evidencia
+    No se buscó evidencia en contra fuera de las dos fuentes inventadas declaradas arriba.
+  clean-light-label-router/decision-memo.md: |
+    ---
+    research: clean-light-label-router
+    date: 2026-07-21
+    stage: transfer
+    ring: assess
+    audience: equipo
+    evidence_claim_ids:
+      - claim-f2316e8bc99e1aedc4430d7d07b1e8f40c7379f53e51481b0e420c32a77428c4
+      - claim-adb9d4f58d5cab7e806965b9053f3fc2f543a1b7952a64537f6eba5a3b0bf120
+    ---
+
+    ## Recomendación
+    En el contexto del ejercicio de etiquetas inventadas, ante la falta de una prueba
+    ejecutable en modo light, decidimos evaluar el enrutador local para lograr salidas
+    estables, porque la evidencia declarada cubre C1 y C2 solo de forma documental,
+    aceptando el trade-off de no contar con resultados reproducibles.
+
+    ## Alternativas evaluadas
+    Enrutador local con reglas ordenadas y tabla estática mantenida a mano.
+
+    ## Criterios de selección
+    Estabilidad de la salida y costo de mantenimiento por categoría nueva.
+
+    ## Riesgos y limitaciones
+    No se midió rendimiento, no se probó con entradas hostiles y no hubo etapa probe.
+
+    ## Próximos pasos
+    Conservar el ejercicio como fixture de referencia y no extrapolar su resultado.
+
+    ## Audiencia
+    Equipo ficticio de capacitación interna.
+  clean-light-label-router/assets/playbook.md: |
+    ---
+    research: clean-light-label-router
+    date: 2026-07-21
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Enrutar etiquetas inventadas
+
+    1. Declarar las categorías fijas antes de escribir reglas.
+    2. Ordenar las reglas y devolver la primera coincidencia.
+    3. Repetir la ejecución para confirmar que la salida no cambia.
+
+commands:
+  - [sdr, new, clean-light-label-router, --title, "Enrutador local de etiquetas inventadas",
+     --question, "¿Un enrutador local puede asignar tres categorías inventadas de forma estable sin red?",
+     --mode, light, --owner, "Bench Actor", --timebox, "2"]
+  - [sdr, check, clean-light-label-router, --json]
+  - [sdr, advance, clean-light-label-router]
+  - [sdr, verify-claims, clean-light-label-router, --json]
+  - [sdr, advance, clean-light-label-router]
+  - [sdr, approve, clean-light-label-router, --by, "Bench Reviewer"]
+  - [sdr, advance, clean-light-label-router]

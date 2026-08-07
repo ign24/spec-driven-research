@@ -1,0 +1,267 @@
+id: contradictory-sources-retry-window
+mode: light
+title: Ventana de reintentos inventada con fuentes que se contradicen
+question: >-
+  ¿Conviene una ventana de reintentos fija o exponencial para un cliente inventado?
+planted_defects:
+  - contradictory-sources
+expected_detection:
+  contradictory-sources: uncaught
+notes: >-
+  Planted defect: the sources contradict each other across the two alternatives. S1 states
+  that the fixed window removes retry bursts; S3 and S4 state that the fixed window
+  produces synchronized retry bursts. Every claim is anchored in its own snapshot, every
+  alternative has a T1 source and two independent invented organizations, and the dates are
+  current, so every structural and evidential check passes while the evidence disagrees with
+  itself. Replaying the whole light lifecycle offline confirms it: every command exits zero
+  and the investigation reaches `reuse` with the contradiction intact, so the expectation is
+  recorded as `uncaught`. No control compares the content of two sources against each other.
+
+sources:
+  - id: S1
+    url: https://docs.reintento-lab.example/clientes/ventana
+    title: Manual de ventanas de reintento de Reintento Lab
+    tier: T1
+    date: "2026-05-19"
+    snapshot: |
+      Manual de ventanas de reintento
+
+      La ventana fija elimina las ráfagas de reintentos sincronizados.
+      El cliente vuelve a intentar cada dos segundos hasta agotar los intentos.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/reintentos/ventana-fija
+    title: Medición de ventana fija de Métodos Abiertos
+    tier: T2
+    date: "2026-06-05"
+    snapshot: |
+      Medición de ventana fija
+
+      La ventana fija mantiene un intervalo constante entre intentos.
+      El conjunto de pruebas usa clientes sintéticos y un servidor simulado.
+  - id: S3
+    url: https://docs.ventana-abierta.example/reintentos/exponencial
+    title: Manual de reintentos de Ventana Abierta
+    tier: T1
+    date: "2026-05-27"
+    snapshot: |
+      Manual de reintentos
+
+      La ventana fija produce ráfagas sincronizadas de reintentos.
+      El retroceso exponencial dispersa los intentos a lo largo del tiempo.
+  - id: S4
+    url: https://bench.taller-etiquetas.test/reintentos/exponencial
+    title: Medición de retroceso exponencial del Taller de Etiquetas
+    tier: T2
+    date: "2026-06-11"
+    snapshot: |
+      Medición de retroceso exponencial
+
+      Los clientes con ventana fija reintentaron todos en el mismo instante.
+      El retroceso exponencial redujo la cantidad de intentos simultáneos.
+
+artifacts:
+  contradictory-sources-retry-window/notes/sources/S1/content.md: |
+    Manual de ventanas de reintento
+
+    La ventana fija elimina las ráfagas de reintentos sincronizados.
+    El cliente vuelve a intentar cada dos segundos hasta agotar los intentos.
+  contradictory-sources-retry-window/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.reintento-lab.example/clientes/ventana
+    declared_url: https://docs.reintento-lab.example/clientes/ventana
+    final_url: https://docs.reintento-lab.example/clientes/ventana
+    redirects: []
+    title: Manual de ventanas de reintento de Reintento Lab
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: ba6dac5b47e776eec238884003162ba6c92f569a6993bbd813b4a63b1d053fca
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: reintento-lab
+    status: ok
+  contradictory-sources-retry-window/notes/sources/S2/content.md: |
+    Medición de ventana fija
+
+    La ventana fija mantiene un intervalo constante entre intentos.
+    El conjunto de pruebas usa clientes sintéticos y un servidor simulado.
+  contradictory-sources-retry-window/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/reintentos/ventana-fija
+    declared_url: https://bench.metodos-abiertos.test/reintentos/ventana-fija
+    final_url: https://bench.metodos-abiertos.test/reintentos/ventana-fija
+    redirects: []
+    title: Medición de ventana fija de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 78eec972215ec0439f5084429cb3ca64e49978f3b1fae6c7cf07eca5b0b66f67
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  contradictory-sources-retry-window/notes/sources/S3/content.md: |
+    Manual de reintentos
+
+    La ventana fija produce ráfagas sincronizadas de reintentos.
+    El retroceso exponencial dispersa los intentos a lo largo del tiempo.
+  contradictory-sources-retry-window/notes/sources/S3/meta.yaml: |
+    schema_version: 2
+    url: https://docs.ventana-abierta.example/reintentos/exponencial
+    declared_url: https://docs.ventana-abierta.example/reintentos/exponencial
+    final_url: https://docs.ventana-abierta.example/reintentos/exponencial
+    redirects: []
+    title: Manual de reintentos de Ventana Abierta
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 95ecbcdc10fae524bd18c423fc12acba84412e252115d03e903efd2b428ed1f3
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: ventana-abierta
+    status: ok
+  contradictory-sources-retry-window/notes/sources/S4/content.md: |
+    Medición de retroceso exponencial
+
+    Los clientes con ventana fija reintentaron todos en el mismo instante.
+    El retroceso exponencial redujo la cantidad de intentos simultáneos.
+  contradictory-sources-retry-window/notes/sources/S4/meta.yaml: |
+    schema_version: 2
+    url: https://bench.taller-etiquetas.test/reintentos/exponencial
+    declared_url: https://bench.taller-etiquetas.test/reintentos/exponencial
+    final_url: https://bench.taller-etiquetas.test/reintentos/exponencial
+    redirects: []
+    title: Medición de retroceso exponencial del Taller de Etiquetas
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 1d43a4f1378485024f63bd311a25b65f78822070a4260bbec37b90c31e59511b
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: taller-etiquetas
+    status: ok
+  contradictory-sources-retry-window/brief.md: |
+    ---
+    research: contradictory-sources-retry-window
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 2
+    ---
+
+    ## Pregunta
+    ¿Conviene una ventana de reintentos fija o exponencial para un cliente inventado?
+
+    ## Hipótesis
+    El retroceso exponencial dispersará mejor los intentos que una ventana fija.
+
+    ## Contexto
+    El escenario es inventado y no describe ningún cliente ni ninguna medición real.
+
+    ## Alcance
+    Incluye dos estrategias de reintento. No incluye red real, cuotas ni producción.
+
+    ## Criterios de evaluación
+    - C1: cada alternativa declara al menos una fuente de primera mano.
+    - C2: las fuentes citadas coinciden sobre el comportamiento de la ventana fija.
+
+    ## Riesgos de adopción
+    Fuentes que se contradicen pueden sostener cualquiera de las dos recomendaciones.
+  contradictory-sources-retry-window/notes/landscape.md: |
+    ---
+    research: contradictory-sources-retry-window
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.reintento-lab.example/clientes/ventana
+        tier: T1
+        date: 2026-05-19
+        alternative: ventana-fija
+      - id: S2
+        url: https://bench.metodos-abiertos.test/reintentos/ventana-fija
+        tier: T2
+        date: 2026-06-05
+        alternative: ventana-fija
+      - id: S3
+        url: https://docs.ventana-abierta.example/reintentos/exponencial
+        tier: T1
+        date: 2026-05-27
+        alternative: retroceso-exponencial
+      - id: S4
+        url: https://bench.taller-etiquetas.test/reintentos/exponencial
+        tier: T2
+        date: 2026-06-11
+        alternative: retroceso-exponencial
+    ---
+
+    ## Alternativas evaluadas
+    La ventana fija elimina las ráfagas de reintentos sincronizados [S1].
+    La ventana fija produce ráfagas sincronizadas de reintentos [S3].
+
+    ## Madurez
+    El retroceso exponencial dispersa los intentos a lo largo del tiempo [cf. S3].
+
+    ## Costos
+    La ventana fija mantiene un intervalo constante entre intentos [S2].
+
+    ## Riesgos
+    Las dos fuentes de primera mano describen el mismo comportamiento de forma opuesta.
+
+    ## Contra-evidencia
+    Los clientes con ventana fija reintentaron todos en el mismo instante [S4].
+  contradictory-sources-retry-window/decision-memo.md: |
+    ---
+    research: contradictory-sources-retry-window
+    date: 2026-07-21
+    stage: transfer
+    ring: assess
+    audience: equipo
+    evidence_claim_ids:
+      - claim-f4dacf658455a998cb2f52990e731c08d91f821af896aba657206fc0c6964f3d
+      - claim-4b69ceda873fa93926d734742e2af6827f841ff4ea45f84d91c672bbbe05db28
+      - claim-5e16fce5574e68535358135ebf78ef5c0617573d586e0c05d717cef5966edfa1
+      - claim-b06f1276799615fb3649cfa928e56750deb6af3354516efa8f529d011e5e3c83
+    ---
+
+    ## Recomendación
+    En el contexto del cliente inventado, ante fuentes de primera mano que se contradicen,
+    decidimos evaluar el retroceso exponencial para lograr intentos dispersos, porque la
+    evidencia disponible no permite decidir sobre la ventana fija, aceptando el trade-off
+    de dejar abierta una contradicción documental.
+
+    ## Alternativas evaluadas
+    Ventana de reintentos fija y retroceso exponencial.
+
+    ## Criterios de selección
+    Dispersión de los intentos y consistencia entre las fuentes citadas.
+
+    ## Riesgos y limitaciones
+    Dos fuentes T1 sostienen afirmaciones opuestas y ninguna medición propia las arbitra.
+
+    ## Próximos pasos
+    Diseñar un probe propio que decida la contradicción antes de subir el anillo.
+
+    ## Audiencia
+    Equipo ficticio de plataforma interna.
+  contradictory-sources-retry-window/assets/playbook.md: |
+    ---
+    research: contradictory-sources-retry-window
+    date: 2026-07-21
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Arbitrar fuentes contradictorias
+
+    1. Escribir las dos afirmaciones opuestas una al lado de la otra.
+    2. No elegir alternativa mientras la contradicción siga sin arbitrar.
+    3. Diseñar una medición propia que resuelva la diferencia.
+
+commands:
+  - [sdr, new, contradictory-sources-retry-window, --title, "Ventana de reintentos inventada con fuentes que se contradicen",
+     --question, "¿Conviene una ventana de reintentos fija o exponencial para un cliente inventado?",
+     --mode, light, --owner, "Bench Actor", --timebox, "2"]
+  - [sdr, check, contradictory-sources-retry-window, --json]
+  - [sdr, advance, contradictory-sources-retry-window]
+  - [sdr, verify-claims, contradictory-sources-retry-window, --json]
+  - [sdr, advance, contradictory-sources-retry-window]
+  - [sdr, approve, contradictory-sources-retry-window, --by, "Bench Reviewer"]
+  - [sdr, advance, contradictory-sources-retry-window]

@@ -1,0 +1,13 @@
+schema_version: 2
+url: https://docs.queue-lab.example/retry-window
+declared_url: https://docs.queue-lab.example/retry-window
+final_url: https://docs.queue-lab.example/retry-window
+redirects: []
+title: Synthetic queue retry guide
+captured_at: '2026-08-01T00:00:00+00:00'
+content_hash: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
+http_status: 200
+content_type: text/plain
+content_eligible: true
+org: queue-lab
+status: ok

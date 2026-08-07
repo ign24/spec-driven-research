@@ -1,0 +1,18 @@
+slug: software-no-edge-focal
+title: Synthetic queue retry comparison
+question: Which retry interval should a separate invented queue evaluate?
+mode: light
+stage: explore
+status: active
+owner: Bench Actor
+timebox: 1
+created: '2026-08-03'
+updated: '2026-08-03'
+tags: [synthetic, software]
+schema_version: 2
+validation: {}
+judge: {}
+verify_probe: {}
+overrides: []
+reopens: []
+archived: false

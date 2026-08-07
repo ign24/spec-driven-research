@@ -1,0 +1,18 @@
+slug: garden-focal
+title: Synthetic courtyard planter investigation
+question: Which watering interval should an invented courtyard planter evaluate?
+mode: light
+stage: explore
+status: active
+owner: Bench Actor
+timebox: 1
+created: '2026-08-02'
+updated: '2026-08-02'
+tags: [synthetic, horticulture]
+schema_version: 2
+validation: {}
+judge: {}
+verify_probe: {}
+overrides: []
+reopens: []
+archived: false

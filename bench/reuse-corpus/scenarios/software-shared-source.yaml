@@ -1,0 +1,116 @@
+kind: cross-investigation-reuse
+id: software-shared-source
+domain: software-engineering
+category: shared-source-and-decision-lineage
+arm: light
+history: history-present
+seeds:
+  - id: software-seed
+    role: seed
+    status: done
+    schema_version: 2
+    evidence_claim_ids:
+      - claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+    source: investigations/software-seed
+    artifacts:
+      - path: sdr.yaml
+        sha256: 0d32abca5d21600f86c1ddc5c2eeddfd8ed7a09f1f5ce40e30f4efd9f027382a
+      - path: notes/landscape.md
+        sha256: b651dc4eb4d49b543d3ce55709af992d46f7598c2f83d913791c5631a8def833
+      - path: notes/sources/S1/content.md
+        sha256: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
+      - path: notes/sources/S1/meta.yaml
+        sha256: 2197e09157e98f9201d265c1a721a7deeec710f9dd5a59e3c9777d7bb02f4c3c
+      - path: decision-memo.md
+        sha256: 07aebe5f1979a542eb97003f0f274cd3c67dc7075390fcf4dde65f47ab2f3cfd
+focal:
+  id: software-focal
+  role: focal
+  status: active
+  schema_version: 2
+  evidence_claim_ids: []
+  source: investigations/software-focal
+  artifacts:
+    - path: sdr.yaml
+      sha256: 7b9e8c3956a478337dfa55b718427d3000e982a1c52daf1805c38194b5d7effd
+    - path: notes/landscape.md
+      sha256: bb5f0a56d7dea2073d3fa8a32741f6b78a09621811585d2fa45a8f56b8ffebfd
+    - path: notes/sources/S7/content.md
+      sha256: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
+    - path: notes/sources/S7/meta.yaml
+      sha256: ed76ed6d5808bfc57e0c0d2f4854253494365966cb282bf6c1878e483199a2f7
+positive_expectations:
+  - id: shared-source-dependencies
+    command: [cross, source, https://docs.queue-lab.example/retry-window, --json]
+    projection:
+      source_identity: https://docs.queue-lab.example/retry-window
+      citations:
+        - investigation: software-focal
+          source_id: S7
+          url: http://www.docs.queue-lab.example/retry-window/?utm_source=fixture
+          identity: https://docs.queue-lab.example/retry-window
+          resolver: normalized-url
+          identifier: https://docs.queue-lab.example/retry-window
+        - investigation: software-seed
+          source_id: S1
+          url: https://docs.queue-lab.example/retry-window
+          identity: https://docs.queue-lab.example/retry-window
+          resolver: normalized-url
+          identifier: https://docs.queue-lab.example/retry-window
+      claims:
+        - investigation: software-focal
+          claim_id: claim-4e4b05e0c1cb624aae927ea297f426c553cb7277afecf417be745285b9f92522
+          source_id: S7
+          source_identity: https://docs.queue-lab.example/retry-window
+          current_evidence_health: verified
+        - investigation: software-seed
+          claim_id: claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+          source_id: S1
+          source_identity: https://docs.queue-lab.example/retry-window
+          current_evidence_health: verified
+      lineage_statuses:
+        - investigation: software-seed
+          status: declared claim dependencies
+      dependent_decisions:
+        - investigation: software-seed
+          claim_id: claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+  - id: shared-source-edge-provenance
+    command: [cross, derive, --json]
+    projection:
+      resolver_chain:
+        - name: work-identifier
+          version: "1"
+        - name: normalized-url
+          version: "1"
+      joins:
+        - investigations: [software-focal, software-seed]
+          kind: anchored_claim
+          normalized_sentence: the invented queue uses a fixed seven-second retry window.
+          origins:
+            - software-focal:claim-4e4b05e0c1cb624aae927ea297f426c553cb7277afecf417be745285b9f92522
+            - software-seed:claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+          provenance: explicit
+          source_identities: [https://docs.queue-lab.example/retry-window]
+          sources: [software-focal:S7, software-seed:S1]
+        - identifier: https://docs.queue-lab.example/retry-window
+          investigations: [software-focal, software-seed]
+          kind: source_identity
+          origins: [software-focal:S7, software-seed:S1]
+          provenance: explicit
+          resolver: normalized-url
+negative_controls:
+  - id: no-semantic-or-unrelated-records
+    command: [cross, source, https://docs.queue-lab.example/retry-window, --json]
+    absent:
+      - path: citations
+        record:
+          investigation: software-seed
+          source_id: S9
+          url: https://docs.queue-lab.example/unrelated
+          identity: https://docs.queue-lab.example/unrelated
+          resolver: normalized-url
+          identifier: https://docs.queue-lab.example/unrelated
+      - path: dependent_decisions
+        record:
+          investigation: software-focal
+          claim_id: claim-0000000000000000000000000000000000000000000000000000000000000000

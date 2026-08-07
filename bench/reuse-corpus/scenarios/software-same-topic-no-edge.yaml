@@ -1,0 +1,77 @@
+kind: cross-investigation-reuse
+id: software-same-topic-no-edge
+domain: software-engineering
+category: same-topic-without-explicit-edge
+arm: light
+history: history-present
+seeds:
+  - id: software-seed
+    role: seed
+    status: done
+    schema_version: 2
+    evidence_claim_ids:
+      - claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+    source: investigations/software-seed
+    artifacts:
+      - path: sdr.yaml
+        sha256: 0d32abca5d21600f86c1ddc5c2eeddfd8ed7a09f1f5ce40e30f4efd9f027382a
+      - path: notes/landscape.md
+        sha256: b651dc4eb4d49b543d3ce55709af992d46f7598c2f83d913791c5631a8def833
+      - path: notes/sources/S1/content.md
+        sha256: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
+      - path: notes/sources/S1/meta.yaml
+        sha256: 2197e09157e98f9201d265c1a721a7deeec710f9dd5a59e3c9777d7bb02f4c3c
+      - path: decision-memo.md
+        sha256: 07aebe5f1979a542eb97003f0f274cd3c67dc7075390fcf4dde65f47ab2f3cfd
+focal:
+  id: software-no-edge-focal
+  role: focal
+  status: active
+  schema_version: 2
+  evidence_claim_ids: []
+  source: investigations/software-no-edge-focal
+  artifacts:
+    - path: sdr.yaml
+      sha256: 97f2c839a350bc618308f8b053857b27bc8a653e6ccdc950418c8a0e717c6117
+    - path: notes/landscape.md
+      sha256: d6eaa02dd6dbaef24cc69397054e4f24b2119a584ed9364aba229940cb623a67
+    - path: notes/sources/S8/content.md
+      sha256: a9734d00872123155a23049ff0b1b0b8bf651149272be98c032cd06ce7d214d1
+    - path: notes/sources/S8/meta.yaml
+      sha256: 81966e10102ecfadf908790eba0d7293875876fddddd5f67dbf1ef5115dd5727
+positive_expectations:
+  - id: seed-source-without-cross-edge
+    command: [cross, source, https://docs.queue-lab.example/retry-window, --json]
+    projection:
+      source_identity: https://docs.queue-lab.example/retry-window
+      citations:
+        - investigation: software-seed
+          source_id: S1
+          url: https://docs.queue-lab.example/retry-window
+          identity: https://docs.queue-lab.example/retry-window
+          resolver: normalized-url
+          identifier: https://docs.queue-lab.example/retry-window
+      claims:
+        - investigation: software-seed
+          claim_id: claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+          source_id: S1
+          source_identity: https://docs.queue-lab.example/retry-window
+          current_evidence_health: verified
+      lineage_statuses:
+        - investigation: software-seed
+          status: declared claim dependencies
+      dependent_decisions:
+        - investigation: software-seed
+          claim_id: claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
+negative_controls:
+  - id: same-topic-has-no-explicit-join
+    command: [cross, derive, --json]
+    absent:
+      - path: joins
+        record:
+          identifier: https://docs.queue-lab.example/retry-window
+          investigations: [software-no-edge-focal, software-seed]
+          kind: source_identity
+          origins: [software-no-edge-focal:S8, software-seed:S1]
+          provenance: explicit
+          resolver: normalized-url

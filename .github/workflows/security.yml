@@ -37,6 +37,7 @@ jobs:
           --exclude .git --exclude .venv --exclude .pytest_cache --exclude .ruff_cache
           --exclude build --exclude dist --exclude examples/__pycache__
           --exclude src/sdr/__pycache__ --exclude tests/__pycache__
+          --exclude bench/__pycache__ --exclude bench/harness/__pycache__
       - name: Install official Gitleaks CLI
         # v8.28.0, tag commit 39fdb480a06768cc41a84ef86959c07ff33091c4.
         run: go install github.com/zricethezav/gitleaks/v8@v8.28.0

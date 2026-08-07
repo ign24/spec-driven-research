@@ -1,0 +1,230 @@
+id: clean-full-checksum-shim
+mode: full
+title: Adaptador inventado de verificación de sumas
+question: >-
+  ¿Un adaptador local puede verificar sumas de tres cadenas inventadas de forma repetible?
+planted_defects: []
+notes: >-
+  Clean full item, including the probe stage. The declared probe expectation matches the
+  marker the command prints, every criterion of the brief has a result, and each factual
+  claim is a literal sentence of its snapshot. A finding on this item is a false positive.
+
+sources:
+  - id: S1
+    url: https://docs.suma-lab.example/adaptador/verificacion
+    title: Manual del adaptador de verificación de Suma Lab
+    tier: T1
+    date: "2026-04-28"
+    snapshot: |
+      Manual del adaptador de verificación
+
+      El adaptador recorre las cadenas en orden y devuelve una suma estable.
+      La verificación no abre conexiones de red ni escribe estado en disco.
+  - id: S2
+    url: https://bench.metodos-abiertos.test/adaptadores/comparativa
+    title: Comparativa de adaptadores de Métodos Abiertos
+    tier: T2
+    date: "2026-05-30"
+    snapshot: |
+      Comparativa de adaptadores
+
+      La biblioteca externa agrega una dependencia de compilación por plataforma.
+      El adaptador local se limita a la biblioteca estándar del intérprete.
+
+artifacts:
+  clean-full-checksum-shim/notes/sources/S1/content.md: |
+    Manual del adaptador de verificación
+
+    El adaptador recorre las cadenas en orden y devuelve una suma estable.
+    La verificación no abre conexiones de red ni escribe estado en disco.
+  clean-full-checksum-shim/notes/sources/S1/meta.yaml: |
+    schema_version: 2
+    url: https://docs.suma-lab.example/adaptador/verificacion
+    declared_url: https://docs.suma-lab.example/adaptador/verificacion
+    final_url: https://docs.suma-lab.example/adaptador/verificacion
+    redirects: []
+    title: Manual del adaptador de verificación de Suma Lab
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: b9bad86fd5c974cdc9e42a0b5141a10bb56852337165e60d683f27c9fa5e6fc5
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: suma-lab
+    status: ok
+  clean-full-checksum-shim/notes/sources/S2/content.md: |
+    Comparativa de adaptadores
+
+    La biblioteca externa agrega una dependencia de compilación por plataforma.
+    El adaptador local se limita a la biblioteca estándar del intérprete.
+  clean-full-checksum-shim/notes/sources/S2/meta.yaml: |
+    schema_version: 2
+    url: https://bench.metodos-abiertos.test/adaptadores/comparativa
+    declared_url: https://bench.metodos-abiertos.test/adaptadores/comparativa
+    final_url: https://bench.metodos-abiertos.test/adaptadores/comparativa
+    redirects: []
+    title: Comparativa de adaptadores de Métodos Abiertos
+    captured_at: '2026-07-20T00:00:00+00:00'
+    content_hash: 87c1fd3adc7dd6947a923c5e8b85a2d0bb3adfb55897696f801184f7b5d152ad
+    http_status: 200
+    content_type: text/plain
+    content_eligible: true
+    org: metodos-abiertos
+    status: ok
+  clean-full-checksum-shim/brief.md: |
+    ---
+    research: clean-full-checksum-shim
+    date: 2026-07-20
+    stage: intake
+    owner: Bench Actor
+    timebox: 3
+    ---
+
+    ## Pregunta
+    ¿Un adaptador local puede verificar sumas de tres cadenas inventadas de forma repetible?
+
+    ## Hipótesis
+    Una función pequeña producirá la misma suma para las mismas entradas inventadas.
+
+    ## Contexto
+    El ejercicio demuestra una prueba ejecutable sin red ni dependencias adicionales.
+
+    ## Alcance
+    Incluye tres cadenas inventadas. No incluye archivos de usuario, red ni producción.
+
+    ## Criterios de evaluación
+    - C1: las tres cadenas producen la suma esperada.
+    - C2: dos ejecuciones consecutivas producen exactamente el mismo marcador.
+
+    ## Riesgos de adopción
+    Tres cadenas inventadas no representan el volumen ni la variedad de un sistema real.
+  clean-full-checksum-shim/notes/landscape.md: |
+    ---
+    research: clean-full-checksum-shim
+    date: 2026-07-20
+    stage: explore
+    sources:
+      - id: S1
+        url: https://docs.suma-lab.example/adaptador/verificacion
+        tier: T1
+        date: 2026-04-28
+        alternative: adaptador-local
+      - id: S2
+        url: https://bench.metodos-abiertos.test/adaptadores/comparativa
+        tier: T2
+        date: 2026-05-30
+        alternative: adaptador-local
+    ---
+
+    ## Alternativas evaluadas
+    El ejercicio compara un adaptador local con una biblioteca externa inventada [cf. S2].
+    El adaptador recorre las cadenas en orden y devuelve una suma estable [S1].
+
+    ## Madurez
+    Ambas alternativas alcanzan para una demostración de capacitación [cf. S1].
+
+    ## Costos
+    La biblioteca externa agrega una dependencia de compilación por plataforma [S2].
+
+    ## Riesgos
+    El conjunto fijo de entradas puede ocultar diferencias de rendimiento entre alternativas.
+
+    ## Contra-evidencia
+    No se encontró evidencia en contra dentro de las dos fuentes inventadas declaradas.
+  clean-full-checksum-shim/probe/check.py: |
+    def checksum(value: str) -> int:
+        return sum(index * ord(char) for index, char in enumerate(value.strip(), start=1))
+
+
+    inputs = ["alfa", "beta", "gamma"]
+    first = [checksum(value) for value in inputs]
+    second = [checksum(value) for value in inputs]
+    assert first == second
+    assert all(total > 0 for total in first)
+    print("CHECKSUM_SHIM_OK")
+  clean-full-checksum-shim/probe/results.md: |
+    ---
+    research: clean-full-checksum-shim
+    date: 2026-07-21
+    stage: probe
+    verify:
+      action: run
+      argv: [python, check.py]
+      expect: CHECKSUM_SHIM_OK
+      environment: clean
+    ---
+
+    ## Resultados por criterio
+    | criterio | resultado | evidencia |
+    |---|---|---|
+    | C1 | cumple: las tres sumas coinciden con lo esperado | `probe/check.py` |
+    | C2 | cumple: dos ejecuciones producen el mismo marcador | `probe/check.py` |
+
+    ## Reproducción
+    ```bash
+    python check.py
+    ```
+  clean-full-checksum-shim/decision-memo.md: |
+    ---
+    research: clean-full-checksum-shim
+    date: 2026-07-22
+    stage: transfer
+    ring: trial
+    audience: equipo
+    evidence_claim_ids:
+      - claim-69de0b03893912c1290cdcded1ea0814447afa31ec99f63c2db19b7f9710ddd1
+      - claim-3f83a75e16e40346a3551eacb22e505f4a0f4999158375f58ec3afab9fc347d6
+    ---
+
+    ## Recomendación
+    En el contexto del ejercicio de sumas inventadas, ante la necesidad de evidencia
+    ejecutable, decidimos probar el adaptador local para lograr verificaciones repetibles,
+    porque el probe determinista cumplió C1 y C2, aceptando el trade-off de que tres
+    cadenas inventadas no representan producción.
+
+    ## Alternativas evaluadas
+    Adaptador local sobre la biblioteca estándar y biblioteca externa inventada.
+
+    ## Criterios de selección
+    Repetibilidad exacta del marcador y ausencia de dependencias de compilación.
+
+    ## Riesgos y limitaciones
+    No se midieron volúmenes grandes, entradas hostiles ni integración con otros sistemas.
+
+    ## Próximos pasos
+    Conservar el probe como demostración portable y no extrapolar su resultado.
+
+    ## Audiencia
+    Equipo ficticio de capacitación interna.
+  clean-full-checksum-shim/assets/playbook.md: |
+    ---
+    research: clean-full-checksum-shim
+    date: 2026-07-22
+    stage: reuse
+    type: playbook
+    audience: internal
+    ---
+
+    # Probe portable de verificación
+
+    1. Usar únicamente datos inventados y embebidos en el propio artefacto.
+    2. Declarar una acción explícita y un vector de argumentos.
+    3. Esperar un marcador determinista y volver a ejecutarlo para confirmarlo.
+
+probe:
+  action: run
+  argv: [python, check.py]
+  expect: CHECKSUM_SHIM_OK
+  environment: clean
+
+commands:
+  - [sdr, new, clean-full-checksum-shim, --title, "Adaptador inventado de verificación de sumas",
+     --question, "¿Un adaptador local puede verificar sumas de tres cadenas inventadas de forma repetible?",
+     --mode, full, --owner, "Bench Actor", --timebox, "3"]
+  - [sdr, check, clean-full-checksum-shim, --json]
+  - [sdr, advance, clean-full-checksum-shim]
+  - [sdr, verify-claims, clean-full-checksum-shim, --json]
+  - [sdr, advance, clean-full-checksum-shim]
+  - [sdr, verify-probe, clean-full-checksum-shim, --json]
+  - [sdr, advance, clean-full-checksum-shim]
+  - [sdr, approve, clean-full-checksum-shim, --by, "Bench Reviewer"]
+  - [sdr, advance, clean-full-checksum-shim]

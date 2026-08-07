@@ -1,0 +1,18 @@
+slug: software-focal
+title: Synthetic worker retry investigation
+question: Which retry window should an invented worker evaluate?
+mode: light
+stage: explore
+status: active
+owner: Bench Actor
+timebox: 1
+created: '2026-08-02'
+updated: '2026-08-02'
+tags: [synthetic, software]
+schema_version: 2
+validation: {}
+judge: {}
+verify_probe: {}
+overrides: []
+reopens: []
+archived: false

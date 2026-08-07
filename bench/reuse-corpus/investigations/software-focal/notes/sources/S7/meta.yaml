@@ -1,0 +1,13 @@
+schema_version: 2
+url: http://www.docs.queue-lab.example/retry-window/?utm_source=fixture
+declared_url: http://www.docs.queue-lab.example/retry-window/?utm_source=fixture
+final_url: http://www.docs.queue-lab.example/retry-window/?utm_source=fixture
+redirects: []
+title: Synthetic queue retry guide alternate location
+captured_at: '2026-08-02T00:00:00+00:00'
+content_hash: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
+http_status: 200
+content_type: text/plain
+content_eligible: true
+org: queue-lab
+status: ok

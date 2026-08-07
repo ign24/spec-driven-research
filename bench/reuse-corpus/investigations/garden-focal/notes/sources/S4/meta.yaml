@@ -1,0 +1,13 @@
+schema_version: 2
+url: https://field.garden-lab.test/rooftop-watering
+declared_url: https://field.garden-lab.test/rooftop-watering
+final_url: https://field.garden-lab.test/rooftop-watering
+redirects: []
+title: Synthetic rooftop watering record
+captured_at: '2026-08-02T00:00:00+00:00'
+content_hash: 93a63efa7ff3524413226fe94e7816d36fe459ac776c0d0e3bdbf8726c845ce0
+http_status: 200
+content_type: text/plain
+content_eligible: true
+org: garden-lab
+status: ok
