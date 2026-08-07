@@ -23,6 +23,10 @@ class TrailResult:
     warning: str = ""
 
 
+class TargetPathStagedError(ValueError):
+    """A focused commit target already has operator-owned staged content."""
+
+
 def _git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False)
 
@@ -65,6 +69,23 @@ def _restore_index(path: Path, contents: bytes | None) -> str:
     except OSError as exc:
         return f"no se pudo restaurar el staging previo: {exc}"
     return ""
+
+
+def require_unstaged_paths(research: Research, paths: list[Path]) -> None:
+    """Refuse a default commit before mutating a target with staged content."""
+    root = _repo_root(research.root)
+    if root is None:
+        return
+    relative, warning = _relative_paths(paths, root, "target path")
+    if warning:
+        raise TargetPathStagedError(warning)
+    staged = _git(["diff", "--cached", "--quiet", "--", *relative], cwd=root)
+    if staged.returncode == 1:
+        raise TargetPathStagedError(
+            "target ledger is already staged; use --no-commit or resolve staging before retrying"
+        )
+    if staged.returncode != 0:
+        raise TargetPathStagedError("could not inspect target ledger staging safely")
 
 
 def commit_transition(

@@ -224,6 +224,7 @@ def test_transfer_requires_human_approval(tmp_path):
             stage: transfer
             ring: assess
             audience: equipo
+            evidence_claim_ids: []
             ---
 
             ## Recomendación
@@ -256,6 +257,51 @@ def test_transfer_requires_human_approval(tmp_path):
     r.save()
     ok = lifecycle.advance(r)
     assert ok.ok
+    assert r.meta.stage == "reuse"
+
+
+def test_reopened_schema_v1_transfer_memo_without_lineage_advances_deterministically(tmp_path):
+    r = _valid_intake(tmp_path, mode="light")
+    r.meta.schema_version = 1
+    r.meta.stage = "transfer"
+    r.meta.approval = Approval(by="nacho", date="2026-07-03")
+    r.artifact_path("decision-memo.md").write_text(
+        textwrap.dedent(
+            """
+            ---
+            research: eval-foo
+            date: 2026-07-03
+            stage: transfer
+            ring: assess
+            audience: equipo
+            ---
+
+            ## Recomendación
+            Decidimos evaluar Foo para soporte, porque la evidencia es parcial, aceptando el trade-off de no adoptarlo todavía.
+
+            ## Alternativas evaluadas
+            Foo, Bar.
+
+            ## Criterios de selección
+            Costo.
+
+            ## Riesgos y limitaciones
+            Lock-in.
+
+            ## Próximos pasos
+            Piloto.
+
+            ## Audiencia
+            Equipo.
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    r.save()
+
+    result = lifecycle.advance(r)
+
+    assert result.ok
     assert r.meta.stage == "reuse"
 
 

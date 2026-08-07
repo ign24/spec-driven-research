@@ -7,8 +7,10 @@ CAPABILITIES = {
     "public-repository-boundary",
     "python-distribution",
     "agent-integrations",
+    "cross-investigation-reuse",
     "public-documentation",
     "release-quality-and-security",
+    "research-evaluation-harness",
     "sdr-lifecycle-evidence-contract",
 }
 

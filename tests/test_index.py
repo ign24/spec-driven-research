@@ -121,20 +121,28 @@ def test_index_recalculates_claims_without_persisting_and_marks_stale_ledger(tmp
     source.joinpath("meta.yaml").write_text(
         yaml.safe_dump(
             {
+                "schema_version": 2,
                 "url": "https://docs.example.com/foo",
+                "declared_url": "https://docs.example.com/foo",
+                "final_url": "https://docs.example.com/foo",
+                "redirects": [],
+                "http_status": 200,
+                "captured_at": "2026-07-11T00:00:00+00:00",
+                "content_type": "text/plain",
+                "content_eligible": True,
                 "status": "ok",
                 "content_hash": hashlib.sha256(content.encode()).hexdigest(),
             }
         ),
         encoding="utf-8",
     )
-    verification.verify_explore_claims(r)
+    assert verification.verify_explore_claims(r).passed
     ledger = r.artifact_path("notes/sources/verification.yaml")
     before = ledger.read_bytes()
     source.joinpath("content.md").write_text("Contenido reemplazado.", encoding="utf-8")
 
     md = index.build_index(tmp_path)
 
-    assert "not_anchored:1" in md
+    assert "unverifiable:1" in md
     assert "stale" in md
     assert ledger.read_bytes() == before

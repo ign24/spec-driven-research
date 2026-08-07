@@ -8,6 +8,7 @@ estas estructuras, de modo que no puedan divergir.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 
 STAGES: tuple[str, ...] = ("intake", "explore", "probe", "transfer", "reuse")
@@ -38,6 +39,7 @@ ASSET_AUDIENCES: tuple[str, ...] = ("internal", "external")
 
 # Anillos que exigen una etapa probe aprobada con resultados.
 RINGS_REQUIRING_PROBE: frozenset[str] = frozenset({"adopt", "trial"})
+_CLAIM_ID_RE = re.compile(r"^claim-[0-9a-f]{64}$")
 
 
 @dataclass(frozen=True)
@@ -114,7 +116,14 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
     "transfer": ArtifactSpec(
         stage="transfer",
         primary_file="decision-memo.md",
-        frontmatter_required=("research", "date", "stage", "ring", "audience"),
+        frontmatter_required=(
+            "research",
+            "date",
+            "stage",
+            "ring",
+            "audience",
+            "evidence_claim_ids",
+        ),
         required_sections=(
             "Recomendación",
             "Alternativas evaluadas",
@@ -123,7 +132,7 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
             "Próximos pasos",
             "Audiencia",
         ),
-        checks=("y_statement", "ring_backed_by_evidence"),
+        checks=("y_statement", "ring_backed_by_evidence", "evidence_claim_ids"),
     ),
     "reuse": ArtifactSpec(
         stage="reuse",
@@ -138,8 +147,8 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
 # Cantidad mínima de criterios de evaluación verificables en el brief.
 MIN_EVALUATION_CRITERIA: int = 2
 
-# Cantidad mínima de dominios independientes en las fuentes de explore.
-MIN_INDEPENDENT_DOMAINS: int = 2
+# Cantidad mínima de hosts declarados distintos en las fuentes de explore.
+MIN_DISTINCT_DECLARED_HOSTS: int = 2
 
 
 # Plantilla que alimenta el artefacto de cada etapa (viven en `templates/`).
@@ -164,9 +173,34 @@ def artifact_for(stage: str, schema_version: int = 1) -> ArtifactSpec:
             required_sections=(*spec.required_sections, "Contra-evidencia"),
             checks=(*spec.checks, "tier_plausibility", "claim_citation_coverage"),
         )
+    if stage == "transfer" and schema_version < 2:
+        return replace(
+            spec,
+            frontmatter_required=tuple(
+                field for field in spec.frontmatter_required if field != "evidence_claim_ids"
+            ),
+        )
     return spec
 
 
 def template_for(stage: str) -> str:
     """Nombre del archivo de plantilla que alimenta la etapa."""
     return TEMPLATE_FILES[stage]
+
+
+def validate_evidence_claim_ids(value: object) -> tuple[str, ...]:
+    """Validate and return a decision memo's exact persisted claim IDs."""
+    if not isinstance(value, list):
+        raise ValueError("evidence_claim_ids must be a list")
+    claim_ids: list[str] = []
+    seen: set[str] = set()
+    for index, claim_id in enumerate(value):
+        if not isinstance(claim_id, str) or not claim_id.strip():
+            raise ValueError(f"evidence_claim_ids[{index}] must not be empty")
+        if not _CLAIM_ID_RE.fullmatch(claim_id):
+            raise ValueError(f"malformed claim ID: {claim_id}")
+        if claim_id in seen:
+            raise ValueError(f"duplicate claim ID: {claim_id}")
+        seen.add(claim_id)
+        claim_ids.append(claim_id)
+    return tuple(claim_ids)

@@ -1,5 +1,7 @@
 import textwrap
 
+import pytest
+
 from sdr import parser
 
 
@@ -73,3 +75,38 @@ def test_section_match_is_whitespace_and_case_insensitive(tmp_path):
     path = _write(tmp_path, "##   riesgos DE adopción\n\ntexto\n")
     art = parser.parse_artifact(path)
     assert art.has_content("Riesgos de adopción")
+
+
+def test_duplicate_top_level_evidence_claim_ids_is_rejected_deterministically(tmp_path):
+    path = _write(
+        tmp_path,
+        """
+        ---
+        research: eval-foo
+        evidence_claim_ids: []
+        evidence_claim_ids:
+          - claim-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        ---
+        """,
+    )
+
+    with pytest.raises(
+        parser.DuplicateFrontmatterKeyError,
+        match="duplicate top-level frontmatter key: evidence_claim_ids",
+    ):
+        parser.parse_artifact(path)
+
+
+def test_unrelated_duplicate_frontmatter_keys_keep_existing_parser_behavior(tmp_path):
+    path = _write(
+        tmp_path,
+        """
+        ---
+        research: first
+        research: second
+        evidence_claim_ids: []
+        ---
+        """,
+    )
+
+    assert parser.parse_artifact(path).frontmatter["research"] == "second"

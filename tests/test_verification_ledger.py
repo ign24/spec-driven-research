@@ -1,4 +1,5 @@
 import hashlib
+import multiprocessing
 import os
 from pathlib import Path
 
@@ -9,13 +10,29 @@ from sdr.verification_ledger import (
     SCHEMA_VERSION,
     LedgerValidationError,
     empty_ledger,
+    ledger_directory_lock,
     load_ledger,
     make_claim_id,
     save_ledger,
+    validate_claim_references,
     validate_ledger,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _raise_while_locked_then_remain_alive(path: str, released, finish) -> None:
+    try:
+        with ledger_directory_lock(Path(path)):
+            raise RuntimeError("expected")
+    except RuntimeError:
+        released.set()
+        assert finish.wait(10)
+
+
+def _acquire_directory_lock(path: str, acquired) -> None:
+    with ledger_directory_lock(Path(path)):
+        acquired.set()
 
 
 def _verified_claim() -> dict:
@@ -48,6 +65,7 @@ def test_empty_ledger_declares_v2_collections() -> None:
         "schema_version": SCHEMA_VERSION,
         "claims": [],
         "resolutions": [],
+        "degradation_acknowledgements": [],
         "legacy": [],
     }
     assert SCHEMA_VERSION == 2
@@ -190,6 +208,7 @@ def test_loading_semantic_v1_separates_claims_into_legacy(tmp_path) -> None:
         "schema_version": 2,
         "claims": [],
         "resolutions": [],
+        "degradation_acknowledgements": [],
         "legacy": [
             old_claim,
             {"kind": "resolution", "data": old_resolution},
@@ -260,6 +279,17 @@ def test_unknown_active_state_survives_round_trip_and_is_inconsistent(tmp_path) 
     assert validate_ledger(loaded) == [
         f"claim {claim['claim_id']} has unknown active state: future_state"
     ]
+
+
+def test_reference_validation_does_not_weaken_whole_ledger_validation() -> None:
+    claim = _verified_claim() | {"state": "future_state", "future": {"data": 1}}
+    ledger = empty_ledger()
+    ledger["claims"].append(claim)
+
+    expected_issue = f"claim {claim['claim_id']} has unknown active state: future_state"
+    assert validate_claim_references(ledger, ()) == []
+    assert validate_claim_references(ledger, (claim["claim_id"],)) == [expected_issue]
+    assert validate_ledger(ledger) == [expected_issue]
 
 
 def test_save_is_stable_for_equivalent_ledger(tmp_path) -> None:
@@ -379,3 +409,28 @@ def test_save_replaces_file_atomically(tmp_path, monkeypatch) -> None:
     assert replacements[0][1] == path
     assert replacements[0][0].parent == path.parent
     assert not replacements[0][0].exists()
+
+
+def test_directory_lock_releases_on_exception_before_process_exit(tmp_path: Path) -> None:
+    path = tmp_path / "verification.yaml"
+    context = multiprocessing.get_context("fork")
+    released = context.Event()
+    finish = context.Event()
+    acquired = context.Event()
+    holder = context.Process(
+        target=_raise_while_locked_then_remain_alive,
+        args=(str(path), released, finish),
+    )
+    contender = context.Process(target=_acquire_directory_lock, args=(str(path), acquired))
+
+    holder.start()
+    assert released.wait(5)
+    contender.start()
+    assert acquired.wait(5)
+    assert holder.is_alive()
+    finish.set()
+    holder.join(10)
+    contender.join(10)
+
+    assert holder.exitcode == 0
+    assert contender.exitcode == 0

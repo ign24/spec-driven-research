@@ -58,6 +58,12 @@ def test_note_template_documents_contextual_references_outside_claim_matching():
     assert "queda fuera del matching textual" in text
 
 
+def test_decision_template_declares_structured_evidence_claim_ids():
+    art = parse_artifact(TEMPLATES_DIR / "decision-memo.md")
+
+    assert art.frontmatter["evidence_claim_ids"] == []
+
+
 def test_asset_template_and_skill_use_only_public_english_vocabulary():
     template = (TEMPLATES_DIR / "asset.md").read_text(encoding="utf-8")
     skill = (ROOT_DIR / "skills" / "sdr-reuse" / "SKILL.md").read_text(encoding="utf-8")
@@ -156,6 +162,35 @@ def test_public_documentation_set_includes_both_readmes():
     )
     for filename in expected:
         assert (ROOT_DIR / filename).is_file(), filename
+
+
+def test_cli_reference_documents_cross_investigation_command_contracts():
+    text = (ROOT_DIR / "docs/cli-reference.md").read_text(encoding="utf-8")
+
+    for command in (
+        "sdr cross derive",
+        "sdr cross source",
+        "sdr cross degraded",
+        "sdr acknowledge-degradation",
+    ):
+        assert command in text
+    for contract in (
+        "read-only",
+        "--json",
+        "--online",
+        "advisory",
+        "never blocks",
+        "--no-commit",
+        "commits by default",
+        "preserves pre-existing staging",
+        "offline JSON is byte-deterministic",
+        "observation timestamp",
+        "fixed observation time",
+        "staged target ledger",
+        "declared URL",
+        "final URL provenance",
+    ):
+        assert contract in text
 
 
 def test_root_readmes_reserve_shared_replaceable_banner_slot():

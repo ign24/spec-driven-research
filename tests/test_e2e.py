@@ -4,15 +4,42 @@ Ejercita gates, anclaje textual, verificación persistida de probe y aprobación
 humana en transfer.
 """
 
+import hashlib
 import json
 import sys
 
+import yaml
+
 from sdr import lifecycle, probe_verify
 from sdr.research import Approval, Research
+from sdr.verification_ledger import load_ledger
 
 
 def _write(path, text):
     path.write_text(text, encoding="utf-8")
+
+
+def _write_snapshot(research, source_id, url, content):
+    source_dir = research.artifact_path(f"notes/sources/{source_id}")
+    source_dir.mkdir(parents=True)
+    content_bytes = content.encode("utf-8")
+    (source_dir / "content.md").write_bytes(content_bytes)
+    metadata = {
+        "schema_version": 2,
+        "url": url,
+        "declared_url": url,
+        "final_url": url,
+        "redirects": [],
+        "captured_at": "2026-07-03T00:00:00+00:00",
+        "content_hash": hashlib.sha256(content_bytes).hexdigest(),
+        "http_status": 200,
+        "content_type": "text/plain",
+        "content_eligible": True,
+        "status": "ok",
+    }
+    (source_dir / "meta.yaml").write_text(
+        yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8"
+    )
 
 
 def test_full_cycle_reaches_done(tmp_path):
@@ -54,22 +81,26 @@ def test_full_cycle_reaches_done(tmp_path):
         "## Madurez\nEstable [S3].\n\n## Costos\nModerado [S2].\n\n## Riesgos\nDrift de indice.\n\n"
         "## Contra-evidencia\nSe buscaron benchmarks negativos y no aparecieron señales fuertes [S4].\n",
     )
-    for source_id, content in {
+    snapshots = {
         "S1": "RAG clasico vs agentico.",
         "S2": "Moderado.",
         "S3": "Estable.",
         "S4": "Se buscaron benchmarks negativos y no aparecieron señales fuertes.",
-    }.items():
+    }
+    urls = {
+        "S1": "https://docs.rag.dev/guide",
+        "S2": "https://bench.example.org/rag",
+        "S3": "https://docs.search.dev/guide",
+        "S4": "https://bench.other.example/rag",
+    }
+    for source_id, content in snapshots.items():
+        _write_snapshot(r, source_id, urls[source_id], content)
         source_dir = r.artifact_path(f"notes/sources/{source_id}")
-        source_dir.mkdir(parents=True)
-        _write(source_dir / "content.md", content)
-        urls = {
-            "S1": "https://docs.rag.dev/guide",
-            "S2": "https://bench.example.org/rag",
-            "S3": "https://docs.search.dev/guide",
-            "S4": "https://bench.other.example/rag",
-        }
-        _write(source_dir / "meta.yaml", f"url: {urls[source_id]}\nstatus: ok\n")
+        metadata = yaml.safe_load((source_dir / "meta.yaml").read_text(encoding="utf-8"))
+        assert (
+            metadata["content_hash"]
+            == hashlib.sha256((source_dir / "content.md").read_bytes()).hexdigest()
+        )
     res = lifecycle.advance(r, offline=True)
     assert res.ok and r.meta.stage == "probe", res.blocked_reason
 
@@ -91,9 +122,17 @@ def test_full_cycle_reaches_done(tmp_path):
     assert res.ok and r.meta.stage == "transfer", res.blocked_reason
 
     # --- transfer (con aprobación humana) ---
+    claim_ids = [
+        str(claim["claim_id"])
+        for claim in load_ledger(r.artifact_path("notes/sources/verification.yaml"))["claims"]
+        if claim.get("state") == "verified"
+    ]
+    evidence_claim_ids = "".join(f"  - {claim_id}\n" for claim_id in claim_ids)
     _write(
         r.artifact_path("decision-memo.md"),
-        "---\nresearch: eval-rag\ndate: 2026-07-03\nstage: transfer\nring: trial\naudience: equipo\n---\n\n"
+        "---\nresearch: eval-rag\ndate: 2026-07-03\nstage: transfer\nring: trial\naudience: equipo\n"
+        f"evidence_claim_ids:\n{evidence_claim_ids}"
+        "---\n\n"
         "## Recomendación\nEn el contexto de soporte, ante el volumen, decidimos pilotar RAG "
         "agentico para lograr mejor precision, porque la prueba cumplió C1 y C2, "
         "aceptando mayor costo de indexado.\n\n"

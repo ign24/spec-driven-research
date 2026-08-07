@@ -4,13 +4,19 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, replace
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urljoin
 
 import yaml
 
 from sdr import claims
+from sdr.network_policy import (
+    FOLLOWED_REDIRECT_STATUSES,
+    is_supported_text_content_type,
+    validate_http_url_structure,
+)
 from sdr.parser import parse_artifact
 from sdr.research import Research
 from sdr.textual_anchoring import (
@@ -19,10 +25,30 @@ from sdr.textual_anchoring import (
     match_text,
     normalize_text,
 )
-from sdr.verification_ledger import load_ledger, save_ledger
+from sdr.verification_ledger import ledger_directory_lock, load_ledger, save_ledger
 
-_UNVERIFIABLE_SENTINEL_VERSION = "1"
+_SNAPSHOT_IDENTITY_VERSION = "2"
 _PASSING_STATES = frozenset({"verified", "human_reviewed"})
+_CONFIDENCE_SCOPE_BY_STATE = {
+    "verified": "local_textual_anchoring",
+    "human_reviewed": "scoped_human_review",
+    "not_anchored": "not_anchored",
+    "unverifiable": "unverifiable",
+    "stale": "stale",
+}
+_SNAPSHOT_IDENTITY_FIELDS = (
+    "schema_version",
+    "url",
+    "declared_url",
+    "final_url",
+    "redirects",
+    "http_status",
+    "captured_at",
+    "content_type",
+    "content_eligible",
+    "status",
+    "content_hash",
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +93,7 @@ class VerificationItem:
             "normalization_version": self.normalization_version,
             "matcher_version": self.matcher_version,
             "state": self.state,
+            "confidence_scope": _CONFIDENCE_SCOPE_BY_STATE[self.state],
         }
         if self.quote:
             result["quote"] = self.quote
@@ -84,6 +111,26 @@ class VerificationReport:
     failures: list[str]
 
 
+@dataclass(frozen=True)
+class _SnapshotEvidence:
+    content: str
+    identity: str
+    eligible: bool
+
+
+@dataclass(frozen=True)
+class SourceSnapshotHealth:
+    """Current local snapshot identity and exact persisted-byte hash health."""
+
+    identity: str
+    eligible: bool
+    persisted_content_hash: str
+    recorded_content_hash: str
+    content_hash_matches: bool
+    metadata_exists: bool
+    content_exists: bool
+
+
 def verify_explore_claims(
     research: Research,
     *,
@@ -93,6 +140,13 @@ def verify_explore_claims(
     """Verifica claims solo con snapshots locales y persiste un ledger v2."""
     del complete  # Compatibilidad temporal de firma; nunca se invoca.
     path = _ledger_path(research)
+    if persist:
+        with ledger_directory_lock(path):
+            return _verify_explore_claims(research, path=path, persist=True)
+    return _verify_explore_claims(research, path=path, persist=False)
+
+
+def _verify_explore_claims(research: Research, *, path: Path, persist: bool) -> VerificationReport:
     ledger = load_ledger(path)
     _ensure_no_duplicate_active_resolutions(ledger["resolutions"])
     existing = list(ledger["claims"])
@@ -109,26 +163,17 @@ def verify_explore_claims(
     for claim in _iter_claims(research):
         current_ids.add(claim.id)
         metadata = _source_meta(research, claim.source_id)
-        content = _source_content(research, claim.source_id)
         declared_url = _declared_source_url(research, claim)
-        persisted_url = str(metadata.get("url") or "")
-        url_matches = bool(declared_url) and persisted_url == declared_url
-        usable = str(metadata.get("status") or "") == "ok" and bool(content.strip()) and url_matches
-        identity_metadata = metadata
-        if not url_matches:
-            identity_metadata = {
-                **metadata,
-                "verification": {
-                    "reason": "snapshot_url_mismatch",
-                    "declared_url": declared_url,
-                    "persisted_url": persisted_url,
-                },
-            }
-        snapshot_hash = (
-            hashlib.sha256(content.encode("utf-8")).hexdigest()
-            if usable
-            else _unverifiable_snapshot_hash(identity_metadata)
+        content_exists, content_bytes = _source_content_bytes(research, claim.source_id)
+        snapshot = _evaluate_snapshot(
+            metadata,
+            content_exists=content_exists,
+            content_bytes=content_bytes,
+            declared_url=declared_url,
         )
+        content = snapshot.content
+        usable = snapshot.eligible
+        snapshot_hash = snapshot.identity
         cached, stale = _find_cached(existing, claim, snapshot_hash, content)
 
         resolution = resolutions.get(claim.id)
@@ -247,58 +292,60 @@ def resolve_claim(research: Research, claim_id: str, *, reason: str, by: str = "
     if not by:
         raise ValueError("resolve-claim requiere un actor no vacío en --by")
     path = _ledger_path(research)
-    ledger = load_ledger(path)
-    _ensure_no_duplicate_active_resolutions(ledger["resolutions"])
+    with ledger_directory_lock(path):
+        ledger = load_ledger(path)
+        _ensure_no_duplicate_active_resolutions(ledger["resolutions"])
 
-    report = verify_explore_claims(research, persist=False)
-    current = next((item for item in report.items if item.claim_id == claim_id), None)
-    if current is None:
-        raise ValueError(
-            f"el claim activo {claim_id} no existe; ejecute sdr verify-claims y use un ID vigente"
+        report = verify_explore_claims(research, persist=False)
+        current = next((item for item in report.items if item.claim_id == claim_id), None)
+        if current is None:
+            raise ValueError(
+                f"el claim activo {claim_id} no existe; "
+                "ejecute sdr verify-claims y use un ID vigente"
+            )
+        state = current.state
+        if state not in {"not_anchored", "unverifiable"}:
+            raise ValueError(
+                f"el claim {claim_id} tiene estado {state}; solo not_anchored o unverifiable "
+                "admiten revisión humana"
+            )
+        existing_claim = next(
+            (item for item in ledger["claims"] if item.get("claim_id") == claim_id), None
         )
-    state = current.state
-    if state not in {"not_anchored", "unverifiable"}:
-        raise ValueError(
-            f"el claim {claim_id} tiene estado {state}; solo not_anchored o unverifiable "
-            "admiten revisión humana"
-        )
-    existing_claim = next(
-        (item for item in ledger["claims"] if item.get("claim_id") == claim_id), None
-    )
-    if existing_claim is not None and any(
-        existing_claim.get(field) != getattr(current, field)
-        for field in (
-            "claim_hash",
-            "snapshot_hash",
-            "normalization_version",
-            "matcher_version",
-        )
-    ):
-        ledger["legacy"].append(_stale_history(existing_claim))
-    ledger["claims"] = [item for item in ledger["claims"] if item.get("claim_id") != claim_id] + [
-        current.to_dict()
-    ]
-    _invalidate_resolutions(ledger["resolutions"], ledger["claims"])
-    resolution = {
-        "claim_id": claim_id,
-        "reason": reason,
-        "by": by,
-        "date": date.today().isoformat(),
-        "state": "active",
-    }
-    resolution.update(
-        {
-            field: getattr(current, field)
+        if existing_claim is not None and any(
+            existing_claim.get(field) != getattr(current, field)
             for field in (
                 "claim_hash",
                 "snapshot_hash",
                 "normalization_version",
                 "matcher_version",
             )
+        ):
+            ledger["legacy"].append(_stale_history(existing_claim))
+        ledger["claims"] = [
+            item for item in ledger["claims"] if item.get("claim_id") != claim_id
+        ] + [current.to_dict()]
+        _invalidate_resolutions(ledger["resolutions"], ledger["claims"])
+        resolution = {
+            "claim_id": claim_id,
+            "reason": reason,
+            "by": by,
+            "date": date.today().isoformat(),
+            "state": "active",
         }
-    )
-    ledger["resolutions"].append(resolution)
-    save_ledger(path, ledger)
+        resolution.update(
+            {
+                field: getattr(current, field)
+                for field in (
+                    "claim_hash",
+                    "snapshot_hash",
+                    "normalization_version",
+                    "matcher_version",
+                )
+            }
+        )
+        ledger["resolutions"].append(resolution)
+        save_ledger(path, ledger)
 
 
 def _iter_claims(research: Research) -> list[claims.Claim]:
@@ -322,9 +369,40 @@ def _source_meta(research: Research, source_id: str) -> dict[str, Any]:
     return data if isinstance(data, dict) else {"status": "invalid_metadata"}
 
 
-def _source_content(research: Research, source_id: str) -> str:
+def _source_content_bytes(research: Research, source_id: str) -> tuple[bool, bytes]:
     path = research.artifact_path(f"notes/sources/{source_id}/content.md")
-    return path.read_text(encoding="utf-8") if path.exists() else ""
+    return (True, path.read_bytes()) if path.is_file() else (False, b"")
+
+
+def evaluate_source_snapshot(
+    research: Research, source_id: str, *, declared_url: str
+) -> SourceSnapshotHealth:
+    """Evaluate one local snapshot through the canonical secure snapshot machinery."""
+    metadata_path = research.artifact_path(f"notes/sources/{source_id}/meta.yaml")
+    metadata = _source_meta(research, source_id)
+    content_exists, content_bytes = _source_content_bytes(research, source_id)
+    persisted_hash = hashlib.sha256(content_bytes).hexdigest()
+    evidence = _evaluate_snapshot(
+        metadata,
+        content_exists=content_exists,
+        content_bytes=content_bytes,
+        declared_url=declared_url,
+    )
+    recorded_hash = metadata.get("content_hash")
+    recorded_content_hash = recorded_hash if isinstance(recorded_hash, str) else ""
+    return SourceSnapshotHealth(
+        identity=evidence.identity,
+        eligible=evidence.eligible,
+        persisted_content_hash=persisted_hash,
+        recorded_content_hash=recorded_content_hash,
+        content_hash_matches=(
+            content_exists
+            and bool(recorded_content_hash)
+            and recorded_content_hash == persisted_hash
+        ),
+        metadata_exists=metadata_path.is_file(),
+        content_exists=content_exists,
+    )
 
 
 def _declared_source_url(research: Research, claim: claims.Claim) -> str:
@@ -335,16 +413,136 @@ def _declared_source_url(research: Research, claim: claims.Claim) -> str:
     return ""
 
 
-def _unverifiable_snapshot_hash(metadata: dict[str, Any]) -> str:
-    canonical = yaml.safe_dump(
+def _evaluate_snapshot(
+    metadata: dict[str, Any],
+    *,
+    content_exists: bool,
+    content_bytes: bytes,
+    declared_url: str,
+) -> _SnapshotEvidence:
+    persisted_hash = hashlib.sha256(content_bytes).hexdigest()
+    try:
+        content = content_bytes.decode("utf-8")
+        decodable = True
+    except UnicodeDecodeError:
+        content = ""
+        decodable = False
+
+    identity = _snapshot_identity(
         metadata,
+        declared_url=declared_url,
+        content_exists=content_exists,
+        persisted_hash=persisted_hash,
+        decodable=decodable,
+    )
+    eligible = (
+        type(metadata.get("schema_version")) is int
+        and metadata["schema_version"] == 2
+        and isinstance(declared_url, str)
+        and bool(declared_url)
+        and metadata.get("url") == declared_url
+        and metadata.get("declared_url") == declared_url
+        and _valid_redirect_provenance(metadata)
+        and type(metadata.get("http_status")) is int
+        and 200 <= metadata["http_status"] < 300
+        and _valid_captured_at(metadata.get("captured_at"))
+        and isinstance(metadata.get("content_type"), str)
+        and is_supported_text_content_type(metadata["content_type"])
+        and metadata.get("content_eligible") is True
+        and metadata.get("status") == "ok"
+        and content_exists
+        and decodable
+        and bool(content.strip())
+        and metadata.get("content_hash") == persisted_hash
+    )
+    return _SnapshotEvidence(content=content, identity=identity, eligible=eligible)
+
+
+def _valid_redirect_provenance(metadata: dict[str, Any]) -> bool:
+    declared_url = metadata.get("declared_url")
+    final_url = metadata.get("final_url")
+    redirects = metadata.get("redirects")
+    if not isinstance(declared_url, str) or not declared_url:
+        return False
+    if not isinstance(final_url, str) or not final_url or not isinstance(redirects, list):
+        return False
+    if not _valid_http_url(declared_url) or not _valid_http_url(final_url):
+        return False
+    expected_url = declared_url
+    for redirect in redirects:
+        if not isinstance(redirect, dict):
+            return False
+        location = redirect.get("location")
+        status_code = redirect.get("status_code")
+        redirect_url = redirect.get("url")
+        target_url = redirect.get("target_url")
+        if (
+            redirect_url != expected_url
+            or not isinstance(redirect_url, str)
+            or not _valid_http_url(redirect_url)
+            or type(status_code) is not int
+            or status_code not in FOLLOWED_REDIRECT_STATUSES
+            or not isinstance(location, str)
+            or not location
+            or not isinstance(target_url, str)
+            or not _valid_http_url(target_url)
+            or target_url != urljoin(expected_url, location)
+        ):
+            return False
+        expected_url = target_url
+    return expected_url == final_url
+
+
+def _valid_http_url(url: str) -> bool:
+    try:
+        validate_http_url_structure(url)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _valid_captured_at(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        captured_at = datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return (
+        captured_at.tzinfo is not None
+        and captured_at.utcoffset() is not None
+        and captured_at.isoformat() == value
+    )
+
+
+def _snapshot_identity(
+    metadata: dict[str, Any],
+    *,
+    declared_url: str,
+    content_exists: bool,
+    persisted_hash: str,
+    decodable: bool,
+) -> str:
+    provenance = {
+        field: {"present": field in metadata, "value": metadata.get(field)}
+        for field in _SNAPSHOT_IDENTITY_FIELDS
+    }
+    identity = {
+        "expected_declared_url": declared_url,
+        "provenance": provenance,
+        "content_exists": content_exists,
+        "persisted_sha256": persisted_hash,
+        "utf8_decodable": decodable,
+    }
+    canonical = yaml.safe_dump(
+        identity,
         allow_unicode=True,
         canonical=True,
         sort_keys=True,
     ).encode("utf-8")
-    sentinel = f"sdr:unverifiable-snapshot:v{_UNVERIFIABLE_SENTINEL_VERSION}\n".encode()
-    digest = hashlib.sha256(sentinel + canonical).hexdigest()
-    return f"unverifiable-v{_UNVERIFIABLE_SENTINEL_VERSION}-{digest}"
+    domain = f"sdr:snapshot-identity:v{_SNAPSHOT_IDENTITY_VERSION}\n".encode()
+    digest = hashlib.sha256(domain + canonical).hexdigest()
+    return f"snapshot-v{_SNAPSHOT_IDENTITY_VERSION}-{digest}"
 
 
 def _find_cached(

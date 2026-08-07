@@ -4,6 +4,7 @@ date: <YYYY-MM-DD>
 stage: transfer
 ring: assess        # adopt | trial | assess | hold (adopt/trial exigen probe aprobada)
 audience: <equipo|comercial|direccion>
+evidence_claim_ids: []  # IDs exactos claim-<sha256>; [] declara que no hay dependencias
 ---
 
 ## Recomendación

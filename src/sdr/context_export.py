@@ -7,32 +7,84 @@ from sdr.context_graph import (
     ContextGraph,
     GraphEdge,
     GraphNode,
-    redact_secret_like_values,
     validate_paths_within_root,
+    write_context_graph,
 )
 from sdr.paths import resolve_child, resolve_root
+from sdr.public_tree_audit import RedactionContext, redact_sensitive, redact_sensitive_values
 
 
 def export_context_graph(
-    graph: ContextGraph, research_path: Path, export_format: str
+    graph: ContextGraph,
+    research_path: Path,
+    export_format: str,
+    *,
+    kb_traceability: bool = False,
+    _redaction_context: RedactionContext | None = None,
 ) -> dict[str, Any]:
     """Export an existing context graph into a derived visual format."""
+    context = _redaction_context or RedactionContext()
     research_path = resolve_root(research_path)
     graph.validate()
     if export_format == "obsidian":
-        return _export_obsidian(graph, research_path)
+        summary = _export_obsidian(
+            graph, research_path, kb_traceability=kb_traceability, redaction_context=context
+        )
+        return redact_sensitive_values(summary, context=context)
     if export_format == "mermaid":
-        return _export_mermaid(graph, research_path)
+        summary = _export_mermaid(
+            graph, research_path, kb_traceability=kb_traceability, redaction_context=context
+        )
+        return redact_sensitive_values(summary, context=context)
     if export_format == "dot":
-        return _export_dot(graph, research_path)
+        summary = _export_dot(
+            graph, research_path, kb_traceability=kb_traceability, redaction_context=context
+        )
+        return redact_sensitive_values(summary, context=context)
     raise ValueError(f"unsupported export format: {export_format}")
 
 
-def _export_obsidian(graph: ContextGraph, research_path: Path) -> dict[str, Any]:
+def export_knowledge_base_context_graph(base_path: Path, export_format: str) -> dict[str, Any]:
+    """Derive and export every investigation through the existing graph exporters."""
+    from sdr.cross_investigation import derive_cross_investigation_layer
+
+    layer = derive_cross_investigation_layer(base_path)
+    graph = layer.to_context_graph()
+    graph_path = write_context_graph(graph, resolve_root(base_path))
+    context = RedactionContext()
+    summary = export_context_graph(
+        graph,
+        base_path,
+        export_format,
+        kb_traceability=True,
+        _redaction_context=context,
+    )
+    return redact_sensitive_values(
+        {
+            **summary,
+            "graph_artifact": str(graph_path),
+            "investigations": len(layer.investigations),
+        },
+        context=context,
+    )
+
+
+def _export_obsidian(
+    graph: ContextGraph,
+    research_path: Path,
+    *,
+    kb_traceability: bool,
+    redaction_context: RedactionContext,
+) -> dict[str, Any]:
     output_dir = resolve_child(research_path, "context/obsidian")
     temp_dir = resolve_child(research_path, "context/obsidian.tmp")
     warnings = _collect_path_warnings(graph, research_path)
-    contents = _obsidian_contents(graph, warnings)
+    contents = _obsidian_contents(
+        graph,
+        warnings,
+        kb_traceability=kb_traceability,
+        redaction_context=redaction_context,
+    )
     if temp_dir.exists():
         shutil.rmtree(temp_dir)
     temp_dir.mkdir(parents=True)
@@ -56,34 +108,60 @@ def _export_obsidian(graph: ContextGraph, research_path: Path) -> dict[str, Any]
     }
 
 
-def _export_mermaid(graph: ContextGraph, research_path: Path) -> dict[str, Any]:
+def _export_mermaid(
+    graph: ContextGraph,
+    research_path: Path,
+    *,
+    kb_traceability: bool,
+    redaction_context: RedactionContext,
+) -> dict[str, Any]:
     path = resolve_child(research_path, "context/context.mmd")
-    text = _render_mermaid(graph)
+    text = redact_sensitive(
+        _render_mermaid(graph, kb_traceability=kb_traceability), context=redaction_context
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return {"format": "mermaid", "path": str(path), "warnings": []}
 
 
-def _export_dot(graph: ContextGraph, research_path: Path) -> dict[str, Any]:
+def _export_dot(
+    graph: ContextGraph,
+    research_path: Path,
+    *,
+    kb_traceability: bool,
+    redaction_context: RedactionContext,
+) -> dict[str, Any]:
     path = resolve_child(research_path, "context/context.dot")
-    text = _render_dot(graph)
+    text = redact_sensitive(
+        _render_dot(graph, kb_traceability=kb_traceability), context=redaction_context
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return {"format": "dot", "path": str(path), "warnings": []}
 
 
-def _obsidian_contents(graph: ContextGraph, warnings: list[str]) -> dict[str, str]:
+def _obsidian_contents(
+    graph: ContextGraph,
+    warnings: list[str],
+    *,
+    kb_traceability: bool,
+    redaction_context: RedactionContext,
+) -> dict[str, str]:
     nodes = sorted(graph.nodes, key=lambda node: node.id)
     edges = _sorted_edges(graph.edges)
     names = {node.id: _note_name(node) for node in nodes}
     contents: dict[str, str] = {
-        "index.md": _render_obsidian_index(graph, nodes, edges, names, warnings)
+        "index.md": _render_obsidian_index(
+            graph, nodes, edges, names, warnings, kb_traceability=kb_traceability
+        )
     }
     for node in nodes:
         incoming = [edge for edge in edges if edge.target == node.id]
         outgoing = [edge for edge in edges if edge.source == node.id]
-        contents[names[node.id]] = _render_obsidian_node(node, incoming, outgoing, names)
-    return {name: redact_secret_like_values(text) for name, text in sorted(contents.items())}
+        contents[names[node.id]] = _render_obsidian_node(
+            node, incoming, outgoing, names, kb_traceability=kb_traceability
+        )
+    return redact_sensitive_values(dict(sorted(contents.items())), context=redaction_context)
 
 
 def _render_obsidian_index(
@@ -92,6 +170,8 @@ def _render_obsidian_index(
     edges: list[GraphEdge],
     names: dict[str, str],
     warnings: list[str],
+    *,
+    kb_traceability: bool,
 ) -> str:
     lines = [
         "---",
@@ -111,6 +191,10 @@ def _render_obsidian_index(
     ]
     for node in nodes:
         lines.append(f"- [[{Path(names[node.id]).stem}|{_clean(node.id)}]]")
+    if kb_traceability:
+        lines.extend(["", "## Traceability", "", "```json"])
+        lines.append(_traceability_metadata(graph))
+        lines.append("```")
     if warnings:
         lines.extend(["", "## Warnings"])
         lines.extend("- out-of-scope path omitted" for _warning in warnings)
@@ -122,6 +206,8 @@ def _render_obsidian_node(
     incoming: list[GraphEdge],
     outgoing: list[GraphEdge],
     names: dict[str, str],
+    *,
+    kb_traceability: bool,
 ) -> str:
     safe_sources = [source for source in node.source_files if not Path(source).is_absolute()]
     lines = [
@@ -148,43 +234,76 @@ def _render_obsidian_node(
             "## Outgoing links",
         ]
     )
-    lines.extend(_edge_line(edge, edge.target, names) for edge in outgoing)
+    lines.extend(
+        _edge_line(edge, edge.target, names, kb_traceability=kb_traceability) for edge in outgoing
+    )
     if not outgoing:
         lines.append("- none")
     lines.append("")
     lines.append("## Incoming links")
-    lines.extend(_edge_line(edge, edge.source, names) for edge in incoming)
+    lines.extend(
+        _edge_line(edge, edge.source, names, kb_traceability=kb_traceability) for edge in incoming
+    )
     if not incoming:
         lines.append("- none")
     return "\n".join(lines) + "\n"
 
 
-def _render_mermaid(graph: ContextGraph) -> str:
+def _render_mermaid(graph: ContextGraph, *, kb_traceability: bool) -> str:
     aliases = _aliases(graph.nodes)
-    lines = ["flowchart TD"]
+    lines = []
+    if kb_traceability:
+        lines.append(f"%% sdr-kb-traceability: {_traceability_metadata(graph)}")
+    lines.append("flowchart TD")
     for node in sorted(graph.nodes, key=lambda item: item.id):
         lines.append(f'  {aliases[node.id]}["{_mermaid_label(node.title)}"]')
     for edge in _sorted_edges(graph.edges):
-        label = _mermaid_label(f"{edge.relation} / {edge.provenance}")
+        label = _mermaid_label(_edge_label(edge, kb_traceability=kb_traceability))
         lines.append(f"  {aliases[edge.source]} -->|{label}| {aliases[edge.target]}")
     return "\n".join(lines) + "\n"
 
 
-def _render_dot(graph: ContextGraph) -> str:
+def _render_dot(graph: ContextGraph, *, kb_traceability: bool) -> str:
     aliases = _aliases(graph.nodes)
     lines = ["digraph context {"]
+    if kb_traceability:
+        lines.append(f"  // sdr-kb-traceability: {_traceability_metadata(graph)}")
     for node in sorted(graph.nodes, key=lambda item: item.id):
         lines.append(f'  {aliases[node.id]} [label="{_dot_label(node.title)}"];')
     for edge in _sorted_edges(graph.edges):
-        label = _dot_label(f"{edge.relation} / {edge.provenance}")
+        label = _dot_label(_edge_label(edge, kb_traceability=kb_traceability))
         lines.append(f'  {aliases[edge.source]} -> {aliases[edge.target]} [label="{label}"];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
 
-def _edge_line(edge: GraphEdge, linked_node: str, names: dict[str, str]) -> str:
+def _edge_line(
+    edge: GraphEdge,
+    linked_node: str,
+    names: dict[str, str],
+    *,
+    kb_traceability: bool,
+) -> str:
     stem = Path(names[linked_node]).stem
-    return f"- {edge.relation} / {edge.provenance}: [[{stem}|{_clean(linked_node)}]]"
+    label = _edge_label(edge, kb_traceability=kb_traceability)
+    return f"- {label}: [[{stem}|{_clean(linked_node)}]]"
+
+
+def _edge_label(edge: GraphEdge, *, kb_traceability: bool) -> str:
+    label = f"{edge.relation} / {edge.provenance}"
+    if kb_traceability:
+        origin = json.dumps(edge.metadata.get("origin"), ensure_ascii=True, sort_keys=True)
+        label = f"{label} / origin={origin}"
+    return label
+
+
+def _traceability_metadata(graph: ContextGraph) -> str:
+    return json.dumps(
+        {"resolver_chain": graph.metadata.get("resolver_chain", [])},
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
 
 
 def _note_name(node: GraphNode) -> str:
@@ -216,7 +335,7 @@ def _collect_path_warnings(graph: ContextGraph, research_path: Path) -> list[str
 
 
 def _clean(value: str) -> str:
-    return redact_secret_like_values(value)
+    return value
 
 
 def _yaml_scalar(value: str) -> str:

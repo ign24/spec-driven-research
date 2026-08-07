@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
+from datetime import date
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -14,7 +18,7 @@ import yaml
 SCHEMA_VERSION = 2
 ACTIVE_STATES = frozenset({"verified", "not_anchored", "unverifiable", "human_reviewed", "stale"})
 LEGACY_SEMANTIC_STATES = frozenset({"supported", "contradicted", "not_found"})
-_COLLECTIONS = ("claims", "resolutions", "legacy")
+_COLLECTIONS = ("claims", "resolutions", "degradation_acknowledgements", "legacy")
 _CLAIM_FIELDS = {
     "claim_id",
     "note_path",
@@ -37,6 +41,17 @@ _RESOLUTION_FIELDS = {
     "normalization_version",
     "matcher_version",
 }
+_ACKNOWLEDGEMENT_FIELDS = {
+    "acknowledgement_id",
+    "source_investigation",
+    "source_id",
+    "cause",
+    "observation_id",
+    "by",
+    "reason",
+    "date",
+}
+_DEGRADATION_CAUSES = frozenset({"unreachable", "changed", "expired"})
 
 
 class LedgerValidationError(ValueError):
@@ -45,7 +60,29 @@ class LedgerValidationError(ValueError):
 
 def empty_ledger() -> dict[str, Any]:
     """Crea un ledger v2 vacío con sus colecciones separadas."""
-    return {"schema_version": SCHEMA_VERSION, "claims": [], "resolutions": [], "legacy": []}
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "claims": [],
+        "resolutions": [],
+        "degradation_acknowledgements": [],
+        "legacy": [],
+    }
+
+
+def make_degradation_acknowledgement_id(
+    source_investigation: str,
+    source_id: str,
+    cause: str,
+    observation_id: str,
+) -> str:
+    """Derive the immutable identity of one reviewed degradation observation."""
+    values = (source_investigation, source_id, cause, observation_id)
+    if any(not isinstance(value, str) or not value.strip() for value in values):
+        raise LedgerValidationError("degradation acknowledgement identity must not be empty")
+    if cause not in _DEGRADATION_CAUSES:
+        raise LedgerValidationError(f"unknown degradation cause: {cause}")
+    canonical = json.dumps(values, ensure_ascii=False, separators=(",", ":"))
+    return f"degradation-ack-{hashlib.sha256(canonical.encode()).hexdigest()}"
 
 
 def make_claim_id(
@@ -126,6 +163,19 @@ def save_ledger(path: Path, ledger: dict[str, Any]) -> None:
     finally:
         if temporary_path is not None and temporary_path.exists():
             temporary_path.unlink()
+
+
+@contextmanager
+def ledger_directory_lock(path: Path) -> Iterator[None]:
+    """Serialize ledger read-modify-write operations without creating a lock artifact."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        os.close(descriptor)
 
 
 def validate_ledger(ledger: dict[str, Any]) -> list[str]:
@@ -224,11 +274,73 @@ def validate_ledger(ledger: dict[str, Any]) -> list[str]:
         ):
             issues.append(f"resolution {claim_id} active resolution does not match current claim")
 
+    acknowledgements = (
+        ledger.get("degradation_acknowledgements")
+        if isinstance(ledger.get("degradation_acknowledgements"), list)
+        else []
+    )
+    seen_acknowledgement_ids: set[str] = set()
+    for index, acknowledgement in enumerate(acknowledgements):
+        if not isinstance(acknowledgement, dict):
+            issues.append(f"degradation_acknowledgements[{index}] must be a mapping")
+            continue
+        acknowledgement_id = str(acknowledgement.get("acknowledgement_id") or "<missing>")
+        _validate_required_strings(
+            acknowledgement,
+            _ACKNOWLEDGEMENT_FIELDS,
+            "degradation acknowledgement",
+            acknowledgement_id,
+            issues,
+        )
+        if acknowledgement_id in seen_acknowledgement_ids:
+            issues.append(f"duplicate degradation acknowledgement: {acknowledgement_id}")
+        seen_acknowledgement_ids.add(acknowledgement_id)
+        try:
+            expected_id = make_degradation_acknowledgement_id(
+                str(acknowledgement.get("source_investigation") or ""),
+                str(acknowledgement.get("source_id") or ""),
+                str(acknowledgement.get("cause") or ""),
+                str(acknowledgement.get("observation_id") or ""),
+            )
+        except LedgerValidationError as exc:
+            issues.append(f"degradation acknowledgement {acknowledgement_id}: {exc}")
+        else:
+            if acknowledgement_id != expected_id:
+                issues.append(
+                    f"degradation acknowledgement {acknowledgement_id} acknowledgement_id "
+                    "does not match its identity fields"
+                )
+        acknowledged_on = acknowledgement.get("date")
+        if isinstance(acknowledged_on, str):
+            try:
+                parsed_date = date.fromisoformat(acknowledged_on)
+            except ValueError:
+                parsed_date = None
+            if parsed_date is None or parsed_date.isoformat() != acknowledged_on:
+                issues.append(
+                    f"degradation acknowledgement {acknowledgement_id} date must be YYYY-MM-DD"
+                )
+            elif parsed_date > date.today():
+                issues.append(
+                    f"degradation acknowledgement {acknowledgement_id} date must not be future"
+                )
+
     legacy = ledger.get("legacy") if isinstance(ledger.get("legacy"), list) else []
     for index, entry in enumerate(legacy):
         if not isinstance(entry, dict):
             issues.append(f"legacy[{index}] must be a mapping")
     return issues
+
+
+def validate_claim_references(ledger: dict[str, Any], claim_ids: tuple[str, ...]) -> list[str]:
+    """Valida estructuralmente solo los claims declarados por una decisión."""
+    referenced = set(claim_ids)
+    claims = ledger.get("claims") if isinstance(ledger.get("claims"), list) else []
+    scoped = empty_ledger()
+    scoped["claims"] = [
+        claim for claim in claims if isinstance(claim, dict) and claim.get("claim_id") in referenced
+    ]
+    return validate_ledger(scoped)
 
 
 def _valid_locator(locator: object) -> bool:

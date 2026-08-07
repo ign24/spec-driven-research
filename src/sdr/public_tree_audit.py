@@ -8,7 +8,22 @@ import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Any
 
+EVALUATION_CATEGORY = "evaluation"
+PUBLIC_CATEGORIES = {
+    ".github": "automation",
+    "assets": "assets",
+    "bench": EVALUATION_CATEGORY,
+    "docs": "documentation",
+    "examples": "examples",
+    "integrations": "integrations",
+    "openspec": "specifications",
+    "skills": "skills",
+    "src": "framework",
+    "tests": "tests",
+}
+LIFECYCLE_METADATA_NAME = "sdr.yaml"
 PROHIBITED_NAMES = {
     ".cache",
     ".git",
@@ -33,6 +48,20 @@ SECRET_PATTERNS = (
     re.compile(r"sk_live_[A-Za-z0-9]{20,}"),
     re.compile(r"-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----"),
 )
+_SECRET_ASSIGNMENT_RE = re.compile(
+    r"(?P<key>(?<![?&])\b(?:API_KEY|SECRET|TOKEN|PASSWORD)\b)"
+    r"(?P<sep>\s*[:=]\s*)(?P<value>[^\s\n,\"'\]}]+)",
+    re.IGNORECASE,
+)
+_SENSITIVE_QUERY_RE = re.compile(
+    r"(?P<prefix>[?&](?:api[_-]?key|access[_-]?token|token|password|passwd|secret|key)=)"
+    r"(?P<value>[^&#\s]+)",
+    re.IGNORECASE,
+)
+_REDACTION_MARKER_RE = re.compile(r"<redacted-value-[1-9][0-9]*>")
+_SENSITIVE_KEY_RE = re.compile(
+    r"(?:api[_-]?key|access[_-]?token|token|password|passwd|secret|key)", re.IGNORECASE
+)
 
 
 @dataclass(frozen=True)
@@ -40,6 +69,29 @@ class Finding:
     code: str
     path: str
     line: int | None = None
+
+
+class RedactionContext:
+    """Assign opaque labels while retaining equality only within one payload."""
+
+    def __init__(self) -> None:
+        self._labels: dict[str, str] = {}
+        self._reserved: set[str] = set()
+        self._next_label = 1
+
+    def reserve(self, marker: str) -> None:
+        self._reserved.add(marker)
+
+    def marker(self, sensitive_value: str) -> str:
+        marker = self._labels.get(sensitive_value)
+        if marker is None:
+            while True:
+                marker = f"<redacted-value-{self._next_label}>"
+                self._next_label += 1
+                if marker not in self._reserved and marker not in self._labels.values():
+                    break
+            self._labels[sensitive_value] = marker
+        return marker
 
 
 def audit_tree(root: Path, excluded: Iterable[Path] = ()) -> list[Finding]:
@@ -68,6 +120,8 @@ def audit_tree(root: Path, excluded: Iterable[Path] = ()) -> list[Finding]:
             display_path = _relative_posix(relative_path)
             if _is_prohibited(relative_path):
                 findings.append(Finding("prohibited-path", display_path))
+            if _is_harness_residue(relative_path):
+                findings.append(Finding("harness-residue", display_path))
             findings.extend(_audit_text(Path(directory) / name, display_path))
 
     return sorted(findings, key=lambda item: (item.path, item.line or 0, item.code))
@@ -75,21 +129,106 @@ def audit_tree(root: Path, excluded: Iterable[Path] = ()) -> list[Finding]:
 
 def render_findings(findings: Sequence[Finding]) -> str:
     """Render only locations and categories, never matched content."""
+    context = RedactionContext()
     lines = []
     for finding in findings:
-        location = redact_sensitive(finding.path)
+        location = redact_sensitive(finding.path, context=context)
         if finding.line is not None:
             location = f"{location}:{finding.line}"
         lines.append(f"{location} [{finding.code}] sensitive content redacted")
     return "\n".join(lines)
 
 
-def redact_sensitive(value: str) -> str:
+def redact_sensitive(value: str, *, context: RedactionContext | None = None) -> str:
     """Redact secret-like and private-path values before writing logs."""
-    redacted = value
-    for pattern in (*PRIVATE_PATH_PATTERNS, *SECRET_PATTERNS):
-        redacted = pattern.sub("<redacted>", redacted)
-    return "".join(character if character.isprintable() else "?" for character in redacted)
+    context = context or RedactionContext()
+    _reserve_markers(value, context)
+    return _redact_unmarked(value, context)
+
+
+def _redact_unmarked(value: str, context: RedactionContext) -> str:
+    spans: list[tuple[int, int, bool]] = []
+    for pattern, group in (
+        (_SECRET_ASSIGNMENT_RE, "value"),
+        (_SENSITIVE_QUERY_RE, "value"),
+        *((pattern, 0) for pattern in PRIVATE_PATH_PATTERNS),
+        *((pattern, 0) for pattern in SECRET_PATTERNS),
+    ):
+        spans.extend((*match.span(group), False) for match in pattern.finditer(value))
+    spans.extend((*match.span(), True) for match in _REDACTION_MARKER_RE.finditer(value))
+
+    redacted_parts: list[str] = []
+    position = 0
+    for start, end, preserve in sorted(
+        spans, key=lambda span: (span[0], -(span[1] - span[0]), not span[2])
+    ):
+        if start < position:
+            continue
+        redacted_parts.append(value[position:start])
+        redacted_parts.append(value[start:end] if preserve else context.marker(value[start:end]))
+        position = end
+    redacted_parts.append(value[position:])
+    redacted = "".join(redacted_parts)
+    return "".join(
+        character if character.isprintable() or character in "\r\n\t" else "?"
+        for character in redacted
+    )
+
+
+def redact_sensitive_values(value: Any, *, context: RedactionContext | None = None) -> Any:
+    """Recursively apply the canonical public-output redaction to JSON-like data."""
+    context = context or RedactionContext()
+    _reserve_markers(value, context)
+    return _redact_sensitive_values(value, context)
+
+
+def _redact_sensitive_values(value: Any, context: RedactionContext) -> Any:
+    if isinstance(value, str):
+        return _redact_unmarked(value, context)
+    if isinstance(value, dict):
+        redacted: dict[Any, Any] = {}
+        for key, item in value.items():
+            redacted_key = _redact_unmarked(key, context) if isinstance(key, str) else key
+            if isinstance(key, str) and _SENSITIVE_KEY_RE.fullmatch(key) and isinstance(item, str):
+                structured = _redact_unmarked(item, context)
+                redacted[redacted_key] = (
+                    structured
+                    if _has_redactable_span(item) or _REDACTION_MARKER_RE.fullmatch(item)
+                    else context.marker(item)
+                )
+            else:
+                redacted[redacted_key] = _redact_sensitive_values(item, context)
+        return redacted
+    if isinstance(value, list | tuple):
+        return [_redact_sensitive_values(item, context) for item in value]
+    if isinstance(value, set):
+        return [_redact_sensitive_values(item, context) for item in sorted(value, key=repr)]
+    return value
+
+
+def _reserve_markers(value: Any, context: RedactionContext) -> None:
+    if isinstance(value, str):
+        for match in _REDACTION_MARKER_RE.finditer(value):
+            context.reserve(match.group())
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            _reserve_markers(key, context)
+            _reserve_markers(item, context)
+    elif isinstance(value, list | tuple | set):
+        for item in value:
+            _reserve_markers(item, context)
+
+
+def _has_redactable_span(value: str) -> bool:
+    return any(
+        pattern.search(value)
+        for pattern in (
+            _SECRET_ASSIGNMENT_RE,
+            _SENSITIVE_QUERY_RE,
+            *PRIVATE_PATH_PATTERNS,
+            *SECRET_PATTERNS,
+        )
+    )
 
 
 def audit_bytes(content: bytes, display_path: str) -> list[Finding]:
@@ -112,6 +251,19 @@ def audit_bytes(content: bytes, display_path: str) -> list[Finding]:
 
 def _audit_text(path: Path, display_path: str) -> list[Finding]:
     return audit_bytes(path.read_bytes(), display_path)
+
+
+def public_category(path: Path) -> str | None:
+    """Return the documented public category of a repository-relative path."""
+    parts = PurePosixPath(_relative_posix(path)).parts
+    if not parts:
+        return None
+    return PUBLIC_CATEGORIES.get(parts[0])
+
+
+def _is_harness_residue(path: Path) -> bool:
+    """Report lifecycle metadata left inside the evaluation category by a harness run."""
+    return public_category(path) == EVALUATION_CATEGORY and path.name == LIFECYCLE_METADATA_NAME
 
 
 def _is_prohibited(path: Path) -> bool:

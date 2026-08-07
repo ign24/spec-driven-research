@@ -59,19 +59,32 @@ def _write_snapshot(research, source_id, content=None, status="ok", **metadata):
     path.mkdir(parents=True, exist_ok=True)
     if content is not None:
         path.joinpath("content.md").write_text(content, encoding="utf-8")
+    source_url = {
+        "S1": "https://docs.foo.dev/guide",
+        "S2": "https://bench.example.com/foo",
+    }.get(source_id, f"https://example.com/{source_id}")
+    declared_url = metadata.get("declared_url", metadata.get("url", source_url))
     meta = {
-        "url": {
-            "S1": "https://docs.foo.dev/guide",
-            "S2": "https://bench.example.com/foo",
-        }.get(source_id, f"https://example.com/{source_id}"),
+        "schema_version": 2,
+        "url": declared_url,
+        "declared_url": declared_url,
+        "final_url": declared_url,
+        "redirects": [],
         "status": status,
         "org": "example",
         "captured_at": "2026-07-03T00:00:00+00:00",
+        "http_status": 200 if status == "ok" else 404,
+        "content_type": "text/plain",
+        "content_eligible": True,
         **metadata,
     }
     if content is not None:
         meta["content_hash"] = hashlib.sha256(content.encode()).hexdigest()
     path.joinpath("meta.yaml").write_text(yaml.safe_dump(meta, sort_keys=False), encoding="utf-8")
+
+
+def _snapshot_item(report, source_id="S1"):
+    return next(item for item in report.items if item.source_id == source_id)
 
 
 def test_verify_claims_uses_full_markdown_canonical_ids_and_local_matcher(tmp_path):
@@ -98,6 +111,20 @@ def test_verify_claims_reuses_only_current_recoverable_cache(tmp_path):
     assert first.passed and second.passed
     assert not any(item.cached for item in first.items)
     assert all(item.cached for item in second.items)
+
+
+def test_nonpersisting_verification_does_not_take_exclusive_ledger_lock(tmp_path, monkeypatch):
+    research = _explore_research(tmp_path)
+
+    def forbidden_lock(path):
+        raise AssertionError(f"unexpected exclusive lock for {path}")
+
+    monkeypatch.setattr(verification, "ledger_directory_lock", forbidden_lock)
+
+    report = verification.verify_explore_claims(research, persist=False)
+
+    assert report.passed
+    assert not research.artifact_path("notes/sources/verification.yaml").exists()
 
 
 def test_invalid_cached_locator_is_preserved_stale_and_recomputed_immediately(tmp_path):
@@ -145,7 +172,7 @@ def test_missing_empty_or_non_ok_snapshot_is_unverifiable_with_stable_sentinel(t
     assert not first.passed
     assert {item.state for item in first.items} == {"unverifiable"}
     assert first_hashes == {item.source_id: item.snapshot_hash for item in second.items}
-    assert all(value.startswith("unverifiable-v1-") for value in first_hashes.values())
+    assert all(value.startswith("snapshot-v2-") for value in first_hashes.values())
     assert all(item.normalization_version == NORMALIZATION_VERSION for item in first.items)
     assert all(item.matcher_version == MATCHER_VERSION for item in first.items)
 
@@ -267,6 +294,93 @@ def test_verify_claims_cli_json_is_v2_and_items_are_v2(tmp_path, monkeypatch):
     assert payload["passed"] is True
     assert {item["state"] for item in payload["items"]} == {"verified"}
     assert all("verdict" not in item for item in payload["items"])
+
+
+def test_deterministic_match_reports_only_local_textual_anchoring(tmp_path, monkeypatch):
+    _explore_research(tmp_path)
+    monkeypatch.setenv("SDR_ROOT", str(tmp_path))
+
+    structured = CliRunner().invoke(
+        main, ["verify-claims", "eval-foo", "--json"], catch_exceptions=False
+    )
+    human = CliRunner().invoke(main, ["verify-claims", "eval-foo"], catch_exceptions=False)
+    payload = json.loads(structured.output)
+    rendered = json.dumps(payload, ensure_ascii=False).lower()
+
+    assert structured.exit_code == 0
+    assert human.exit_code == 0
+    assert {item["confidence_scope"] for item in payload["items"]} == {"local_textual_anchoring"}
+    assert "anclaje textual local" in human.output.lower()
+    for overclaim in (
+        "publisher_identity",
+        "authenticated_publisher",
+        "authorship",
+        "authenticity",
+        "accuracy",
+        "truth",
+    ):
+        assert overclaim not in rendered
+
+
+@pytest.mark.parametrize(
+    ("state", "expected_scope"),
+    [
+        ("verified", "local_textual_anchoring"),
+        ("human_reviewed", "scoped_human_review"),
+        ("not_anchored", "not_anchored"),
+        ("unverifiable", "unverifiable"),
+        ("stale", "stale"),
+    ],
+)
+def test_confidence_scope_describes_the_actual_verification_state(state, expected_scope):
+    item = verification.VerificationItem(
+        claim_id="claim-1",
+        note_path="notes/n1.md",
+        line_start=1,
+        line_end=1,
+        source_id="S1",
+        claim_text="claim",
+        claim_hash="claim-hash",
+        snapshot_hash="snapshot-hash",
+        normalization_version=NORMALIZATION_VERSION,
+        matcher_version=MATCHER_VERSION,
+        state=state,
+    )
+
+    assert item.to_dict()["confidence_scope"] == expected_scope
+
+
+def test_human_reviewed_cli_reports_scoped_review_without_claiming_textual_match(
+    tmp_path, monkeypatch
+):
+    research = _explore_research(tmp_path)
+    _write_snapshot(research, "S1", None, status="missing")
+    _write_snapshot(research, "S2", None, status="missing")
+    blocked = verification.verify_explore_claims(research)
+    for item in blocked.items:
+        verification.resolve_claim(research, item.claim_id, reason="revisado", by="nacho")
+    monkeypatch.setenv("SDR_ROOT", str(tmp_path))
+
+    result = CliRunner().invoke(main, ["verify-claims", "eval-foo"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert "[OK] verificación de claims" in result.output
+    assert "revisión humana acotada" in result.output
+    assert "[OK] anclaje textual local" not in result.output
+    assert "anclaje textual local" not in result.output
+
+
+def test_unverifiable_cli_does_not_label_the_report_as_textual_anchoring(tmp_path, monkeypatch):
+    research = _explore_research(tmp_path)
+    _write_snapshot(research, "S1", None, status="missing")
+    monkeypatch.setenv("SDR_ROOT", str(tmp_path))
+
+    result = CliRunner().invoke(main, ["verify-claims", "eval-foo"], catch_exceptions=False)
+
+    assert result.exit_code == 1
+    assert "[FALLA] verificación de claims" in result.output
+    assert "evidencia no verificable" in result.output
+    assert "[OK] anclaje textual local" not in result.output
 
 
 def test_verify_claims_cli_exits_nonzero_for_unverifiable(tmp_path, monkeypatch):
@@ -425,6 +539,247 @@ def test_snapshot_url_mismatch_is_unverifiable_without_network(tmp_path, monkeyp
     assert item.state in {"unverifiable", "stale"}
 
 
+def test_incomplete_legacy_snapshot_metadata_is_never_inferred_as_eligible(tmp_path):
+    research = _explore_research(tmp_path)
+    source_dir = research.artifact_path("notes/sources/S1")
+    content = source_dir.joinpath("content.md").read_bytes()
+    source_dir.joinpath("meta.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "url": "https://docs.foo.dev/guide",
+                "status": "ok",
+                "content_hash": hashlib.sha256(content).hexdigest(),
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.snapshot_hash.startswith("snapshot-v2-")
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"declared_url": "https://changed.example/guide", "url": "https://changed.example/guide"},
+        {
+            "final_url": "https://cdn.foo.dev/guide",
+            "redirects": [
+                {
+                    "url": "https://docs.foo.dev/guide",
+                    "status_code": 302,
+                    "location": "https://cdn.foo.dev/guide",
+                    "target_url": "https://cdn.foo.dev/guide",
+                }
+            ],
+        },
+        {"http_status": 201},
+        {"content_type": "text/markdown"},
+        {"captured_at": "2026-07-04T00:00:00+00:00"},
+    ],
+)
+def test_every_evidence_affecting_provenance_change_invalidates_cached_identity(tmp_path, changes):
+    research = _explore_research(tmp_path)
+    before = _snapshot_item(verification.verify_explore_claims(research))
+    meta_path = research.artifact_path("notes/sources/S1/meta.yaml")
+    metadata = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+    metadata.update(changes)
+    meta_path.write_text(yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8")
+
+    after = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert after.snapshot_hash != before.snapshot_hash
+    assert after.cached is False
+    if changes.get("declared_url"):
+        assert after.state == "unverifiable"
+
+
+@pytest.mark.parametrize(
+    ("content", "metadata"),
+    [
+        ("Foo reduce latencia a 100 ms.", {"http_status": 404}),
+        ("Foo reduce latencia a 100 ms.", {"content_eligible": False}),
+        ("", {}),
+    ],
+)
+def test_noneligible_http_unsupported_and_empty_snapshots_cannot_anchor(
+    tmp_path, content, metadata
+):
+    research = _explore_research(tmp_path)
+    _write_snapshot(research, "S1", content, status="ok", **metadata)
+
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.quote == ""
+    assert item.locator is None
+
+
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "",
+        "application/octet-stream",
+        "text/plain, application/octet-stream",
+        "text/",
+        "text/plain@invalid",
+        "text/plain; charset",
+    ],
+)
+def test_persisted_true_eligibility_cannot_override_canonical_content_type_policy(
+    tmp_path, content_type
+):
+    research = _explore_research(tmp_path)
+    _write_snapshot(
+        research,
+        "S1",
+        "Foo reduce latencia a 100 ms.",
+        content_type=content_type,
+        content_eligible=True,
+    )
+
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.quote == ""
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {
+            "declared_url": "file:///etc/passwd",
+            "url": "file:///etc/passwd",
+            "final_url": "file:///etc/passwd",
+        },
+        {
+            "declared_url": "https://bad host.example/guide",
+            "url": "https://bad host.example/guide",
+            "final_url": "https://bad host.example/guide",
+        },
+        {
+            "declared_url": "http://127.0.0.1/private",
+            "url": "http://127.0.0.1/private",
+            "final_url": "http://127.0.0.1/private",
+        },
+        *[
+            {
+                "final_url": target,
+                "redirects": [
+                    {
+                        "url": "https://docs.foo.dev/guide",
+                        "status_code": 302,
+                        "location": target,
+                        "target_url": target,
+                    }
+                ],
+            }
+            for target in (
+                "file:///etc/passwd",
+                "https://user:secret@docs.foo.dev/guide",
+                "https://docs.foo.dev:70000/guide",
+                "https://bad host.example/guide",
+                "http://127.0.0.1/private",
+            )
+        ],
+    ],
+)
+def test_structurally_invalid_persisted_provenance_fails_closed_without_dns(
+    tmp_path, monkeypatch, changes
+):
+    research = _explore_research(tmp_path)
+    meta_path = research.artifact_path("notes/sources/S1/meta.yaml")
+    metadata = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+    metadata.update(changes)
+    meta_path.write_text(yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8")
+
+    monkeypatch.setattr(
+        "socket.getaddrinfo",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("offline verification used DNS")
+        ),
+    )
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.quote == ""
+
+
+@pytest.mark.parametrize(
+    "captured_at",
+    [
+        "not-a-timestamp",
+        "2026-02-30T00:00:00+00:00",
+        "2026-07-03T00:00:00",
+        "2026-07-03",
+        "2026-07-03 00:00:00+00:00",
+        "2026-07-03T00:00:00Z",
+    ],
+)
+def test_invalid_or_naive_capture_timestamp_fails_closed(tmp_path, captured_at):
+    research = _explore_research(tmp_path)
+    _write_snapshot(
+        research,
+        "S1",
+        "Foo reduce latencia a 100 ms.",
+        captured_at=captured_at,
+    )
+
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.quote == ""
+
+
+def test_anchoring_recomputes_sha256_over_exact_persisted_content_bytes(tmp_path):
+    research = _explore_research(tmp_path)
+    content_path = research.artifact_path("notes/sources/S1/content.md")
+    content_path.write_bytes(b"Foo reduce latencia a 100 ms.\n")
+    meta_path = research.artifact_path("notes/sources/S1/meta.yaml")
+    metadata = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+    metadata["content_hash"] = hashlib.sha256(b"Foo reduce latencia a 100 ms.").hexdigest()
+    meta_path.write_text(yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8")
+
+    item = _snapshot_item(verification.verify_explore_claims(research))
+
+    assert item.state == "unverifiable"
+    assert item.quote == ""
+
+
+def test_provenance_change_stales_scoped_resolution_without_making_snapshot_eligible(
+    tmp_path,
+):
+    research = _explore_research(tmp_path)
+    _write_snapshot(research, "S1", "Different text.")
+    blocked = _snapshot_item(verification.verify_explore_claims(research))
+    verification.resolve_claim(research, blocked.claim_id, reason="reviewed", by="nacho")
+    reviewed = _snapshot_item(verification.verify_explore_claims(research))
+    assert reviewed.state == "human_reviewed"
+    assert reviewed.quote == ""
+
+    meta_path = research.artifact_path("notes/sources/S1/meta.yaml")
+    metadata = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
+    metadata["http_status"] = 201
+    meta_path.write_text(yaml.safe_dump(metadata, sort_keys=False), encoding="utf-8")
+
+    current = _snapshot_item(verification.verify_explore_claims(research))
+    ledger = load_ledger(research.artifact_path("notes/sources/verification.yaml"))
+
+    assert current.state == "not_anchored"
+    assert current.snapshot_hash != blocked.snapshot_hash
+    assert (
+        next(
+            resolution
+            for resolution in ledger["resolutions"]
+            if resolution["claim_id"] == blocked.claim_id
+        )["state"]
+        == "stale"
+    )
+
+
 def test_legacy_resolution_remains_effective_as_human_reviewed(tmp_path):
     research = _explore_research(tmp_path)
     _write_snapshot(research, "S1", None, status="missing")
@@ -576,7 +931,7 @@ def test_resolve_unverifiable_persists_exact_identity_and_becomes_human_reviewed
         "matcher_version": item.matcher_version,
         "state": "active",
     }
-    assert resolution["snapshot_hash"].startswith("unverifiable-v1-")
+    assert resolution["snapshot_hash"].startswith("snapshot-v2-")
     assert (
         next(
             current.state
@@ -654,7 +1009,7 @@ def test_resolve_uses_fresh_changed_sentinel_identity_without_intermediate_write
 
     ledger = load_ledger(research.artifact_path("notes/sources/verification.yaml"))
     resolution = next(item for item in ledger["resolutions"] if item["claim_id"] == old.claim_id)
-    assert resolution["snapshot_hash"].startswith("unverifiable-v1-")
+    assert resolution["snapshot_hash"].startswith("snapshot-v2-")
     assert resolution["snapshot_hash"] != old.snapshot_hash
     assert (
         next(item for item in ledger["claims"] if item["claim_id"] == old.claim_id)["snapshot_hash"]

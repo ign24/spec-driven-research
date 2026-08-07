@@ -1,7 +1,54 @@
+import ast
+import hashlib
+import inspect
 import textwrap
+from pathlib import Path
 
-from sdr import gates, probe_verify
+import pytest
+
+from sdr import gates, lifecycle, probe_verify
 from sdr.research import Research
+from sdr.textual_anchoring import MATCHER_VERSION, NORMALIZATION_VERSION
+from sdr.verification_ledger import empty_ledger, load_ledger, make_claim_id, save_ledger
+
+_DERIVED_LAYER_MODULE = "sdr.cross_investigation"
+_DERIVED_LAYER_SYMBOLS = {
+    "CrossInvestigationLayer",
+    "DegradedSupportReport",
+    "derive_cross_investigation_layer",
+    "query_source_dependencies",
+    "report_degraded_support",
+}
+
+
+def _gate_boundary_violations(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            violations.extend(
+                alias.name
+                for alias in node.names
+                if alias.name == _DERIVED_LAYER_MODULE
+                or alias.name.startswith(f"{_DERIVED_LAYER_MODULE}.")
+            )
+        elif isinstance(node, ast.ImportFrom):
+            imported = {alias.name for alias in node.names}
+            module = node.module or ""
+            if module in {_DERIVED_LAYER_MODULE, "cross_investigation"}:
+                violations.append(module)
+            if (module == "sdr" or node.level > 0) and "cross_investigation" in imported:
+                violations.append(_DERIVED_LAYER_MODULE)
+        elif isinstance(node, (ast.Name, ast.Attribute)):
+            name = node.id if isinstance(node, ast.Name) else node.attr
+            if name in _DERIVED_LAYER_SYMBOLS or name == "cross_investigation":
+                violations.append(name)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value == _DERIVED_LAYER_MODULE or node.value.startswith(
+                f"{_DERIVED_LAYER_MODULE}."
+            ):
+                violations.append(node.value)
+    return violations
 
 
 def _make(tmp_path, mode="full"):
@@ -50,7 +97,7 @@ def _ok_sources() -> str:
     )
 
 
-def test_explore_passes_with_t1_and_two_domains(tmp_path):
+def test_explore_passes_with_t1_and_two_distinct_declared_hosts(tmp_path):
     r = _make(tmp_path)
     (r.root / "notes" / "n1.md").write_text(_note(_ok_sources()), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
@@ -564,7 +611,7 @@ def test_explore_fails_without_t1_source(tmp_path):
     assert any(f.check == "source_tiers" for f in report.failures)
 
 
-def test_explore_fails_with_single_domain(tmp_path):
+def test_explore_fails_with_single_declared_host(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://docs.foo.dev/a\n    tier: T1\n    date: 2026-01-01\n"
@@ -576,7 +623,7 @@ def test_explore_fails_with_single_domain(tmp_path):
     assert any(f.check == "source_triangulation" for f in report.failures)
 
 
-def test_www_prefix_does_not_count_as_distinct_domain(tmp_path):
+def test_www_prefix_does_not_count_as_distinct_declared_host(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://www.foo.dev/a\n    tier: T1\n    date: 2026-01-01\n"
@@ -587,7 +634,68 @@ def test_www_prefix_does_not_count_as_distinct_domain(tmp_path):
     assert any(f.check == "source_triangulation" for f in report.failures)
 
 
-def test_github_repos_from_same_owner_count_as_one_org(tmp_path):
+def test_redirect_final_host_does_not_count_as_a_distinct_declared_host(tmp_path):
+    r = _make(tmp_path)
+    sources = (
+        "  - id: S1\n    url: https://declared.example/report\n    tier: T1\n    date: 2026-01-01\n"
+    )
+    (r.root / "notes" / "n1.md").write_text(_note(sources), encoding="utf-8")
+    snapshot_dir = r.root / "notes" / "sources" / "S1"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_dir.joinpath("meta.yaml").write_text(
+        "declared_url: https://declared.example/report\n"
+        "final_url: https://other.example/mirror\n"
+        "redirects:\n"
+        "  - url: https://declared.example/report\n"
+        "    status_code: 302\n"
+        "    location: https://other.example/mirror\n"
+        "    target_url: https://other.example/mirror\n",
+        encoding="utf-8",
+    )
+
+    report = gates.check_stage(r, stage="explore", offline=True)
+    result = next(item for item in report.results if item.check == "source_triangulation")
+
+    assert not result.passed
+    assert "1 hosts declarados distintos" in result.detail
+    assert "independ" not in result.detail.lower()
+    assert "organiz" not in result.detail.lower()
+
+
+def test_distinct_declared_hosts_count_even_when_redirects_share_a_final_host(tmp_path):
+    r = _make(tmp_path)
+    sources = (
+        "  - id: S1\n    url: https://first.example/report\n"
+        "    tier: T1\n    date: 2026-01-01\n"
+        "  - id: S2\n    url: https://second.example/report\n"
+        "    tier: T2\n    date: 2026-01-02\n"
+    )
+    (r.root / "notes" / "n1.md").write_text(_note(sources), encoding="utf-8")
+    for source_id, declared_url in (
+        ("S1", "https://first.example/report"),
+        ("S2", "https://second.example/report"),
+    ):
+        snapshot_dir = r.root / "notes" / "sources" / source_id
+        snapshot_dir.mkdir(parents=True)
+        snapshot_dir.joinpath("meta.yaml").write_text(
+            f"declared_url: {declared_url}\n"
+            "final_url: https://shared.example/mirror\n"
+            "redirects:\n"
+            f"  - url: {declared_url}\n"
+            "    status_code: 302\n"
+            "    location: https://shared.example/mirror\n"
+            "    target_url: https://shared.example/mirror\n",
+            encoding="utf-8",
+        )
+
+    report = gates.check_stage(r, stage="explore", offline=True)
+    result = next(item for item in report.results if item.check == "source_triangulation")
+
+    assert result.passed
+    assert result.detail == "2 hosts declarados distintos"
+
+
+def test_same_declared_github_host_counts_once(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://github.com/acme/repo-a\n    tier: T1\n    date: 2026-01-01\n"
@@ -596,11 +704,12 @@ def test_github_repos_from_same_owner_count_as_one_org(tmp_path):
     (r.root / "notes" / "n1.md").write_text(_note(sources), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
     assert any(
-        f.check == "source_triangulation" and "organizaciones" in f.detail for f in report.failures
+        f.check == "source_triangulation" and "hosts declarados" in f.detail
+        for f in report.failures
     )
 
 
-def test_vendor_mirrors_count_as_one_org(tmp_path):
+def test_distinct_vendor_hosts_are_counted_mechanically(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://docs.vendor.com/a\n    tier: T1\n    date: 2026-01-01\n"
@@ -609,12 +718,10 @@ def test_vendor_mirrors_count_as_one_org(tmp_path):
     )
     (r.root / "notes" / "n1.md").write_text(_note(sources), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
-    assert any(
-        f.check == "source_triangulation" and "organizaciones" in f.detail for f in report.failures
-    )
+    assert all(x.passed for x in report.results if x.check == "source_triangulation")
 
 
-def test_org_aliases_yaml_collapses_sources(tmp_path):
+def test_org_aliases_do_not_change_declared_host_count(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://docs.foo.dev/a\n    tier: T1\n    date: 2026-01-01\n"
@@ -628,7 +735,7 @@ def test_org_aliases_yaml_collapses_sources(tmp_path):
         encoding="utf-8",
     )
     report = gates.check_stage(r, stage="explore", offline=True)
-    assert any(f.check == "source_triangulation" for f in report.failures)
+    assert all(x.passed for x in report.results if x.check == "source_triangulation")
 
 
 def test_per_alternative_t1_requirement(tmp_path):
@@ -657,7 +764,7 @@ def test_per_alternative_triangulation_requirement(tmp_path):
     assert any(f.check == "source_triangulation" and "bar" in f.detail for f in report.failures)
 
 
-def test_per_alternative_triangulation_passes_with_two_domains_each(tmp_path):
+def test_per_alternative_triangulation_passes_with_two_declared_hosts_each(tmp_path):
     r = _make(tmp_path)
     sources = (
         "  - url: https://docs.foo.dev/a\n    tier: T1\n    date: 2026-01-01\n    alternative: foo\n"
@@ -820,8 +927,8 @@ def test_probe_passes_with_benchmark_table_and_repro_command(tmp_path):
 # --- transfer: y-statement y ring acoplado a evidencia ---------------------
 
 
-def _memo(ring: str, recommendation: str) -> str:
-    return textwrap.dedent(
+def _memo(ring: str, recommendation: str, evidence_claim_ids: list[str] | None = None) -> str:
+    memo = textwrap.dedent(
         f"""
         ---
         research: eval-foo
@@ -829,6 +936,7 @@ def _memo(ring: str, recommendation: str) -> str:
         stage: transfer
         ring: {ring}
         audience: equipo
+        __EVIDENCE_CLAIM_IDS__
         ---
 
         ## Recomendación
@@ -850,6 +958,66 @@ def _memo(ring: str, recommendation: str) -> str:
         Equipo técnico.
         """
     ).lstrip()
+    if evidence_claim_ids is None:
+        evidence = ""
+    elif not evidence_claim_ids:
+        evidence = "evidence_claim_ids: []"
+    else:
+        evidence = (
+            "evidence_claim_ids:\n"
+            + "".join(f"  - {claim_id}\n" for claim_id in evidence_claim_ids).rstrip()
+        )
+    return memo.replace("__EVIDENCE_CLAIM_IDS__\n", f"{evidence}\n" if evidence else "")
+
+
+def _persist_claim(r: Research, state: str = "verified") -> str:
+    claim_text = "Foo has stable support."
+    claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
+    claim_id = make_claim_id("notes/evidence.md", 1, 1, "S1", claim_hash)
+    ledger = empty_ledger()
+    ledger["claims"] = [
+        {
+            "claim_id": claim_id,
+            "note_path": "notes/evidence.md",
+            "line_start": 1,
+            "line_end": 1,
+            "source_id": "S1",
+            "claim_text": claim_text,
+            "claim_hash": claim_hash,
+            "snapshot_hash": "snapshot-hash",
+            "normalization_version": NORMALIZATION_VERSION,
+            "matcher_version": MATCHER_VERSION,
+            "state": state,
+            "quote": claim_text if state == "verified" else "",
+            "locator": {"line_start": 1, "line_end": 1} if state == "verified" else None,
+        }
+    ]
+    save_ledger(r.artifact_path("notes/sources/verification.yaml"), ledger)
+    return claim_id
+
+
+def _append_forward_compatible_claim(r: Research) -> None:
+    claim_text = "Future verification state."
+    claim_hash = hashlib.sha256(claim_text.encode()).hexdigest()
+    claim_id = make_claim_id("notes/future.md", 2, 2, "S2", claim_hash)
+    ledger_path = r.artifact_path("notes/sources/verification.yaml")
+    ledger = load_ledger(ledger_path)
+    ledger["claims"].append(
+        {
+            "claim_id": claim_id,
+            "note_path": "notes/future.md",
+            "line_start": 2,
+            "line_end": 2,
+            "source_id": "S2",
+            "claim_text": claim_text,
+            "claim_hash": claim_hash,
+            "snapshot_hash": "future-snapshot-hash",
+            "normalization_version": NORMALIZATION_VERSION,
+            "matcher_version": MATCHER_VERSION,
+            "state": "future_state",
+        }
+    )
+    save_ledger(ledger_path, ledger)
 
 
 def _complete_recommendation() -> str:
@@ -912,6 +1080,155 @@ def test_transfer_complete_y_statement_passes(tmp_path):
     )
     report = gates.check_stage(r, stage="transfer")
     assert all(x.passed for x in report.results if x.check == "y_statement")
+
+
+def test_transfer_requires_every_declared_claim_to_exist(tmp_path):
+    r = _make(tmp_path, mode="light")
+    missing_id = "claim-" + "a" * 64
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), [missing_id]), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    failure = next(item for item in report.failures if item.check == "evidence_claim_ids")
+    assert failure.detail == f"decision-memo.md: claim ID does not exist: {missing_id}"
+
+
+def test_transfer_requires_every_declared_claim_to_be_currently_verified(tmp_path):
+    r = _make(tmp_path, mode="light")
+    claim_id = _persist_claim(r, state="not_anchored")
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), [claim_id]), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    failure = next(item for item in report.failures if item.check == "evidence_claim_ids")
+    assert failure.detail == (
+        f"decision-memo.md: claim ID is not currently verified: {claim_id} (not_anchored)"
+    )
+
+
+def test_transfer_accepts_unique_existing_verified_claim_ids(tmp_path):
+    r = _make(tmp_path, mode="light")
+    claim_id = _persist_claim(r)
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), [claim_id]), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert all(item.passed for item in report.results if item.check == "evidence_claim_ids")
+
+
+@pytest.mark.parametrize("references_verified_claim", [False, True])
+def test_transfer_ignores_unrelated_forward_compatible_claims(tmp_path, references_verified_claim):
+    r = _make(tmp_path, mode="light")
+    claim_ids = [_persist_claim(r)] if references_verified_claim else []
+    _append_forward_compatible_claim(r)
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), claim_ids), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert all(item.passed for item in report.results if item.check == "evidence_claim_ids")
+
+
+def test_transfer_rejects_forged_verified_claim_from_invalid_ledger(tmp_path):
+    r = _make(tmp_path, mode="light")
+    claim_id = _persist_claim(r)
+    ledger_path = r.artifact_path("notes/sources/verification.yaml")
+    ledger_path.write_text(
+        ledger_path.read_text(encoding="utf-8").replace(
+            "source_id: S1",
+            "source_id: S2",
+        ),
+        encoding="utf-8",
+    )
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), [claim_id]), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    failure = next(item for item in report.failures if item.check == "evidence_claim_ids")
+    assert "invalid verification ledger" in failure.detail
+    assert "claim_id does not match its identity fields" in failure.detail
+
+
+def test_transfer_rejects_duplicate_top_level_evidence_claim_ids_without_last_wins(tmp_path):
+    r = _make(tmp_path, mode="light")
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation(), []).replace(
+            "evidence_claim_ids: []",
+            "evidence_claim_ids: []\nevidence_claim_ids: []",
+        ),
+        encoding="utf-8",
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert [failure.detail for failure in report.failures] == [
+        "decision-memo.md: duplicate top-level frontmatter key: evidence_claim_ids"
+    ]
+
+
+def test_transfer_schema_v1_accepts_legacy_memo_without_lineage(tmp_path):
+    r = _make(tmp_path, mode="light")
+    r.meta.schema_version = 1
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation()), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    lineage = [item for item in report.results if item.check == "evidence_claim_ids"]
+    assert lineage == [
+        gates.GateResult(
+            "evidence_claim_ids",
+            True,
+            "legacy schema v1 decision lineage unavailable",
+        )
+    ]
+
+
+def test_transfer_schema_v2_rejects_new_memo_without_lineage(tmp_path):
+    r = _make(tmp_path, mode="light")
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", _complete_recommendation()), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert any(
+        failure.check == "frontmatter" and "evidence_claim_ids" in failure.detail
+        for failure in report.failures
+    )
+    assert any(
+        failure.check == "evidence_claim_ids" and "must be a list" in failure.detail
+        for failure in report.failures
+    )
+
+
+def test_gate_boundary_never_imports_or_reads_cross_investigation_derivations() -> None:
+    gate_boundary = (
+        Path(inspect.getsourcefile(gates) or ""),
+        Path(inspect.getsourcefile(lifecycle) or ""),
+    )
+
+    violations = {
+        str(path): _gate_boundary_violations(path)
+        for path in set(gate_boundary)
+        if _gate_boundary_violations(path)
+    }
+
+    assert violations == {}
+    assert "evidence_claim_ids" in gates._CHECKS
+    lineage_source = inspect.getsource(gates._check_evidence_claim_ids)
+    assert "validate_evidence_claim_ids" in lineage_source
+    assert "load_ledger" in lineage_source
 
 
 # --- reuse: metadata de asset ---------------------------------------------

@@ -20,8 +20,13 @@ import yaml
 from sdr import schema
 from sdr.claims import extract_claims, extract_references
 from sdr.network_policy import NetworkPolicyError, fetch_http
-from sdr.parser import Artifact, parse_artifact
+from sdr.parser import Artifact, DuplicateFrontmatterKeyError, parse_artifact
 from sdr.research import Research
+from sdr.verification_ledger import (
+    LedgerValidationError,
+    load_ledger,
+    validate_claim_references,
+)
 
 _CRITERION_ID_RE = re.compile(r"\bC\d+\b")
 _CODE_FENCE_RE = re.compile(r"```")
@@ -66,6 +71,18 @@ class GateReport:
         }
 
 
+@dataclass(frozen=True)
+class SourceExpiry:
+    """Mechanical age result under the investigation's configured tier policy."""
+
+    tier: str
+    source_date: date | None
+    as_of: date
+    max_age_days: int
+    age_days: int | None
+    expired: bool
+
+
 def extract_criteria_ids(text: str) -> list[str]:
     """IDs de criterio (C1, C2, ...) únicos, en orden de aparición."""
     seen: dict[str, None] = {}
@@ -84,7 +101,10 @@ def _check_single_file(research: Research, spec: schema.ArtifactSpec) -> list[Ga
     path = research.artifact_path(spec.primary_file)
     if not path.exists():
         return [GateResult("structure", False, f"falta {spec.primary_file}")]
-    art = parse_artifact(path)
+    try:
+        art = parse_artifact(path)
+    except DuplicateFrontmatterKeyError as exc:
+        return [GateResult("duplicate_frontmatter_key", False, f"{spec.primary_file}: {exc}")]
     results.extend(_check_frontmatter(art, spec.frontmatter_required, spec.primary_file))
     results.extend(_check_sections(art, spec.required_sections, spec.primary_file))
     return results
@@ -115,6 +135,8 @@ def _check_frontmatter(art: Artifact, required: tuple[str, ...], rel: str) -> li
     results: list[GateResult] = []
     for field_name in required:
         value = art.frontmatter.get(field_name)
+        if field_name == "evidence_claim_ids" and isinstance(value, list):
+            continue
         if value in (None, "", [], {}):
             results.append(
                 GateResult("frontmatter", False, f"{rel}: falta frontmatter {field_name!r}")
@@ -261,7 +283,7 @@ def _check_source_tiers(ctx: CheckContext) -> list[GateResult]:
 def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
     sources = _iter_sources(ctx.research)
     results: list[GateResult] = []
-    brief_date, max_age = _source_age_policy(ctx.research)
+    brief_date, _ = _source_age_policy(ctx.research)
     for src in sources:
         if src.get("date") in (None, ""):
             results.append(
@@ -274,7 +296,7 @@ def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
             continue
         if ctx.research.meta.schema_version >= 2 and brief_date:
             try:
-                source_date = date.fromisoformat(str(src.get("date")))
+                date.fromisoformat(str(src.get("date")))
             except ValueError:
                 results.append(
                     GateResult(
@@ -284,16 +306,14 @@ def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
                     )
                 )
                 continue
-            tier = str(src.get("tier") or "T3")
-            allowed = max_age.get(tier, schema.DEFAULT_SOURCE_MAX_AGE.get(tier, 180))
-            age = (brief_date - source_date).days
-            if age > allowed and not src.get("date_justification"):
+            expiry = source_expiry(ctx.research, src, as_of=brief_date)
+            if expiry.expired and not src.get("date_justification"):
                 results.append(
                     GateResult(
                         "source_dates",
                         False,
-                        f"{src.get('note')}: fuente {src.get('url')} vencida para {tier} "
-                        f"({age} días > {allowed})",
+                        f"{src.get('note')}: fuente {src.get('url')} vencida para {expiry.tier} "
+                        f"({expiry.age_days} días > {expiry.max_age_days})",
                     )
                 )
     if not results:
@@ -318,6 +338,26 @@ def _source_age_policy(research: Research) -> tuple[date | None, dict[str, int]]
         return date.fromisoformat(str(fm.get("date"))), policy
     except (TypeError, ValueError):
         return None, policy
+
+
+def source_expiry(research: Research, source: dict[str, Any], *, as_of: date) -> SourceExpiry:
+    """Evaluate source age without changing the gate's configured tier policy."""
+    _, policy = _source_age_policy(research)
+    tier = str(source.get("tier") or "T3")
+    allowed = policy.get(tier, schema.DEFAULT_SOURCE_MAX_AGE.get(tier, 180))
+    try:
+        source_date = date.fromisoformat(str(source.get("date")))
+    except (TypeError, ValueError):
+        source_date = None
+    age = (as_of - source_date).days if source_date is not None else None
+    return SourceExpiry(
+        tier=tier,
+        source_date=source_date,
+        as_of=as_of,
+        max_age_days=allowed,
+        age_days=age,
+        expired=age is not None and age > allowed,
+    )
 
 
 def _check_tier_plausibility(ctx: CheckContext) -> list[GateResult]:
@@ -365,7 +405,6 @@ def _tier_rank(tier: str) -> int:
 
 def _check_source_triangulation(ctx: CheckContext) -> list[GateResult]:
     sources = _iter_sources(ctx.research)
-    aliases = _load_org_aliases(ctx.research)
     has_alternatives = any(src.get("alternative") for src in sources)
     groups: dict[str, set[str]] = {}
     if has_alternatives:
@@ -373,26 +412,28 @@ def _check_source_triangulation(ctx: CheckContext) -> list[GateResult]:
             label = str(src.get("alternative") or "__sin_alternativa__")
             groups.setdefault(label, set())
             if src.get("url"):
-                groups[label].add(_org(src["url"], aliases))
+                groups[label].add(_hostname(src["url"]))
     else:
-        groups["__global__"] = {_org(s["url"], aliases) for s in sources if s.get("url")}
+        groups["__global__"] = {_hostname(s["url"]) for s in sources if s.get("url")}
 
     results: list[GateResult] = []
-    for label, domains in groups.items():
-        domains.discard("")
-        if len(domains) < schema.MIN_INDEPENDENT_DOMAINS:
+    for label, declared_hosts in groups.items():
+        declared_hosts.discard("")
+        if len(declared_hosts) < schema.MIN_DISTINCT_DECLARED_HOSTS:
             target = "el conjunto" if label == "__global__" else f"la alternativa {label!r}"
             results.append(
                 GateResult(
                     "source_triangulation",
                     False,
-                    f"{target} requiere >= {schema.MIN_INDEPENDENT_DOMAINS} organizaciones "
-                    f"independientes; hay {len(domains)}",
+                    f"{target} requiere >= {schema.MIN_DISTINCT_DECLARED_HOSTS} hosts declarados "
+                    f"distintos; hay {len(declared_hosts)} hosts declarados distintos",
                 )
             )
     if not results:
-        total = sum(len(domains) for domains in groups.values())
-        results.append(GateResult("source_triangulation", True, f"{total} organizaciones"))
+        total = sum(len(declared_hosts) for declared_hosts in groups.values())
+        results.append(
+            GateResult("source_triangulation", True, f"{total} hosts declarados distintos")
+        )
     return results
 
 
@@ -605,6 +646,68 @@ def _check_ring_backed_by_evidence(ctx: CheckContext) -> list[GateResult]:
     return [GateResult("ring_backed_by_evidence", True, f"anillo {ring!r} respaldado")]
 
 
+def _check_evidence_claim_ids(ctx: CheckContext) -> list[GateResult]:
+    memo = ctx.research.artifact_path("decision-memo.md")
+    if not memo.exists():
+        return [GateResult("evidence_claim_ids", False, "falta decision-memo.md")]
+    frontmatter = parse_artifact(memo).frontmatter
+    if "evidence_claim_ids" not in frontmatter and ctx.research.meta.schema_version < 2:
+        return [
+            GateResult(
+                "evidence_claim_ids",
+                True,
+                "legacy schema v1 decision lineage unavailable",
+            )
+        ]
+    value = frontmatter.get("evidence_claim_ids")
+    try:
+        claim_ids = schema.validate_evidence_claim_ids(value)
+    except ValueError as exc:
+        return [GateResult("evidence_claim_ids", False, f"decision-memo.md: {exc}")]
+
+    try:
+        ledger = load_ledger(ctx.research.artifact_path("notes/sources/verification.yaml"))
+    except LedgerValidationError as exc:
+        return [GateResult("evidence_claim_ids", False, str(exc))]
+    ledger_issues = validate_claim_references(ledger, claim_ids)
+    if ledger_issues:
+        return [
+            GateResult(
+                "evidence_claim_ids",
+                False,
+                "invalid verification ledger: " + "; ".join(ledger_issues),
+            )
+        ]
+    claims = {str(claim.get("claim_id")): claim for claim in ledger["claims"]}
+    for claim_id in claim_ids:
+        claim = claims.get(claim_id)
+        if claim is None:
+            return [
+                GateResult(
+                    "evidence_claim_ids",
+                    False,
+                    f"decision-memo.md: claim ID does not exist: {claim_id}",
+                )
+            ]
+        state = str(claim.get("state") or "")
+        if state != "verified":
+            return [
+                GateResult(
+                    "evidence_claim_ids",
+                    False,
+                    "decision-memo.md: claim ID is not currently verified: "
+                    f"{claim_id} ({state or 'missing state'})",
+                )
+            ]
+    return [
+        GateResult(
+            "evidence_claim_ids",
+            True,
+            f"{len(claim_ids)} claim dependencies verified",
+        )
+    ]
+
+
 def _check_asset_metadata(ctx: CheckContext) -> list[GateResult]:
     directory = ctx.research.artifact_path("assets")
     files = sorted(directory.glob("*.md")) if directory.is_dir() else []
@@ -654,6 +757,7 @@ _CHECKS: dict[str, Callable[[CheckContext], list[GateResult]]] = {
     "probe_artifacts_exist": _check_probe_artifacts_exist,
     "y_statement": _check_y_statement,
     "ring_backed_by_evidence": _check_ring_backed_by_evidence,
+    "evidence_claim_ids": _check_evidence_claim_ids,
     "asset_metadata": _check_asset_metadata,
 }
 
@@ -662,10 +766,9 @@ def _default_url_checker(url: str) -> bool:
     import httpx
 
     try:
-        with httpx.Client(follow_redirects=False, trust_env=False) as client:
-            response = fetch_http(url, method="HEAD", client=client)
-            if response.status_code >= 400:
-                response = fetch_http(url, client=client)
+        response = fetch_http(url, method="HEAD")
+        if response.status_code >= 400:
+            response = fetch_http(url)
         return response.status_code < 400
     except (httpx.HTTPError, NetworkPolicyError):
         return False
@@ -685,6 +788,8 @@ def check_stage(
         report.results.extend(_check_collection(research, spec))
     else:
         report.results.extend(_check_single_file(research, spec))
+    if any(result.check == "duplicate_frontmatter_key" for result in report.results):
+        return report
     ctx = CheckContext(
         research=research,
         stage=stage,

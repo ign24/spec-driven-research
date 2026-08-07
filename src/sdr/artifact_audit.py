@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from .public_tree_audit import Finding as TreeFinding
-from .public_tree_audit import audit_bytes, audit_tree, redact_sensitive
+from .public_tree_audit import RedactionContext, audit_bytes, audit_tree, redact_sensitive
 
 MAX_MEMBER_SIZE = 25 * 1024 * 1024
 MAX_TOTAL_SIZE = 100 * 1024 * 1024
@@ -112,9 +112,10 @@ def audit_artifacts(paths: Iterable[Path]) -> list[ArtifactFinding]:
 
 def render_findings(findings: Sequence[ArtifactFinding]) -> str:
     """Render locations and categories without rendering matched content."""
+    context = RedactionContext()
     lines = []
     for finding in findings:
-        location = redact_sensitive(f"{finding.artifact}:{finding.path}")
+        location = redact_sensitive(f"{finding.artifact}:{finding.path}", context=context)
         if finding.line is not None:
             location += f":{finding.line}"
         lines.append(f"{location} [{finding.code}] sensitive content redacted")

@@ -19,10 +19,6 @@ _RESULT_RE = re.compile(
     re.IGNORECASE,
 )
 _BULLET_RE = re.compile(r"^\s*[-*]\s+(.+?)\s*$")
-_SECRET_RE = re.compile(
-    r"(?P<key>\b(?:API_KEY|SECRET|TOKEN|PASSWORD)\b)(?P<sep>\s*[:=]\s*)(?P<value>[^\s\n]+)",
-    re.IGNORECASE,
-)
 
 
 class ContextGraphError(ValueError):
@@ -118,11 +114,26 @@ class ContextGraph:
     def to_dict(self) -> dict[str, Any]:
         """Serialize the graph to a deterministic dictionary."""
         self.validate()
-        return {
-            "edges": [edge.to_dict() for edge in _sorted_edges(self.edges)],
-            "metadata": _stable_value(self.metadata),
-            "nodes": [node.to_dict() for node in sorted(self.nodes, key=lambda node: node.id)],
-        }
+        from sdr.public_tree_audit import redact_sensitive_values
+
+        payload = redact_sensitive_values(
+            {
+                "edges": [edge.to_dict() for edge in _sorted_edges(self.edges)],
+                "metadata": _stable_value(self.metadata),
+                "nodes": [node.to_dict() for node in sorted(self.nodes, key=lambda node: node.id)],
+            }
+        )
+        payload["nodes"] = sorted(payload["nodes"], key=lambda node: node["id"])
+        payload["edges"] = sorted(
+            payload["edges"],
+            key=lambda edge: (
+                edge["source"],
+                edge["relation"],
+                edge["target"],
+                edge["provenance"],
+            ),
+        )
+        return payload
 
     def to_json(self) -> str:
         """Serialize the graph to stable, pretty-printed JSON."""
@@ -275,7 +286,13 @@ def validate_paths_within_root(root: Path, paths: tuple[Path | str, ...]) -> lis
 
 def redact_secret_like_values(text: str) -> str:
     """Redact common secret-like key assignments in generated summaries."""
-    return _SECRET_RE.sub(lambda match: f"{match.group('key')}{match.group('sep')}<redacted>", text)
+    from sdr.public_tree_audit import RedactionContext, redact_sensitive
+
+    context = RedactionContext()
+    return "".join(
+        redact_sensitive(line.rstrip("\r\n"), context=context) + line[len(line.rstrip("\r\n")) :]
+        for line in text.splitlines(keepends=True)
+    )
 
 
 def build_sdr_context_graph(

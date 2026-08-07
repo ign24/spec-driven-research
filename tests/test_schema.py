@@ -79,7 +79,39 @@ def test_explore_artifact_schema_v2_requires_counter_evidence():
     assert "Contra-evidencia" in spec.required_sections
 
 
+def test_transfer_artifact_schema_v1_allows_legacy_lineage_omission():
+    spec = schema.artifact_for("transfer", schema_version=1)
+
+    assert "evidence_claim_ids" not in spec.frontmatter_required
+    assert "evidence_claim_ids" in spec.checks
+
+
+def test_transfer_artifact_schema_v2_requires_exact_claim_lineage():
+    spec = schema.artifact_for("transfer", schema_version=2)
+
+    assert "evidence_claim_ids" in spec.frontmatter_required
+    assert "evidence_claim_ids" in spec.checks
+
+
 def test_schema_has_no_operational_judge_rubrics():
     assert not hasattr(schema, "Criterion")
     assert not hasattr(schema, "Rubric")
     assert not hasattr(schema, "rubric")
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ("claim-" + "a" * 64, "must be a list"),
+        ([""], "must not be empty"),
+        (["claim-not-a-digest"], "malformed claim ID"),
+        (["claim-" + "a" * 64] * 2, "duplicate claim ID"),
+    ],
+)
+def test_evidence_claim_ids_reject_malformed_and_duplicate_values_deterministically(value, message):
+    with pytest.raises(ValueError, match=message):
+        schema.validate_evidence_claim_ids(value)
+
+
+def test_evidence_claim_ids_accept_an_explicit_empty_list():
+    assert schema.validate_evidence_claim_ids([]) == ()

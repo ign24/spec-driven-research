@@ -1,7 +1,11 @@
+import json
+
 import pytest
 
+from sdr import context_export
 from sdr.context_export import export_context_graph
 from sdr.context_graph import ContextGraph, GraphEdge, GraphNode, write_context_graph
+from sdr.research import Research
 
 
 def _sample_graph() -> ContextGraph:
@@ -43,6 +47,125 @@ def _sample_graph() -> ContextGraph:
     )
 
 
+@pytest.mark.parametrize(
+    ("export_format", "relative_output"),
+    [
+        ("obsidian", "context/obsidian/index.md"),
+        ("mermaid", "context/context.mmd"),
+        ("dot", "context/context.dot"),
+    ],
+)
+def test_export_knowledge_base_covers_every_investigation(tmp_path, export_format, relative_output):
+    Research.create(base=tmp_path, slug="beta", title="Beta", question="Second question")
+    Research.create(base=tmp_path, slug="alpha", title="Alpha", question="First question")
+
+    summary = context_export.export_knowledge_base_context_graph(tmp_path, export_format)
+
+    assert summary["investigations"] == 2
+    rendered = (tmp_path / relative_output).read_text(encoding="utf-8")
+    if export_format == "obsidian":
+        output = tmp_path / "context" / "obsidian"
+        research_notes = sorted(output.glob("research--*.md"))
+        assert len(research_notes) == 2
+        titles = {
+            path.read_text(encoding="utf-8").split("# ", 1)[1].splitlines()[0]
+            for path in research_notes
+        }
+        assert titles == {"alpha", "beta"}
+        assert "research:alpha" in rendered
+        assert "research:beta" in rendered
+    else:
+        assert "alpha" in rendered
+        assert "beta" in rendered
+
+
+@pytest.mark.parametrize(
+    ("export_format", "relative_output"),
+    [
+        ("obsidian", "context/obsidian/index.md"),
+        ("mermaid", "context/context.mmd"),
+        ("dot", "context/context.dot"),
+    ],
+)
+def test_empty_knowledge_base_exports_a_valid_graph(tmp_path, export_format, relative_output):
+    summary = context_export.export_knowledge_base_context_graph(tmp_path, export_format)
+
+    assert summary["investigations"] == 0
+    assert (tmp_path / relative_output).is_file()
+    graph_path = tmp_path / "context" / "context.json"
+    assert graph_path.is_file()
+    ContextGraph.from_dict(json.loads(graph_path.read_text(encoding="utf-8")))
+
+
+@pytest.mark.parametrize("export_format", ["obsidian", "mermaid", "dot"])
+def test_kb_exports_resolver_chain_and_exact_edge_origins(tmp_path, export_format):
+    first = Research.create(base=tmp_path, slug="alpha", title="Alpha", question="q")
+    second = Research.create(base=tmp_path, slug="beta", title="Beta", question="q")
+    for research, source_id in ((first, "S1"), (second, "S2")):
+        research.artifact_path("notes/sources.md").write_text(
+            "---\n"
+            f"research: {research.meta.slug}\n"
+            "date: 2026-08-03\n"
+            "stage: explore\n"
+            "sources:\n"
+            f"  - id: {source_id}\n"
+            "    url: https://example.com/shared\n"
+            "---\n\n"
+            "## Sources\n",
+            encoding="utf-8",
+        )
+
+    summary = context_export.export_knowledge_base_context_graph(tmp_path, export_format)
+
+    graph_path = tmp_path / "context" / "context.json"
+    assert summary["graph_artifact"] == str(graph_path)
+    graph = ContextGraph.from_dict(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    if export_format == "obsidian":
+        rendered = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted((tmp_path / "context" / "obsidian").glob("*.md"))
+        )
+    else:
+        rendered = (
+            tmp_path / f"context/context.{'mmd' if export_format == 'mermaid' else 'dot'}"
+        ).read_text(encoding="utf-8")
+    assert "work-identifier" in rendered
+    assert "normalized-url" in rendered
+    assert "alpha:S1" in rendered
+    assert "beta:S2" in rendered
+
+
+def test_per_investigation_exports_remain_byte_for_byte_unchanged(tmp_path):
+    graph = ContextGraph(
+        nodes=[GraphNode(id="source:S1", type="source", title="Source", metadata={"tier": "T1"})],
+        edges=[],
+        metadata={"slug": "legacy"},
+    )
+    root = tmp_path / "legacy"
+
+    export_context_graph(graph, root, "obsidian")
+    export_context_graph(graph, root, "mermaid")
+    export_context_graph(graph, root, "dot")
+
+    assert (root / "context/obsidian/index.md").read_bytes() == (
+        b"---\nderived: true\ngraph_artifact: context/context.json\nslug: legacy\n---\n\n"
+        b"# SpecLab Context Graph\n\n"
+        b"> Derived from `context.json`. Regenerate this export instead of editing it as evidence.\n\n"
+        b"- Nodes: 1\n- Edges: 0\n\n## Nodes\n- [[source--S1|source:S1]]\n"
+    )
+    assert (root / "context/obsidian/source--S1.md").read_bytes() == (
+        b"---\nderived: true\ngraph_artifact: context/context.json\nnode_id: source:S1\n"
+        b"node_type: source\nsource_files:\n---\n\n# Source\n\n## Metadata\n\n"
+        b'```json\n{\n  "tier": "T1"\n}\n```\n\n## Outgoing links\n- none\n\n'
+        b"## Incoming links\n- none\n"
+    )
+    assert (root / "context/context.mmd").read_bytes() == b'flowchart TD\n  n1["Source"]\n'
+    assert (root / "context/context.dot").read_bytes() == (
+        b'digraph context {\n  n1 [label="Source"];\n}\n'
+    )
+
+
 def test_export_obsidian_writes_index_notes_frontmatter_and_wikilinks(tmp_path):
     root = tmp_path / "eval-context"
     graph = _sample_graph()
@@ -75,7 +198,10 @@ def test_export_obsidian_is_deterministic_and_redacts_secrets_and_paths(tmp_path
                 type="source",
                 title="API_KEY=abc123",
                 source_files=(str(outside),),
-                metadata={"summary": "TOKEN: super-secret"},
+                metadata={
+                    "repeated": "TOKEN: abc123",
+                    "summary": "TOKEN: super-secret",
+                },
             )
         ],
         edges=[],
@@ -98,7 +224,8 @@ def test_export_obsidian_is_deterministic_and_redacts_secrets_and_paths(tmp_path
     combined = "\n".join(contents_first.values())
     assert "abc123" not in combined
     assert "super-secret" not in combined
-    assert "<redacted>" in combined
+    assert combined.count("<redacted-value-1>") == 2
+    assert "<redacted-value-2>" in combined
     assert str(outside) not in combined
 
 

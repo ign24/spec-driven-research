@@ -395,9 +395,171 @@ def test_redact_secret_like_values_masks_sensitive_assignments():
 
     assert "abc123" not in redacted
     assert "super-secret" not in redacted
-    assert "API_KEY=<redacted>" in redacted
-    assert "PASSWORD: <redacted>" in redacted
+    assert "API_KEY=<redacted-value-1>" in redacted
+    assert "PASSWORD: <redacted-value-2>" in redacted
     assert "normal=value" in redacted
+
+
+def test_context_json_recursively_redacts_sensitive_urls_and_private_paths(tmp_path):
+    sensitive_url = "https://example.com/doc?token=top-secret&page=2"
+    private_path = "/" + "home/alice/private/source.txt"
+    graph = ContextGraph(
+        nodes=[
+            GraphNode(
+                id="source:S1",
+                type="source",
+                title=sensitive_url,
+                source_files=(private_path,),
+                metadata={
+                    "nested": {"password_url": sensitive_url, "path": private_path},
+                    "doi": "doi:10.1000/private-paths-are-not-secrets",
+                },
+            )
+        ],
+        edges=[],
+    )
+
+    output = write_context_graph(graph, tmp_path).read_text(encoding="utf-8")
+
+    assert "top-secret" not in output
+    assert private_path not in output
+    assert "token=<redacted-value-1>" in output
+    assert "page=2" in output
+    assert "doi:10.1000/private-paths-are-not-secrets" in output
+    assert graph.nodes[0].title == sensitive_url
+    assert graph.nodes[0].source_files == (private_path,)
+
+
+def test_safe_serialization_preserves_sensitive_graph_identity_and_round_trips():
+    first_url = "https://example.com/doc?token=alpha-secret&view=full"
+    second_url = "https://example.com/doc?token=beta-secret&view=full"
+    first_path = "/" + "home/alice/private/alpha.txt"
+    second_path = "/" + "home/alice/private/beta.txt"
+    graph = ContextGraph(
+        nodes=[
+            GraphNode(
+                id=f"source:{first_url}",
+                type="source",
+                title=first_url,
+                source_files=(first_path,),
+                metadata={"url": first_url, "path": first_path, "ordinary": "source:S1"},
+            ),
+            GraphNode(
+                id=f"source:{second_url}",
+                type="source",
+                title=second_url,
+                source_files=(second_path,),
+                metadata={"url": second_url, "path": second_path, "ordinary": "source:S2"},
+            ),
+        ],
+        edges=[
+            GraphEdge(
+                source=f"source:{first_url}",
+                target=f"source:{second_url}",
+                relation="related",
+                provenance="explicit",
+                metadata={"password": "PASSWORD=alpha-secret", "ordinary": "edge:E1"},
+            )
+        ],
+        metadata={
+            "password": "PASSWORD=beta-secret",
+            "provenance_map": {"TOKEN": "provenance-secret"},
+            "ordinary": "graph:G1",
+        },
+    )
+
+    first = graph.to_dict()
+    second = graph.to_dict()
+    encoded = json.dumps(first, sort_keys=True)
+    round_tripped = ContextGraph.from_dict(first)
+
+    assert first == second
+    assert len({node["id"] for node in first["nodes"]}) == 2
+    node_ids_by_ordinary = {node["metadata"]["ordinary"]: node["id"] for node in first["nodes"]}
+    assert first["edges"][0]["source"] == node_ids_by_ordinary["source:S1"]
+    assert first["edges"][0]["target"] == node_ids_by_ordinary["source:S2"]
+    round_trip_payload = round_tripped.to_dict()
+    third_cycle_payload = ContextGraph.from_dict(round_trip_payload).to_dict()
+    assert round_trip_payload == first
+    assert third_cycle_payload == first
+    round_trip_ids = {node["id"] for node in round_trip_payload["nodes"]}
+    assert len(round_trip_ids) == 2
+    assert round_trip_payload["edges"][0]["source"] in round_trip_ids
+    assert round_trip_payload["edges"][0]["target"] in round_trip_ids
+    assert "alpha-secret" not in encoded
+    assert "beta-secret" not in encoded
+    assert "provenance-secret" not in encoded
+    assert first_path not in encoded
+    assert second_path not in encoded
+    assert encoded.count("redacted-value-1") >= 3
+    assert encoded.count("redacted-value-2") >= 3
+    assert "redacted-value-3" in encoded
+    assert "redacted-value-4" in encoded
+    assert set(node_ids_by_ordinary) == {"source:S1", "source:S2"}
+    assert first["edges"][0]["metadata"]["ordinary"] == "edge:E1"
+    assert first["metadata"]["ordinary"] == "graph:G1"
+
+
+@pytest.mark.parametrize("marker_first", [False, True])
+def test_context_graph_reserved_marker_identity_cannot_collide_on_round_trip(marker_first):
+    marker_input = "<redacted-value-1>"
+    private_path = "/" + "home/alice/private/source.txt"
+    actual_secret = "actual-secret"
+    actual_id = f"source:https://example.com/doc?token={actual_secret}"
+    marker_id = f"source:https://example.com/doc?token={marker_input}"
+    nodes = [
+        GraphNode(
+            id=actual_id,
+            type="source",
+            title=actual_id,
+            source_files=(private_path,),
+            metadata={"kind": "actual", "map": {"TOKEN": actual_secret}},
+        ),
+        GraphNode(
+            id=marker_id,
+            type="source",
+            title=marker_id,
+            source_files=(marker_input,),
+            metadata={"kind": "marker-shaped", "provenance_detail": marker_input},
+        ),
+    ]
+    if marker_first:
+        nodes.reverse()
+    graph = ContextGraph(
+        nodes=nodes,
+        edges=[
+            GraphEdge(
+                source=actual_id,
+                target=marker_id,
+                relation="related",
+                provenance="explicit",
+            )
+        ],
+    )
+
+    payload = graph.to_dict()
+    node_ids = {node["id"] for node in payload["nodes"]}
+    round_tripped = ContextGraph.from_dict(payload)
+    round_trip_payload = round_tripped.to_dict()
+    third_cycle_payload = ContextGraph.from_dict(round_trip_payload).to_dict()
+    round_trip_ids = {node["id"] for node in round_trip_payload["nodes"]}
+
+    assert len(node_ids) == len(round_trip_ids) == 2
+    assert payload["edges"][0]["source"] in node_ids
+    assert payload["edges"][0]["target"] in node_ids
+    assert round_trip_payload["edges"][0]["source"] in round_trip_ids
+    assert round_trip_payload["edges"][0]["target"] in round_trip_ids
+    assert round_trip_payload == payload
+    assert third_cycle_payload == payload
+    assert actual_secret not in json.dumps(payload)
+    marker_node = next(
+        node for node in payload["nodes"] if node["metadata"]["kind"] == "marker-shaped"
+    )
+    source_files = {node["metadata"]["kind"]: node["source_files"][0] for node in payload["nodes"]}
+    assert f"token={marker_input}" in marker_node["id"]
+    assert len(set(source_files.values())) == 2
+    assert source_files["marker-shaped"] == marker_input
+    assert private_path not in source_files.values()
 
 
 def test_context_graph_warns_for_decision_without_basis_and_unused_results():

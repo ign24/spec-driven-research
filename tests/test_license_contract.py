@@ -106,7 +106,7 @@ def test_sdist_metadata_and_license_payload_are_mit(
         "openspec/specs/public-repository-boundary/spec.md",
         "openspec/changes/release-hardening-and-public-distribution/design.md",
         "openspec/changes/release-hardening-and-public-distribution/specs/public-repository-boundary/spec.md",
-        "openspec/changes/switch-license-to-mit/specs/public-repository-boundary/spec.md",
+        "openspec/changes/archive/2026-08-02-switch-license-to-mit/specs/public-repository-boundary/spec.md",
     ],
 )
 def test_consolidated_and_active_openspec_contracts_require_mit(relative_path: str) -> None:

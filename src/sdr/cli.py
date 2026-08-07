@@ -10,14 +10,16 @@ from __future__ import annotations
 import json as jsonlib
 import os
 import sys
-from datetime import date
+from datetime import date, datetime
 from importlib import resources
 from pathlib import Path
 
 import click
+import yaml
 
 from sdr import archive as archive_mod
 from sdr import audit as audit_mod
+from sdr import cross_investigation as cross_mod
 from sdr import index as index_mod
 from sdr import integration_validation as integration_validation_mod
 from sdr import lifecycle, schema, trail
@@ -36,9 +38,18 @@ from sdr.context_graph import (
 from sdr.context_query import map_query_text_to_intent, query_context_graph
 from sdr.gates import check_stage
 from sdr.paths import resolve_child, resolve_root, resolve_segment
+from sdr.public_tree_audit import redact_sensitive_values
 from sdr.research import META_FILE, Approval, Research
 
 TEMPLATES = resources.files("sdr").joinpath("templates")
+
+
+def _json_dumps(value: object) -> str:
+    return jsonlib.dumps(redact_sensitive_values(value), ensure_ascii=False, indent=2)
+
+
+def _json_dumps_redacted(value: object) -> str:
+    return jsonlib.dumps(value, ensure_ascii=False, indent=2)
 
 
 def _base() -> Path:
@@ -58,6 +69,46 @@ def _record(research: Research, transition: str, no_commit: bool, paths=None, ex
         click.echo(f"rastro: {result.message}")
     elif result.warning:
         click.echo(f"rastro: {result.warning}", err=True)
+
+
+def _cross_observations(online: bool, observed_at: datetime | None = None):
+    if observed_at is not None and not online:
+        raise click.ClickException("--observed-at requires --online")
+    if not online:
+        return ()
+    if observed_at is None:
+        return cross_mod.observe_network_sources(_base())
+    return cross_mod.observe_network_sources(_base(), observed_at=observed_at)
+
+
+def _as_of_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError as exc:
+        raise click.ClickException("--as-of debe usar el formato YYYY-MM-DD") from exc
+
+
+def _observation_time(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    try:
+        timestamp = datetime.fromisoformat(value)
+    except ValueError as exc:
+        raise click.ClickException("--observed-at must be an ISO 8601 timestamp") from exc
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        raise click.ClickException("--observed-at must include a timezone")
+    return timestamp
+
+
+def _cross_click_exception(exc: Exception, *, writing: bool = False) -> click.ClickException:
+    if isinstance(exc, yaml.YAMLError):
+        return click.ClickException("invalid YAML in cross-investigation data")
+    if isinstance(exc, OSError):
+        action = "read or write" if writing else "read"
+        return click.ClickException(f"could not {action} cross-investigation data")
+    return click.ClickException(str(exc))
 
 
 def _load(slug: str) -> Research:
@@ -157,7 +208,7 @@ def new(
 
     _record(research, "new", no_commit, paths=transition_paths)
     if as_json:
-        click.echo(jsonlib.dumps(research.to_dict(), ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(research.to_dict()))
     else:
         click.echo(f"creada investigación {slug!r} en {research.root} (etapa intake)")
 
@@ -194,11 +245,7 @@ def check(
             {**report.to_dict(), "slug": r.meta.slug, "consistency_issues": issues}
             for r, report, issues in reports
         ]
-        click.echo(
-            jsonlib.dumps(
-                payload[0] if len(payload) == 1 else payload, ensure_ascii=False, indent=2
-            )
-        )
+        click.echo(_json_dumps(payload[0] if len(payload) == 1 else payload))
     else:
         for research, report, issues in reports:
             _print_report(research, report, issues)
@@ -214,14 +261,13 @@ def snapshot(slug: str, as_json: bool) -> None:
     results = snapshot_mod.capture_declared_sources(research)
     payload = {
         "slug": slug,
-        "captured": [result.__dict__ for result in results],
+        "captured": [result.to_dict() for result in results],
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"{slug}: {len(results)} fuentes capturadas")
-        for result in results:
-            click.echo(f"  - {result.source_id}: {result.status} {result.url}")
+        _print_snapshot_results(results)
 
 
 @main.command("verify-claims")
@@ -239,12 +285,21 @@ def verify_claims(slug: str, as_json: bool) -> None:
         "items": [item.to_dict() for item in report.items],
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         mark = "OK" if report.passed else "FALLA"
-        click.echo(f"[{mark}] verificación anclada de {slug}")
+        click.echo(f"[{mark}] verificación de claims de {slug}")
+        state_labels = {
+            "verified": "anclaje textual local",
+            "human_reviewed": "revisión humana acotada",
+            "not_anchored": "sin coincidencia textual determinista",
+            "unverifiable": "evidencia no verificable",
+            "stale": "verificación obsoleta",
+        }
         for item in report.items:
-            click.echo(f"  - {item.claim_id} {item.source_id}: {item.state}")
+            click.echo(
+                f"  - {item.claim_id} {item.source_id}: {state_labels.get(item.state, item.state)}"
+            )
         for failure in report.failures:
             click.echo(f"  x {failure}")
     sys.exit(0 if report.passed else 1)
@@ -280,7 +335,7 @@ def verify_probe(slug: str, timeout: int, as_json: bool) -> None:
         raise click.ClickException(str(exc)) from exc
     payload = result.to_dict()
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"comando: {result.command}")
         click.echo(f"resultado: {result.result}")
@@ -345,7 +400,7 @@ def doctor(as_json: bool) -> None:
     deprecated = sorted(name for name in os.environ if name.startswith("SDR_JUDGE_"))
     payload = {"ready": True, "deprecated_environment": deprecated}
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo("[OK] instalación SDR")
         for name in deprecated:
@@ -427,15 +482,30 @@ def migrate(slug: str, as_json: bool) -> None:
         "from_schema_version": before,
         "to_schema_version": 2,
         "assigned_source_ids": assigned,
-        "captured": [item.__dict__ for item in captured],
+        "captured": [item.to_dict() for item in captured],
         "gaps": gaps,
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"{slug}: migrada a schema_version 2")
+        _print_snapshot_results(captured)
         for gap in gaps:
             click.echo(f"  - {gap}")
+
+
+def _print_snapshot_results(results) -> None:
+    for result in results:
+        click.echo(f"  - {result.source_id}: {result.status} {result.url}")
+        if result.declared_url != result.final_url:
+            click.echo(f"    declarada: {result.declared_url}")
+            click.echo(f"    final: {result.final_url}")
+        if result.redirects:
+            click.echo("    redirecciones (orden de recuperación):")
+            for index, redirect in enumerate(result.redirects, start=1):
+                click.echo(
+                    f"      {index}. {redirect.status_code} {redirect.url} -> {redirect.target_url}"
+                )
 
 
 def _migration_gaps(research: Research) -> list[str]:
@@ -479,6 +549,195 @@ def context() -> None:
 
 
 @main.group()
+def cross() -> None:
+    """Consultas derivadas, determinísticas y no bloqueantes entre investigaciones."""
+
+
+@cross.command("derive")
+@click.option("--json", "as_json", is_flag=True)
+def cross_derive(as_json: bool) -> None:
+    """Deriva en memoria las relaciones entre todas las investigaciones."""
+    try:
+        payload = cross_mod.derive_cross_investigation_layer(_base()).to_dict()
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        raise _cross_click_exception(exc) from exc
+    if as_json:
+        click.echo(_json_dumps_redacted(payload))
+    else:
+        click.echo(
+            f"cross-investigation: {len(payload['investigations'])} investigaciones, "
+            f"{payload['join_count']} joins"
+        )
+
+
+@cross.command("source")
+@click.argument("source_identity")
+@click.option("--json", "as_json", is_flag=True)
+def cross_source(source_identity: str, as_json: bool) -> None:
+    """Consulta citas y dependencias explícitas de una identidad de fuente."""
+    try:
+        layer = cross_mod.derive_cross_investigation_layer(_base())
+        payload = cross_mod.query_source_dependencies(layer, source_identity).to_dict()
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        raise _cross_click_exception(exc) from exc
+    if as_json:
+        click.echo(_json_dumps_redacted(payload))
+    else:
+        click.echo(f"Source: {source_identity}")
+        click.echo(f"  Citations: {len(payload['citations'])}")
+        click.echo(f"  Claims: {len(payload['claims'])}")
+        click.echo(f"  Dependent decisions: {len(payload['dependent_decisions'])}")
+
+
+@cross.command("degraded")
+@click.option("--online", is_flag=True, help="Comprobar fuentes mediante red explícitamente.")
+@click.option("--observed-at", default=None, metavar="ISO-8601")
+@click.option("--include-expiry", is_flag=True, help="Incluir degradación por expiración.")
+@click.option("--as-of", default=None, metavar="YYYY-MM-DD")
+@click.option("--json", "as_json", is_flag=True)
+def cross_degraded(
+    online: bool,
+    observed_at: str | None,
+    include_expiry: bool,
+    as_of: str | None,
+    as_json: bool,
+) -> None:
+    """Reporta hechos mecánicos de soporte degradado sin bloquear ni escribir."""
+    try:
+        report = cross_mod.report_degraded_support(
+            _base(),
+            network_observations=_cross_observations(online, _observation_time(observed_at)),
+            include_expiry=include_expiry,
+            as_of=_as_of_date(as_of),
+        )
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        raise _cross_click_exception(exc) from exc
+    payload = report.to_dict()
+    if as_json:
+        click.echo(_json_dumps_redacted(payload))
+    else:
+        click.echo(f"degraded support: {len(report.items)} dependencias afectadas")
+        for item in report.items:
+            click.echo(
+                f"  - {item.source_investigation}:{item.source_id} {item.cause} "
+                f"-> {item.decision_investigation}:{item.claim_id}"
+            )
+
+
+@main.command("acknowledge-degradation")
+@click.argument("slug")
+@click.argument("source_id")
+@click.option(
+    "--cause",
+    required=True,
+    type=click.Choice(["unreachable", "changed", "expired"]),
+)
+@click.option("--observation-id", required=True, help="ID exacto del reporte actual.")
+@click.option("--reason", required=True, help="Motivo de la revisión humana.")
+@click.option("--by", required=True, help="Autor de la revisión humana.")
+@click.option("--online", is_flag=True, help="Recomprobar fuentes mediante red explícitamente.")
+@click.option("--observed-at", default=None, metavar="ISO-8601")
+@click.option("--include-expiry", is_flag=True, help="Incluir degradación por expiración.")
+@click.option("--as-of", default=None, metavar="YYYY-MM-DD")
+@click.option("--no-commit", is_flag=True, help="No registrar la revisión en git.")
+@click.option("--json", "as_json", is_flag=True)
+def acknowledge_degradation(
+    slug: str,
+    source_id: str,
+    cause: str,
+    observation_id: str,
+    reason: str,
+    by: str,
+    online: bool,
+    observed_at: str | None,
+    include_expiry: bool,
+    as_of: str | None,
+    no_commit: bool,
+    as_json: bool,
+) -> None:
+    """Registra una revisión exacta del soporte degradado actual."""
+    trail_result = None
+    try:
+        research = _load(slug)
+        observations = _cross_observations(online, _observation_time(observed_at))
+        report_date = _as_of_date(as_of)
+        report = cross_mod.report_degraded_support(
+            _base(),
+            network_observations=observations,
+            include_expiry=include_expiry,
+            as_of=report_date,
+        )
+        matches = [
+            item
+            for item in report.items
+            if item.source_investigation == slug
+            and item.source_id == source_id
+            and item.cause == cause
+            and item.observation_id == observation_id
+        ]
+        observations_by_scope = {
+            (
+                item.source_investigation,
+                item.source_id,
+                item.source_identity,
+                item.cause,
+                item.observation_source,
+                item.mechanical_fact,
+                item.observation_id,
+            )
+            for item in matches
+        }
+        if not matches:
+            raise ValueError("selection does not match one exact current degradation observation")
+        if len(observations_by_scope) != 1:
+            raise ValueError("selection matches ambiguous current degradation observations")
+
+        def require_clean_target(path: Path) -> None:
+            if not no_commit:
+                trail.require_unstaged_paths(research, [path])
+
+        def commit_locked(path: Path) -> None:
+            nonlocal trail_result
+            if not no_commit:
+                trail_result = trail.commit_transition(
+                    research,
+                    f"acknowledge degradation {source_id} {cause}",
+                    paths=[path],
+                )
+
+        cross_mod.acknowledge_degradation(
+            research,
+            matches[0],
+            network_observations=observations,
+            include_expiry=include_expiry,
+            as_of=report_date,
+            reason=reason,
+            by=by,
+            before_write=require_clean_target,
+            after_write=commit_locked,
+        )
+    except (ValueError, OSError, yaml.YAMLError) as exc:
+        raise _cross_click_exception(exc, writing=True) from exc
+
+    payload = {
+        "slug": slug,
+        "source_id": source_id,
+        "cause": cause,
+        "observation_id": observation_id,
+        "committed": bool(trail_result and trail_result.committed),
+        "commit_warning": trail_result.warning if trail_result and trail_result.warning else None,
+    }
+    if as_json:
+        click.echo(_json_dumps(payload))
+    else:
+        click.echo(f"{slug}: degradación {source_id} {cause} reconocida")
+        if trail_result and trail_result.committed:
+            click.echo(f"rastro: {trail_result.message}")
+        elif trail_result and trail_result.warning:
+            click.echo(f"rastro: {trail_result.warning}", err=True)
+
+
+@main.group()
 def integrations() -> None:
     """Install packaged integrations into an explicit agent discovery scope."""
 
@@ -504,7 +763,7 @@ def integrations_install(destination: Path, as_json: bool) -> None:
         "installed_count": len(installed),
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"installed {len(installed)} canonical skills in {destination}")
 
@@ -524,7 +783,7 @@ def context_build(slug: str, as_json: bool) -> None:
         "slug": research.meta.slug,
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(
             f"{slug}: context graph escrito en {path} "
@@ -544,7 +803,7 @@ def context_inspect(slug: str, as_json: bool) -> None:
         raise click.ClickException(str(exc)) from exc
     payload = {"slug": research.meta.slug, **inspect_context_graph(graph)}
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"Context Graph: {research.meta.slug}")
         click.echo(f"  Nodes: {payload['nodes']}")
@@ -572,7 +831,7 @@ def context_trace(slug: str, criterion: str, as_json: bool) -> None:
     except ContextGraphError as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"Trace: {payload['target']['id']}")
         click.echo("  Incoming:")
@@ -601,7 +860,7 @@ def context_check(slug: str, strict: bool, as_json: bool) -> None:
             "warnings": [],
         }
         if as_json:
-            click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+            click.echo(_json_dumps(payload))
         else:
             click.echo(f"[FALLA] context graph de {slug}")
             click.echo(f"  x {exc}")
@@ -617,7 +876,7 @@ def context_check(slug: str, strict: bool, as_json: bool) -> None:
         "warnings": warnings,
     }
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"[{'OK' if passed else 'FALLA'}] context graph de {slug}")
         for warning in warnings:
@@ -647,7 +906,7 @@ def context_export(slug: str, export_format: str, as_json: bool) -> None:
     except (ContextGraphError, ValueError) as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"{slug}: exported {export_format} context to {payload['path']}")
         for warning in payload.get("warnings", []):
@@ -681,7 +940,7 @@ def context_query(slug: str, intent: str, criterion: str, as_json: bool) -> None
     except ContextGraphError as exc:
         raise click.ClickException(str(exc)) from exc
     if as_json:
-        click.echo(jsonlib.dumps(payload, ensure_ascii=False, indent=2))
+        click.echo(_json_dumps(payload))
     else:
         click.echo(f"Query: {payload['intent']}")
         click.echo("Answer:")
@@ -708,7 +967,7 @@ def status(slug: str | None, as_json: bool) -> None:
             "timebox_overdue": _timebox_overdue(research),
         }
         if as_json:
-            click.echo(jsonlib.dumps(info, ensure_ascii=False, indent=2))
+            click.echo(_json_dumps(info))
         else:
             click.echo(f"{research.meta.slug} — {research.meta.title}")
             click.echo(f"  etapa: {research.meta.stage} | estado: {research.meta.status}")
@@ -722,13 +981,7 @@ def status(slug: str | None, as_json: bool) -> None:
 
     items = _all_research()
     if as_json:
-        click.echo(
-            jsonlib.dumps(
-                [_status_metadata(r) for r in items],
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        click.echo(_json_dumps([_status_metadata(r) for r in items]))
         return
     if not items:
         click.echo("no hay investigaciones")

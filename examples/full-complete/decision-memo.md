@@ -4,6 +4,7 @@ date: 2026-07-01
 stage: transfer
 ring: trial
 audience: equipo de capacitación
+evidence_claim_ids: []
 ---
 
 ## Recomendación

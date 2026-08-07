@@ -5,7 +5,7 @@ import sys
 import tarfile
 import zipfile
 from io import BytesIO
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import pytest
 
@@ -126,7 +126,10 @@ def test_artifact_audit_redacts_sensitive_member_names(tmp_path: Path) -> None:
     output = render_findings(audit_artifact(wheel))
 
     assert github_token not in output
-    assert "<redacted>" in output
+    assert (
+        f"{wheel.name}:<redacted-value-1> [unexpected-member] sensitive content redacted"
+        in output.splitlines()
+    )
 
 
 def test_sdist_rejects_prohibited_material_and_redacts_private_paths(tmp_path: Path) -> None:
@@ -168,16 +171,33 @@ def test_sdist_allows_only_the_public_banner_asset(tmp_path: Path) -> None:
     )
 
 
-def test_built_wheel_and_sdist_pass_the_artifact_contract(tmp_path: Path) -> None:
-    dist = tmp_path / "dist"
+@pytest.fixture(scope="module")
+def built_artifacts(tmp_path_factory: pytest.TempPathFactory) -> list[Path]:
+    dist = tmp_path_factory.mktemp("dist")
     subprocess.run(
         [sys.executable, "-m", "build", "--outdir", str(dist), str(PROJECT_ROOT)],
         check=True,
     )
+    return sorted(dist.iterdir())
 
-    artifacts = sorted(dist.iterdir())
-    assert {path.suffix for path in artifacts} == {".gz", ".whl"}
-    assert audit_artifacts(artifacts) == []
+
+def test_built_wheel_and_sdist_pass_the_artifact_contract(built_artifacts: list[Path]) -> None:
+    assert {path.suffix for path in built_artifacts} == {".gz", ".whl"}
+    assert audit_artifacts(built_artifacts) == []
+
+
+def test_built_artifacts_exclude_the_evaluation_tree(built_artifacts: list[Path]) -> None:
+    members: list[str] = []
+    for artifact in built_artifacts:
+        if artifact.suffix == ".whl":
+            with zipfile.ZipFile(artifact) as wheel:
+                members.extend(wheel.namelist())
+        else:
+            with tarfile.open(artifact) as sdist:
+                members.extend(sdist.getnames())
+
+    assert members
+    assert [name for name in members if "bench" in PurePosixPath(name).parts] == []
 
 
 def test_artifact_audit_requires_typed_package_marker(tmp_path: Path) -> None:
