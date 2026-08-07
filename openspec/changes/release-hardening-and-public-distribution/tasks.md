@@ -16,13 +16,8 @@
 
 ## 3. Snapshot Provenance And Hash Consistency
 
-- [ ] 3.1 Add failing network-policy tests for declared URL, final URL, ordered redirects, terminal status, and bounded response metadata.
-- [ ] 3.2 Extend bounded retrieval to return complete redirect and terminal-response provenance without weakening URL validation; run network-policy and full tests.
-- [ ] 3.3 Add failing snapshot tests for versioned provenance, 2xx-only eligibility, empty extraction, non-2xx outcomes, and SHA-256 over exact persisted bytes.
-- [ ] 3.4 Implement versioned snapshot capture with distinct declared/final URLs, redirect records, fail-closed status, and exact persisted-byte hashing; run snapshot and full tests.
-- [ ] 3.5 Add failing verification tests for incomplete legacy metadata, URL/provenance changes, non-eligible HTTP outcomes, persisted hash mismatch, and stale resolution invalidation.
-- [ ] 3.6 Recompute snapshot hashes before anchoring, include evidence-affecting provenance in snapshot identity, and conservatively reject unknown legacy facts; run verification, textual-anchoring, and full tests.
-- [ ] 3.7 Update synthetic lifecycle fixtures and regression tests so valid light/full workflows retain their existing behavior.
+Extracted to the `harden-snapshot-provenance` change. Section intentionally left empty
+so later section numbers keep their historical identity.
 
 ## 4. Versioned Integration Acquisition
 

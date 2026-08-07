@@ -2,17 +2,22 @@
 
 Define the material that may be published as the SDR repository and the deterministic checks that
 keep research data, local state, and secret-like content outside that boundary.
-
 ## Requirements
-
 ### Requirement: Framework-only public tree
 The repository MUST contain framework code, tests, package resources, public documentation,
-canonical skills, integration adapters, synthetic examples, and public specifications only.
+canonical skills, integration adapters, synthetic examples, the synthetic evaluation corpus and its
+harness, and public specifications only.
 
 #### Scenario: Inspect a candidate public tree
 - **WHEN** the repository tree is audited
 - **THEN** every included path belongs to a documented public framework category
 - **THEN** research outputs and local operator state are absent
+
+#### Scenario: Audit the tree after an evaluation run
+- **WHEN** the evaluation harness has executed and the repository tree is audited
+- **THEN** the corpus and harness paths are accepted as a documented public category
+- **THEN** no research root, lifecycle metadata, or run output produced by the harness is present in
+  the tree
 
 ### Requirement: Prohibited material exclusion
 The public tree MUST exclude real investigations, knowledge outputs, notebooks, environment files,
@@ -34,8 +39,7 @@ rewrite, or mutate another repository's history or working tree.
 - **THEN** no external working tree is changed
 
 ### Requirement: Public identity consistency
-Repository, package, command, license, and copyright metadata MUST identify the same public project
-across packaging and governance files.
+Repository, package, command, license, and copyright metadata MUST identify the same public project across packaging and governance files.
 
 #### Scenario: Compare public metadata
 - **WHEN** package and repository metadata are validated
@@ -60,3 +64,4 @@ whose output redacts any detected sensitive value.
 - **WHEN** the same unchanged tree is audited twice
 - **THEN** both runs return the same ordered findings
 - **THEN** safe trees return success and unresolved findings return failure
+
