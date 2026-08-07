@@ -24,7 +24,9 @@ assets, or `sdr.yaml`.
 Across `research/<slug>/notes/`, preserve these Spanish headings:
 `Alternativas evaluadas`, `Madurez`, `Costos`, `Riesgos`, and
 `Contra-evidencia`. Each note needs dated sources with `url`, `tier`, and an ID.
-Each alternative needs at least one T1 source and two independent domains.
+Each alternative needs at least one T1 source and two distinct declared hosts.
+This is a mechanical count, not evidence of organizational independence;
+redirect targets do not add declared hosts.
 
 Use `[S1]` only for a factual statement closely anchored in that source's local
 snapshot. Use `[cf. S1]` for context, synthesis, or interpretation; it does not

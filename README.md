@@ -136,6 +136,9 @@ non-blocking and is not complete lineage.
   Matching does not use models.
 - `sdr resolve-claim` records scoped human review; it does not replace or substitute
   transfer-level `sdr approve`.
+- `sdr cross` derives deterministic, model-free, advisory joins across stored
+  investigations. Shared identity or text does not prove publisher identity,
+  truth, or independent corroboration, and the layer never blocks a transition.
 - `sdr check --offline` skips network checks and automatic snapshot capture.
   Skipped checks are reported as skipped, not passed. For example:
   `uv run sdr check example-study --offline`.
@@ -151,10 +154,11 @@ the host environment as trust boundaries.
 
 ## Git behavior
 
-`new`, `advance`, `reopen`, `drop`, and `archive` commit by default. Use
-`--no-commit` when you, CI, or an agent owns Git history. `check`, `approve`, and
-evidence/reporting commands do not create commits. See the exact mutation,
-network, and guard contract in the [CLI reference](docs/cli-reference.md).
+`new`, `advance`, `reopen`, `drop`, and `archive` commit by default.
+`acknowledge-degradation` also commits by default. Use `--no-commit` when you,
+CI, or an agent owns Git history. Read-only evidence/reporting commands,
+including `sdr cross`, do not create commits. See the exact mutation, network,
+and guard contract in the [CLI reference](docs/cli-reference.md).
 
 ## Agent integrations
 
@@ -182,7 +186,7 @@ Start at the [task-oriented documentation home](docs/README.md).
 | --- | --- |
 | Complete the smallest supported lifecycle | [Getting started](docs/getting-started.md) |
 | Understand stages and backtracking | [Workflow](docs/workflow.md) |
-| Look up `sdr new`, `sdr check`, `sdr advance`, `sdr status`, `sdr snapshot`, `sdr verify-claims`, `sdr resolve-claim`, `sdr verify-probe`, `sdr approve`, `sdr reopen`, `sdr drop`, `sdr archive`, `sdr index`, `sdr doctor`, `sdr migrate`, or `sdr context` | [CLI reference](docs/cli-reference.md) |
+| Look up `sdr new`, `sdr check`, `sdr advance`, `sdr status`, `sdr snapshot`, `sdr verify-claims`, `sdr resolve-claim`, `sdr verify-probe`, `sdr approve`, `sdr reopen`, `sdr drop`, `sdr archive`, `sdr index`, `sdr doctor`, `sdr migrate`, `sdr context`, `sdr cross`, or `sdr acknowledge-degradation` | [CLI reference](docs/cli-reference.md) |
 | Evaluate claims and evidence limits | [Evidence model](docs/evidence-model.md) |
 | Review threats and trust boundaries | [Security model](docs/security-model.md) and [SECURITY.md](SECURITY.md) |
 | Install agent skills | [Integrations](docs/integrations.md) |

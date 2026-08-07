@@ -139,6 +139,10 @@ Context Graph opcional es no bloqueante y no representa trazabilidad completa.
   matching no usa modelos.
 - `sdr resolve-claim` registra una revisión humana acotada; no reemplaza ni
   sustituye a `sdr approve` en transfer.
+- `sdr cross` deriva joins determinísticos, sin modelos y consultivos entre las
+  investigaciones almacenadas. Compartir identidad o texto no demuestra la
+  identidad del editor, la verdad ni la corroboración independiente, y la capa
+  nunca bloquea una transición.
 - `sdr check --offline` omite los checks de red y la captura automática de
   snapshots. Los checks omitidos se reportan como omitidos, no aprobados. Por
   ejemplo: `uv run sdr check example-study --offline`.
@@ -154,9 +158,10 @@ como límites de confianza.
 
 ## Comportamiento de Git
 
-`new`, `advance`, `reopen`, `drop` y `archive` crean commits por defecto. Usa
-`--no-commit` cuando tú, CI o un agente controlen el historial Git. `check`,
-`approve` y los comandos de evidencia o reporte no crean commits. La
+`new`, `advance`, `reopen`, `drop` y `archive` crean commits por defecto.
+`acknowledge-degradation` también crea commits por defecto. Usa `--no-commit`
+cuando tú, CI o un agente controlen el historial Git. Los comandos de evidencia
+o reporte de solo lectura, incluido `sdr cross`, no crean commits. La
 [referencia de la CLI](docs/cli-reference.md) es la fuente canónica sobre
 mutaciones, red y guards.
 
@@ -186,7 +191,7 @@ Empieza en la [documentación orientada a tareas](docs/README.es.md).
 | --- | --- |
 | Completar el ciclo mínimo soportado | [Primeros pasos](docs/getting-started.es.md) |
 | Entender etapas y retrocesos | [Workflow](docs/workflow.md) |
-| Consultar `sdr new`, `sdr check`, `sdr advance`, `sdr status`, `sdr snapshot`, `sdr verify-claims`, `sdr resolve-claim`, `sdr verify-probe`, `sdr approve`, `sdr reopen`, `sdr drop`, `sdr archive`, `sdr index`, `sdr doctor`, `sdr migrate` o `sdr context` | [Referencia de la CLI](docs/cli-reference.md) |
+| Consultar `sdr new`, `sdr check`, `sdr advance`, `sdr status`, `sdr snapshot`, `sdr verify-claims`, `sdr resolve-claim`, `sdr verify-probe`, `sdr approve`, `sdr reopen`, `sdr drop`, `sdr archive`, `sdr index`, `sdr doctor`, `sdr migrate`, `sdr context`, `sdr cross` o `sdr acknowledge-degradation` | [Referencia de la CLI](docs/cli-reference.md) |
 | Evaluar claims y límites de evidencia | [Modelo de evidencia](docs/evidence-model.md) |
 | Revisar amenazas y límites de confianza | [Modelo de seguridad](docs/security-model.md) y [SECURITY.md](SECURITY.md) |
 | Instalar skills para agentes | [Integraciones](docs/integrations.md) |

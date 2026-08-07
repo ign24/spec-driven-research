@@ -89,10 +89,17 @@ files, caches, nested repositories, credentials, private paths, organization
 names, or real investigation data. Run:
 
 ```bash
-uv run python -m sdr.public_tree_audit .
+PYTHONDONTWRITEBYTECODE=1 uv run python -m sdr.public_tree_audit . \
+  --exclude .git --exclude .claude --exclude .venv \
+  --exclude .pytest_cache --exclude .ruff_cache \
+  --exclude build --exclude dist --exclude examples/__pycache__ \
+  --exclude src/sdr/__pycache__ --exclude tests/__pycache__ \
+  --exclude bench/__pycache__ --exclude bench/harness/__pycache__
 ```
 
 Review findings manually. Pattern matching cannot prove that content is safe.
+The exclusions are ignored local, cache, and build state outside the candidate
+public surface. This command does not inspect or delete excluded state.
 
 ## Security checks
 
@@ -110,10 +117,7 @@ public-tree and artifact auditors:
 ```bash
 uv export --locked --no-dev --no-emit-project --no-hashes --output-file /tmp/sdr-runtime.txt
 uv run pip-audit --requirement /tmp/sdr-runtime.txt
-PYTHONDONTWRITEBYTECODE=1 uv run python -m sdr.public_tree_audit . \
-  --exclude .git --exclude .venv --exclude .pytest_cache --exclude .ruff_cache \
-  --exclude build --exclude dist --exclude examples/__pycache__ \
-  --exclude src/sdr/__pycache__ --exclude tests/__pycache__
+# Run the exact candidate-surface public-tree command above.
 gitleaks dir --redact --no-banner .
 gitleaks git --redact --no-banner --log-opts="--all" .
 git diff --cached --binary | gitleaks --redact --no-banner stdin

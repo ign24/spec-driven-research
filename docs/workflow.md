@@ -32,8 +32,9 @@ sdr advance example-study
 
 Create one or more notes in `notes/`. Declare dated sources with stable IDs,
 tier classifications, and any alternative they support. Use at least one T1
-source per alternative and independent domains where the gate requires
-triangulation.
+source per alternative and distinct declared hosts where the gate requires
+triangulation. This is a mechanical diversity count: hostnames and redirects do
+not establish organizational independence.
 
 End factual claims with `[S1]`. Use `[cf. S1]` for context or synthesis that
 does not create a claim and does not enter textual matching.

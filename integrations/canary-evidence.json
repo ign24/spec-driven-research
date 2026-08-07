@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "recorded_on": "2026-07-30",
+  "recorded_on": "2026-08-04",
   "artifact": {
     "package_version": "0.1.0",
     "wheel_filename": "spec_driven_research-0.1.0-py3-none-any.whl",
-    "sha256": "f677b818dc03e94c9fc575b9dc74fea8584a1bb03a6fc789836bbc19e22551b3"
+    "sha256": "1905ccf579381e0d540081e3cb66a485308a7e659bcb1c489377b8e1d5f9e6a2"
   },
   "environment": {
     "isolation": "env-i",
@@ -16,7 +16,7 @@
   },
   "adapters": {
     "claude-code": {
-      "host_version": "2.1.220",
+      "host_version": "2.1.221",
       "policy": {
         "authentication": "no-credentials",
         "model": "not-invoked",
@@ -29,10 +29,10 @@
         "result": "not-run"
       },
       "limitations": [
-        "The host reported no authentication, but exposed no offline skill-introspection command.",
-        "The exact wheel installed all seven packaged skills; discovery was limited to filesystem presence.",
-        "Host discovery and an SDR lifecycle were not run.",
-        "Network namespace isolation was unavailable; the local commands did not request network access."
+        "Only `claude --version` was invoked; no host process inspected the installed skills.",
+        "The exact wheel's canonical installer reported seven installed skills, and all seven packaged skill files were present at the temporary discovery destination.",
+        "No host prompt was submitted, no model was invoked, and no SDR lifecycle was run.",
+        "Network namespace isolation was not used; commands did not intentionally access the network."
       ]
     },
     "codex": {
@@ -49,14 +49,14 @@
         "result": "not-run"
       },
       "limitations": [
-        "The exact wheel installed all seven packaged skills; discovery was limited to filesystem presence.",
-        "No host prompt was submitted and no model was invoked.",
-        "No host-driven SDR lifecycle was run.",
-        "Network namespace isolation was unavailable; the local commands did not request network access."
+        "Only `codex --version` was invoked; no host process inspected the installed skills.",
+        "The exact wheel's canonical installer reported seven installed skills, and all seven packaged skill files were present at the temporary discovery destination.",
+        "No host prompt was submitted, no model was invoked, and no SDR lifecycle was run.",
+        "Network namespace isolation was not used; commands did not intentionally access the network."
       ]
     },
     "opencode": {
-      "host_version": "1.18.10",
+      "host_version": "1.18.11",
       "policy": {
         "authentication": "no-credentials",
         "model": "not-invoked",
@@ -69,10 +69,10 @@
         "result": "not-run"
       },
       "limitations": [
-        "The exact wheel installed all seven packaged skills; discovery was limited to filesystem presence.",
-        "No host prompt was submitted and no model was invoked.",
-        "No host-driven SDR lifecycle was run.",
-        "Network namespace isolation was unavailable; the local commands did not request network access."
+        "Only `opencode --version` was invoked; no host process inspected the installed skills.",
+        "The exact wheel's canonical installer reported seven installed skills, and all seven packaged skill files were present at the temporary discovery destination.",
+        "No host prompt was submitted, no model was invoked, and no SDR lifecycle was run.",
+        "Network namespace isolation was not used; commands did not intentionally access the network."
       ]
     }
   }
