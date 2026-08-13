@@ -7,13 +7,18 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
-EXPECTED_ACTIONS = {
-    "actions/checkout": "11bd71901bbe5b1630ceea73d27597364c9af683",
-    "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
-    "actions/setup-go": "44694675825211faa026b3c33043df3e48a5fa00",
-    "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
-    "astral-sh/setup-uv": "b75a909f75acd358c2196fb9a5f1299a9a8868a4",
-}
+USES = re.compile(r"uses:\s+(?P<action>[^@\s]+)@(?P<ref>\S+)(?:\s+#\s*(?P<tag>\S+))?")
+
+
+def _action_pins() -> list[tuple[str, str, str, str | None]]:
+    """Return (workflow, action, ref, trailing version comment) for every pin."""
+    pins = []
+    for path in sorted(WORKFLOWS.glob("*.yml")):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = USES.search(line)
+            if match is not None:
+                pins.append((path.name, match["action"], match["ref"], match["tag"]))
+    return pins
 
 
 def _workflow(name: str) -> tuple[str, dict[str, object]]:
@@ -70,15 +75,31 @@ def test_gitleaks_excludes_only_local_generated_directories() -> None:
     assert "dist" not in "\n".join(allowlist["paths"])
 
 
-def test_external_actions_are_pinned_to_documented_full_shas() -> None:
-    found: set[str] = set()
-    for path in sorted(WORKFLOWS.glob("*.yml")):
-        text = path.read_text(encoding="utf-8")
-        for action, ref in re.findall(r"uses:\s+([^@\s]+)@([^\s#]+)", text):
-            assert FULL_SHA.fullmatch(ref), f"{path.name}: {action}@{ref} is not a full SHA"
-            assert EXPECTED_ACTIONS[action] == ref
-            found.add(action)
-    assert found == set(EXPECTED_ACTIONS)
+def test_external_actions_are_pinned_to_full_shas() -> None:
+    pins = _action_pins()
+
+    assert pins
+    for workflow, action, ref, _ in pins:
+        assert FULL_SHA.fullmatch(ref), f"{workflow}: {action}@{ref} is not a full SHA"
+
+
+def test_every_action_pin_records_its_release_tag_on_the_same_line() -> None:
+    """Dependabot only maintains a version comment trailing the pinned ref."""
+    for workflow, action, _, tag in _action_pins():
+        assert tag is not None, f"{workflow}: {action} has no trailing version comment"
+        assert tag.startswith("v"), f"{workflow}: {action} comment {tag} is not a release tag"
+
+
+def test_each_action_resolves_to_one_ref_across_every_workflow() -> None:
+    refs: dict[str, set[str]] = {}
+    tags: dict[str, set[str]] = {}
+    for _, action, ref, tag in _action_pins():
+        refs.setdefault(action, set()).add(ref)
+        tags.setdefault(action, set()).add(tag or "")
+
+    for action, action_refs in refs.items():
+        assert len(action_refs) == 1, f"{action} is pinned to {len(action_refs)} different refs"
+        assert len(tags[action]) == 1, f"{action} records conflicting release tags"
 
 
 def test_workflows_do_not_publish_or_request_write_permissions() -> None:

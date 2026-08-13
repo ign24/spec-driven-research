@@ -145,6 +145,10 @@ uv run python -m sdr.artifact_audit --release dist/*
 `--release` therefore requires re-running the documented discovery canaries
 against the candidate build before publication.
 
-All external GitHub Actions are pinned to full commit SHAs. The workflow comments
-record their release tags; `.github/dependabot.yml` checks GitHub Actions and the
-Python/uv lock inputs weekly.
+All external GitHub Actions are pinned to full commit SHAs, each followed on the
+same line by a `# vX.Y.Z` comment recording the release tag that SHA claims to
+be. Both properties are enforced by `tests/test_automation.py`, and every pin of
+the same action must agree across workflows. The comment has to trail the ref
+because that is the only form Dependabot keeps in step with the SHA it writes;
+`.github/dependabot.yml` checks GitHub Actions and the Python/uv lock inputs
+weekly.
