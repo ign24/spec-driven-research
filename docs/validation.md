@@ -130,7 +130,20 @@ gitleaks dir --redact --no-banner --max-archive-depth=1 dist
 Pass the candidate wheel and matching sdist to the artifact auditor together.
 Their independent content checks are preserved, and the paired checks compare
 packaged integration resources and bind the sdist's sanitized canary evidence
-to the exact wheel filename, version, and SHA-256 bytes.
+to the wheel filename and version.
+
+The canary evidence also records the SHA-256 of the wheel the canaries actually
+ran against. Every rebuild from changed sources produces a different digest, so
+that field is provenance rather than a routine gate. Add `--release` when
+auditing the exact artifacts being promoted; it additionally requires the
+recorded digest to match the audited wheel bytes:
+
+```bash
+uv run python -m sdr.artifact_audit --release dist/*
+```
+
+`--release` therefore requires re-running the documented discovery canaries
+against the candidate build before publication.
 
 All external GitHub Actions are pinned to full commit SHAs. The workflow comments
 record their release tags; `.github/dependabot.yml` checks GitHub Actions and the

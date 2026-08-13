@@ -259,6 +259,16 @@ def test_harness_lifecycle_metadata_in_the_tree_is_reported(tmp_path):
     assert findings == [Finding("harness-residue", "bench/runs/clean-light-1/sdr.yaml")]
 
 
+def test_committed_corpus_fixtures_are_not_harness_residue(tmp_path):
+    """Corpus investigations are reviewed inputs, not output left by a run."""
+    for corpus in ("corpus", "reuse-corpus"):
+        fixture = tmp_path / "bench" / corpus / "investigations" / "software-seed"
+        fixture.mkdir(parents=True)
+        (fixture / "sdr.yaml").write_text("slug: software-seed\n", encoding="utf-8")
+
+    assert audit_tree(tmp_path) == []
+
+
 def test_lifecycle_metadata_outside_the_evaluation_category_is_not_harness_residue(tmp_path):
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "sdr.yaml").write_text("slug: example\n", encoding="utf-8")

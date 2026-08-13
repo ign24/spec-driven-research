@@ -332,10 +332,8 @@ def test_paired_artifact_audit_rejects_mismatched_canary_wheel_identity(
     )
 
 
-def test_paired_artifact_audit_rejects_stale_canary_digest_deterministically(
-    tmp_path: Path,
-) -> None:
-    stale_evidence = json.dumps(
+def _stale_digest_evidence() -> bytes:
+    return json.dumps(
         {
             "schema_version": 1,
             "artifact": {
@@ -345,10 +343,15 @@ def test_paired_artifact_audit_rejects_stale_canary_digest_deterministically(
             },
         }
     ).encode()
-    wheel, sdist = _write_artifact_pair(tmp_path, evidence=stale_evidence)
 
-    findings = audit_artifacts([wheel, sdist])
-    reverse_findings = audit_artifacts([sdist, wheel])
+
+def test_release_artifact_audit_rejects_stale_canary_digest_deterministically(
+    tmp_path: Path,
+) -> None:
+    wheel, sdist = _write_artifact_pair(tmp_path, evidence=_stale_digest_evidence())
+
+    findings = audit_artifacts([wheel, sdist], release=True)
+    reverse_findings = audit_artifacts([sdist, wheel], release=True)
 
     assert (
         ArtifactFinding(
@@ -359,6 +362,57 @@ def test_paired_artifact_audit_rejects_stale_canary_digest_deterministically(
         in findings
     )
     assert reverse_findings == findings
+
+
+def test_routine_artifact_audit_ignores_a_canary_digest_from_another_build(
+    tmp_path: Path,
+) -> None:
+    """A development rebuild changes the wheel digest without invalidating the canary."""
+    wheel, sdist = _write_artifact_pair(tmp_path, evidence=_stale_digest_evidence())
+
+    findings = audit_artifacts([wheel, sdist])
+
+    assert not any(finding.code == "stale-canary-evidence" for finding in findings)
+
+
+def test_routine_artifact_audit_still_rejects_a_canary_for_another_version(
+    tmp_path: Path,
+) -> None:
+    """Version and filename binding survives; only the digest match moves to release."""
+    evidence = json.dumps(
+        {
+            "schema_version": 1,
+            "artifact": {
+                "package_version": "9.9",
+                "wheel_filename": "spec_driven_research-1.0-py3-none-any.whl",
+                "sha256": "0" * 64,
+            },
+        }
+    ).encode()
+    wheel, sdist = _write_artifact_pair(tmp_path, evidence=evidence)
+
+    findings = audit_artifacts([wheel, sdist])
+
+    assert (
+        ArtifactFinding(
+            wheel.name,
+            "canary-artifact-mismatch",
+            "integrations/canary-evidence.json",
+        )
+        in findings
+    )
+
+
+def test_module_cli_enforces_the_canary_digest_only_with_release(tmp_path: Path) -> None:
+    wheel, sdist = _write_artifact_pair(tmp_path, evidence=_stale_digest_evidence())
+    command = [sys.executable, "-m", "sdr.artifact_audit", str(wheel), str(sdist)]
+
+    routine = subprocess.run(command, capture_output=True, text=True, check=False)
+    release = subprocess.run([*command, "--release"], capture_output=True, text=True, check=False)
+
+    assert "stale-canary-evidence" not in routine.stdout
+    assert release.returncode == 1
+    assert "stale-canary-evidence" in release.stdout
 
 
 def test_module_cli_audits_all_artifacts_without_sensitive_output(tmp_path: Path) -> None:

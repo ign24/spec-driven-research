@@ -49,6 +49,19 @@ single source of truth is `src/sdr/__init__.py`.
 - Current and future distributions are licensed under MIT; historical Apache-2.0 grants are not revoked.
 - Narrowed the documented Agent Skills adapter set to Claude Code, Codex, and
   OpenCode; removed Hermes Agent and OpenClaw adapters and support claims.
+- The artifact audit now binds canary evidence to the wheel filename and version
+  on every run, and requires its recorded digest to match the audited bytes only
+  under the new `--release` flag. The digest identifies the build the canaries
+  actually ran against, so every rebuild from changed sources changed it and made
+  routine audits fail on evidence that was still accurate for its own build.
+
+### Fixed
+
+- The source distribution no longer packages a local `.codegraph` index
+  directory.
+- Committed corpus fixtures under `bench/corpus` and `bench/reuse-corpus` are no
+  longer reported as harness residue by the public-tree audit; lifecycle metadata
+  elsewhere in the evaluation tree still is.
 
 ## [0.1.0] - 2026-07-27
 

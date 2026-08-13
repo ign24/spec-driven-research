@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 EVALUATION_CATEGORY = "evaluation"
+EVALUATION_CORPUS_DIRECTORIES = frozenset({"corpus", "reuse-corpus"})
 PUBLIC_CATEGORIES = {
     ".github": "automation",
     "assets": "assets",
@@ -262,8 +263,15 @@ def public_category(path: Path) -> str | None:
 
 
 def _is_harness_residue(path: Path) -> bool:
-    """Report lifecycle metadata left inside the evaluation category by a harness run."""
-    return public_category(path) == EVALUATION_CATEGORY and path.name == LIFECYCLE_METADATA_NAME
+    """Report lifecycle metadata left inside the evaluation category by a harness run.
+
+    Corpus directories hold reviewed fixture investigations that are committed on
+    purpose, so lifecycle metadata under them is an input rather than run residue.
+    """
+    if public_category(path) != EVALUATION_CATEGORY or path.name != LIFECYCLE_METADATA_NAME:
+        return False
+    parts = PurePosixPath(_relative_posix(path)).parts
+    return len(parts) < 2 or parts[1] not in EVALUATION_CORPUS_DIRECTORIES
 
 
 def _is_prohibited(path: Path) -> bool:

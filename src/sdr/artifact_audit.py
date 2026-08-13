@@ -102,11 +102,16 @@ def audit_artifact(path: Path) -> list[ArtifactFinding]:
     return [ArtifactFinding(path.name, "unsupported-artifact", path.name)]
 
 
-def audit_artifacts(paths: Iterable[Path]) -> list[ArtifactFinding]:
-    """Audit artifacts in deterministic path order."""
+def audit_artifacts(paths: Iterable[Path], *, release: bool = False) -> list[ArtifactFinding]:
+    """Audit artifacts in deterministic path order.
+
+    Canary evidence must always name the audited version and wheel filename. Its
+    recorded digest identifies the build the canary actually ran against, so it is
+    only required to match the audited wheel when `release` promotes exact bytes.
+    """
     ordered_paths = sorted(path.resolve() for path in paths)
     findings = [item for path in ordered_paths for item in audit_artifact(path)]
-    findings.extend(_resource_comparison_findings(ordered_paths))
+    findings.extend(_resource_comparison_findings(ordered_paths, release=release))
     return sorted(findings, key=lambda item: (item.artifact, item.path, item.line or 0, item.code))
 
 
@@ -243,7 +248,9 @@ def _tree_findings(artifact: str, findings: list[TreeFinding]) -> list[ArtifactF
     return [ArtifactFinding(artifact, item.code, item.path, item.line) for item in findings]
 
 
-def _resource_comparison_findings(paths: Sequence[Path]) -> list[ArtifactFinding]:
+def _resource_comparison_findings(
+    paths: Sequence[Path], *, release: bool = False
+) -> list[ArtifactFinding]:
     wheels: dict[tuple[str, str], list[tuple[Path, dict[str, bytes]]]] = {}
     sdists: dict[tuple[str, str], list[tuple[dict[str, bytes], bytes | None]]] = {}
     for path in paths:
@@ -265,12 +272,14 @@ def _resource_comparison_findings(paths: Sequence[Path]) -> list[ArtifactFinding
                         findings.append(
                             ArtifactFinding(wheel.name, "resource-content-mismatch", name)
                         )
-                findings.extend(_canary_evidence_findings(wheel, identity[1], canary_evidence))
+                findings.extend(
+                    _canary_evidence_findings(wheel, identity[1], canary_evidence, release=release)
+                )
     return findings
 
 
 def _canary_evidence_findings(
-    wheel: Path, version: str, evidence_bytes: bytes | None
+    wheel: Path, version: str, evidence_bytes: bytes | None, *, release: bool = False
 ) -> list[ArtifactFinding]:
     def finding(code: str) -> ArtifactFinding:
         return ArtifactFinding(wheel.name, code, CANARY_EVIDENCE_PATH)
@@ -298,7 +307,7 @@ def _canary_evidence_findings(
         return [finding("invalid-canary-evidence")]
     if artifact["package_version"] != version or artifact["wheel_filename"] != wheel.name:
         return [finding("canary-artifact-mismatch")]
-    if artifact["sha256"] != _sha256(wheel):
+    if release and artifact["sha256"] != _sha256(wheel):
         return [finding("stale-canary-evidence")]
     return []
 
@@ -415,8 +424,13 @@ def _read_selected_resources(
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("artifacts", nargs="+", type=Path)
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="Require the canary evidence digest to match the audited wheel bytes.",
+    )
     args = parser.parse_args(argv)
-    findings = audit_artifacts(args.artifacts)
+    findings = audit_artifacts(args.artifacts, release=args.release)
     if findings:
         print(render_findings(findings))
         return 1
