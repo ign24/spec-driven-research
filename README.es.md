@@ -4,9 +4,9 @@
 
 # Spec-Driven Research
 
-[![CI](https://github.com/ign24/sdr/actions/workflows/ci.yml/badge.svg)](https://github.com/ign24/sdr/actions/workflows/ci.yml)
-[![Security](https://github.com/ign24/sdr/actions/workflows/security.yml/badge.svg)](https://github.com/ign24/sdr/actions/workflows/security.yml)
-[![Python CI: 3.12 | 3.13](https://img.shields.io/badge/Python_CI-3.12_%7C_3.13-3776AB?logo=python&logoColor=white)](https://github.com/ign24/sdr/actions/workflows/ci.yml)
+[![CI](https://github.com/ign24/spec-driven-research/actions/workflows/ci.yml/badge.svg)](https://github.com/ign24/spec-driven-research/actions/workflows/ci.yml)
+[![Security](https://github.com/ign24/spec-driven-research/actions/workflows/security.yml/badge.svg)](https://github.com/ign24/spec-driven-research/actions/workflows/security.yml)
+[![Python CI: 3.12 | 3.13](https://img.shields.io/badge/Python_CI-3.12_%7C_3.13-3776AB?logo=python&logoColor=white)](https://github.com/ign24/spec-driven-research/actions/workflows/ci.yml)
 [![Licencia: MIT](https://img.shields.io/badge/Licencia-MIT-yellow.svg)](LICENSE)
 [![Estado: Alfa](https://img.shields.io/badge/Estado-Alfa-orange.svg)](CHANGELOG.md)
 
@@ -69,7 +69,7 @@ Este ejemplo mantenido es inventado, sin red y en modo light. Registra una
 aprobación sintética explícita, no ejecuta un probe y completa el reuse obligatorio.
 
 ```bash
-git clone https://github.com/ign24/sdr.git
+git clone https://github.com/ign24/spec-driven-research.git
 cd sdr
 uv sync --locked --all-extras --dev
 TOUR_ROOT="$(mktemp -d)/research"
@@ -95,7 +95,7 @@ transición que podría crear un commit.
 SDR requiere Python 3.12 o posterior. Instala el código fuente canónico actual:
 
 ```bash
-uv tool install "git+https://github.com/ign24/sdr"
+uv tool install "git+https://github.com/ign24/spec-driven-research"
 sdr --help
 ```
 
@@ -103,7 +103,7 @@ Para una instalación reproducible, reemplaza `REVISION` por un SHA completo:
 
 ```bash
 REVISION=REEMPLAZAR_POR_SHA_COMPLETO
-uv tool install "git+https://github.com/ign24/sdr@${REVISION}"
+uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
 ```
 
 Desde un checkout existente, `uv tool install .` ofrece la instalación aislada.
