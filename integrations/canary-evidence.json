@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "recorded_on": "2026-08-04",
+  "recorded_on": "2026-08-13",
   "artifact": {
     "package_version": "0.1.0",
     "wheel_filename": "spec_driven_research-0.1.0-py3-none-any.whl",
-    "sha256": "1905ccf579381e0d540081e3cb66a485308a7e659bcb1c489377b8e1d5f9e6a2"
+    "sha256": "908975b67f53be5c292ba043ef304cc977c21d7a3a6c45069a73fd35c5cf088f"
   },
   "environment": {
     "isolation": "env-i",
@@ -16,7 +16,7 @@
   },
   "adapters": {
     "claude-code": {
-      "host_version": "2.1.221",
+      "host_version": "2.1.231",
       "policy": {
         "authentication": "no-credentials",
         "model": "not-invoked",
@@ -36,7 +36,7 @@
       ]
     },
     "codex": {
-      "host_version": "0.128.0",
+      "host_version": "0.147.0",
       "policy": {
         "authentication": "no-credentials",
         "model": "not-invoked",
@@ -56,7 +56,7 @@
       ]
     },
     "opencode": {
-      "host_version": "1.18.11",
+      "host_version": "1.18.18",
       "policy": {
         "authentication": "no-credentials",
         "model": "not-invoked",
