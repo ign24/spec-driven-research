@@ -12,6 +12,7 @@ from types import MappingProxyType
 from typing import Final
 
 from bench.harness.actor import ARMS, ActorKind
+from bench.harness.enforcement import BoundaryError
 
 
 class EvaluationQuestion(StrEnum):
@@ -67,6 +68,7 @@ class PromptInputs:
     history_condition: HistoryCondition | None
     workflow_instructions: tuple[str, ...] = ()
     focal_sources: tuple[PromptSource, ...] = ()
+    stop_at_transfer: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.evaluation_question, EvaluationQuestion):
@@ -86,6 +88,8 @@ class PromptInputs:
             raise ValueError("workflow instructions must be non-empty strings")
         if not all(isinstance(source, PromptSource) for source in self.focal_sources):
             raise ValueError("focal sources must contain only PromptSource values")
+        if not isinstance(self.stop_at_transfer, bool):
+            raise ValueError("stop_at_transfer must be boolean")
 
 
 @dataclass(frozen=True)
@@ -129,6 +133,7 @@ class PromptTemplate:
     identifier: str
     version: str
     sha256: str
+    body: bytes
 
 
 @dataclass(frozen=True)
@@ -178,6 +183,19 @@ class BuiltPrompt:
     template: PromptTemplate
     treatment: PromptTreatment
     leak_validation_passed: bool
+    inputs: PromptInputs
+    leaks: PromptLeakSignals
+
+
+@dataclass(frozen=True)
+class LivePromptEvidence:
+    """Recomputed template and exact submitted-byte evidence."""
+
+    template_bytes: bytes
+    template_sha256: str
+    submitted_bytes: bytes
+    submitted_sha256: str
+    leak_validation_passed: bool
 
 
 _TEMPLATE_VERSION: Final[str] = "1"
@@ -217,6 +235,10 @@ _SCORING_VOCABULARY: Final[tuple[str, ...]] = (
     "not-consulted",
     "not_consulted",
 )
+_TRANSFER_STOP_INSTRUCTION: Final[str] = (
+    "Stop at transfer and return control to the real operator. Do not invoke approval, "
+    "substitute claim resolution, or continue past the operator boundary."
+)
 
 
 def build_prompt(inputs: PromptInputs, leaks: PromptLeakSignals) -> BuiltPrompt:
@@ -239,6 +261,7 @@ def build_prompt(inputs: PromptInputs, leaks: PromptLeakSignals) -> BuiltPrompt:
             _QUESTION_INSTRUCTIONS[inputs.evaluation_question],
             _ARM_INSTRUCTIONS[inputs.arm],
             assisted,
+            _TRANSFER_STOP_INSTRUCTION if inputs.stop_at_transfer else "",
         )
         if part
     )
@@ -248,6 +271,7 @@ def build_prompt(inputs: PromptInputs, leaks: PromptLeakSignals) -> BuiltPrompt:
         identifier=identifier,
         version=_TEMPLATE_VERSION,
         sha256=hashlib.sha256(template_body.encode("utf-8")).hexdigest(),
+        body=template_body.encode("utf-8"),
     )
     policy = inputs.policy.value if inputs.policy is not None else "not-applicable"
     history = (
@@ -304,7 +328,39 @@ def build_prompt(inputs: PromptInputs, leaks: PromptLeakSignals) -> BuiltPrompt:
         template_version=template.version,
         template_sha256=template.sha256,
     )
-    return BuiltPrompt(text, template, treatment, leak_validation_passed=True)
+    return BuiltPrompt(
+        text,
+        template,
+        treatment,
+        leak_validation_passed=True,
+        inputs=inputs,
+        leaks=leaks,
+    )
+
+
+def validate_live_prompt(prompt: BuiltPrompt, submitted_bytes: bytes) -> LivePromptEvidence:
+    """Prove a host receives the exact immutable prompt that passed canonical validation."""
+    if not isinstance(prompt, BuiltPrompt):
+        raise TypeError("live execution accepts only canonical BuiltPrompt values")
+    if not prompt.leak_validation_passed:
+        raise BoundaryError("live prompt did not pass leak validation")
+    template_sha256 = hashlib.sha256(prompt.template.body).hexdigest()
+    if template_sha256 != prompt.template.sha256:
+        raise BoundaryError("live prompt template hash is stale or invalid")
+    if build_prompt(prompt.inputs, prompt.leaks) != prompt:
+        raise BoundaryError("live prompt is not the canonical build_prompt result")
+    expected = prompt.text.encode("utf-8")
+    if submitted_bytes != expected:
+        raise BoundaryError("submitted prompt bytes differ from validated BuiltPrompt text")
+    if "stop at transfer" not in prompt.template.body.decode("utf-8").casefold():
+        raise BoundaryError("live prompt template lacks the canonical transfer stop")
+    return LivePromptEvidence(
+        template_bytes=prompt.template.body,
+        template_sha256=template_sha256,
+        submitted_bytes=submitted_bytes,
+        submitted_sha256=hashlib.sha256(submitted_bytes).hexdigest(),
+        leak_validation_passed=True,
+    )
 
 
 def group_treatments(

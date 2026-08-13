@@ -71,10 +71,10 @@ def test_entry_point_renders_the_report_to_stdout_under_the_scripted_actor(
 
     assert code == EXIT_OK
     assert stderr == ""
-    assert stdout.startswith("# SDR evaluation harness comparison report")
-    assert f"## Actor: {ActorKind.SCRIPTED.value}" in stdout
-    assert f"## Actor: {ActorKind.LIVE.value}" not in stdout
-    assert "corpus_version: runner-test" in stdout
+    assert stdout.startswith("# SDR evaluation harness evidence report")
+    assert f'"actor":"{ActorKind.SCRIPTED.value}"' in stdout
+    assert f'"actor":"{ActorKind.LIVE.value}"' not in stdout
+    assert '"corpus":"runner-test"' in stdout
 
 
 def test_entry_point_requires_no_api_key_and_no_network(
@@ -86,7 +86,7 @@ def test_entry_point_requires_no_api_key_and_no_network(
     code, stdout, _ = _run(["--corpus", str(corpus_root)])
 
     assert code == EXIT_OK
-    assert f"## Actor: {ActorKind.SCRIPTED.value}" in stdout
+    assert f'"actor":"{ActorKind.SCRIPTED.value}"' in stdout
 
 
 def test_entry_point_writes_run_records_to_a_path_outside_the_repository(
@@ -98,7 +98,7 @@ def test_entry_point_writes_run_records_to_a_path_outside_the_repository(
 
     assert code == EXIT_OK
     records = RunRecordSet.from_json(records_path.read_text(encoding="utf-8"))
-    assert records.corpus_version == "runner-test"
+    assert {record.corpus.version for record in records.records} == {"runner-test"}
     assert {record.arm for record in records.records} == set(ARMS)
     assert all(record.actor is ActorKind.SCRIPTED for record in records.records)
 
@@ -113,7 +113,7 @@ def test_entry_point_writes_the_report_to_a_path_outside_the_repository(
     assert code == EXIT_OK
     assert stdout == ""
     assert report_path.read_text(encoding="utf-8").startswith(
-        "# SDR evaluation harness comparison report"
+        "# SDR evaluation harness evidence report"
     )
 
 
@@ -148,7 +148,7 @@ def test_entry_point_writes_records_to_stdout_when_asked(corpus_root: Path) -> N
 
     assert code == EXIT_OK
     records = RunRecordSet.from_json(stdout)
-    assert records.repetitions == 1
+    assert {record.repetition for record in records.records} == {0}
 
 
 def test_entry_point_limits_execution_to_the_requested_arms(
@@ -183,7 +183,7 @@ def test_entry_point_repeats_every_applicable_arm(corpus_root: Path, tmp_path: P
 
     assert code == EXIT_OK
     records = RunRecordSet.from_json(records_path.read_text(encoding="utf-8"))
-    assert records.repetitions == 2
+    assert {record.repetition for record in records.records} == {0, 1}
     repetitions = sorted(
         record.repetition for record in records.records if record.item_id == "runner-light-item"
     )
@@ -229,7 +229,7 @@ def test_entry_point_re_renders_a_stored_record_set_byte_identically(
 
     assert first[0] == EXIT_OK
     assert first[1] == second[1]
-    assert first[1].startswith("# SDR evaluation harness comparison report")
+    assert first[1].startswith("# SDR evaluation harness evidence report")
 
 
 def test_entry_point_refuses_to_re_render_and_execute_in_one_invocation(

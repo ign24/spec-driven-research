@@ -19,8 +19,11 @@ contract as current.
 ### Requirement: Subprocess environments enforce credential boundaries
 Scripted, mutation, and metamorphic actors MUST construct allowlisted subprocess environments that
 exclude agent-host credentials. A live actor MUST use a separately constructed environment containing
-only the inherited host variables required by its declared connector. Executable provenance MUST be
-captured before either environment starts a subprocess.
+only explicit credential variables from its connector-owned fixed allowlist. Callers MUST NOT extend
+that allowlist or inject loader/runtime options, search paths, config roots, or general environment
+maps. Live execution MUST use harness-owned isolated XDG config/data/cache/state roots. Executable
+canonical path, device/inode identity, hash, and package/version provenance MUST be captured and fixed
+before credential access or subprocess startup.
 
 #### Scenario: Start a non-live subprocess
 - **WHEN** a scripted, mutation, or metamorphic subprocess environment is built
@@ -30,7 +33,8 @@ captured before either environment starts a subprocess.
 #### Scenario: Start an opted-in live subprocess
 - **WHEN** both live opt-in keys are present and a connector is selected
 - **THEN** the live environment is built independently from the non-live environment
-- **THEN** only the connector's declared inherited host variables are admitted
+- **THEN** only explicitly present credentials in the connector's fixed allowlist are admitted
+- **THEN** loader/runtime injection and inherited XDG state are rejected
 
 ### Requirement: Live execution requires two opt-in keys
 The harness MUST start a live host only when both the live environment opt-in and an explicit live CLI
@@ -45,7 +49,13 @@ network request may be made.
 ### Requirement: Live execution is bounded and repository-write-free
 Every live session MUST execute inside a disposable external research root, MUST create a bounded
 process group, and MUST enforce turn and wall-clock bounds over the complete process tree. It MUST NOT
-write research artifacts, lifecycle metadata, results, or Git commits into the repository tree.
+write research artifacts, lifecycle metadata, results, or Git commits into the repository tree. A
+live session MAY write only exact current-stage focal research artifacts derived internally from the
+sealed request and materialized manifest. It MUST protect `sdr.yaml` from direct/unmediated writes
+while permitting only an exact authorized metadata transition produced by the mediator-executed SDR
+lifecycle command. It MUST protect immutable seeds, harness configuration, and results.
+Every mediator-spawned lifecycle, inspection, verification, and export subprocess MUST share complete
+bounds and cancellation propagation, terminate descendants, and be joined before teardown or return.
 
 #### Scenario: A live session completes within bounds
 - **WHEN** a live session completes before either bound
@@ -57,11 +67,84 @@ write research artifacts, lifecycle metadata, results, or Git commits into the r
 - **THEN** the complete process tree is terminated and the disposable runspace is torn down
 - **THEN** the run is errored with the exceeded bound and is not scored as a completed lifecycle run
 
+#### Scenario: A live tool attempts an undeclared write
+- **WHEN** a host requests a direct write to `sdr.yaml`, a seed, repository path, harness config,
+  result, or undeclared focal file
+- **THEN** the write is denied before dispatch
+- **THEN** no broader filesystem permission or fallback tool is available
+
+#### Scenario: An authorized lifecycle command changes metadata
+- **WHEN** the mediator executes an allowed `verify-claims`, `verify-probe`, or `advance` command
+- **THEN** the pre/post semantic `sdr.yaml` delta exactly equals the predicted command-specific
+  transition
+- **THEN** any missing, additional, stale, or otherwise unexplained metadata change fails attribution
+
+### Requirement: OpenCode live execution proves isolated mediation
+The harness MUST materialize and hash a dedicated OpenCode configuration and harness-owned mediation
+plugin. It MUST fail closed before host startup unless the machine-readable effective configuration
+proves that exact config/plugin provenance and proves external plugins, MCP servers, saved grants,
+loader/runtime environment injection, unmediated bash/shell execution, and generic command tools are
+absent or denied. Executable, config, and plugin canonical path, device/inode identity, and hash MUST
+be fixed and revalidated before startup, every tool dispatch, every mediator subprocess boundary, and
+export. The mediator control token MUST remain only in the harness host process and MUST never appear
+in model/tool input, debug output, structured events, durable records, or exports.
+
+#### Scenario: Effective configuration matches the harness boundary
+- **WHEN** live OpenCode preflight inspects the effective configuration
+- **THEN** the selected config root and plugin bytes match the captured harness-owned hashes
+- **THEN** isolated XDG roots and fixed executable/config/plugin identities validate
+- **THEN** only the declared mediation tool and required focal artifact edits are available
+
+#### Scenario: Isolation cannot be demonstrated
+- **WHEN** effective configuration is unavailable, ambiguous, inherits an external plugin/MCP/grant, or
+  leaves an unmediated execution path enabled
+- **THEN** startup fails before a paid session, credential use, or network request
+- **THEN** the deficiency is not downgraded to a warning
+
+### Requirement: Lifecycle actions use one pre-dispatch argv mediator
+The live host MUST receive no generic SDR or shell tool. A harness-owned plugin MUST expose one narrow
+lifecycle tool requiring `verify.action: run` and argv without a shell. The tool MUST serialize
+commands and enforce stateful stage-specific command, flag, and focal-artifact allowlists derived from
+independently parsed state. As applicable those allowlists MUST include `verify-claims`, `verify-probe`,
+and `advance`, and MUST always deny `approve`, every `resolve-claim`, direct lifecycle metadata writes,
+and every undeclared lifecycle action. Before exposing tools and after every attempted command, the
+mediator MUST independently schema-validate and semantically reconcile
+`sdr status <slug> --json` and exactly `sdr check <slug> --offline --json` with the manifest, sealed
+request, filesystem, and expected command transition before permitting another command.
+Intake MAY edit only declared brief artifacts and invoke `advance`; explore MAY edit only declared
+notes and invoke `verify-claims` or `advance`; probe MAY edit only declared probe artifacts and invoke
+`verify-probe` or `advance`; transfer MUST expose no mutation/transition; and reuse MAY edit only
+declared assets and invoke `advance` in a separately operator-authorized resumed run. Read-only status,
+offline check, and plan-declared cross queries remain exact argv operations where required. Every
+advance MUST be exactly `sdr advance <slug> --offline --no-commit`; verification flags and timeout
+MUST be fixed by the sealed request.
+
+#### Scenario: Execute one authorized lifecycle command
+- **WHEN** the plugin receives an allowed `verify.action: run` argv request
+- **THEN** exactly one fixed-executable command runs without a shell
+- **THEN** structured status and offline check plus the exact pre/post semantic metadata transition
+  are captured and validated before another lifecycle request
+
+#### Scenario: Initial state is inconsistent
+- **WHEN** initial status/check schemas or semantics disagree with each other, the manifest, sealed
+  request, derived roots, or stage allowlist
+- **THEN** no host tool or lifecycle command is exposed
+- **THEN** caller scalar attestations cannot repair or replace the missing exact identity
+
+#### Scenario: Attempt to bypass mediation
+- **WHEN** the host requests a command string, alternate executable, concurrent lifecycle command,
+  forbidden subcommand, direct metadata write, or external execution tool
+- **THEN** the request is denied before dispatch
+- **THEN** the run cannot treat post-hoc observation as enforcement
+
 ### Requirement: Live usage has exact session attribution
 Live token usage and monetary cost MUST come from the selected host's structured export for the exact
-session identifier captured from that run. The harness MUST NOT use a host-wide aggregate or estimate
-cost from a price table. It MUST persist aggregates and evidence references only, never a transcript
-or raw host export.
+immutable session identifier captured from that run. Every session-bearing event in the complete
+stream and every session-bearing export record MUST be reconciled and agree with that identifier. The
+harness MUST NOT use a host-wide aggregate, estimate cost from a price table, or use a model fallback
+when export is unavailable. It MUST persist aggregates and evidence references only, never a
+transcript or raw host export. An intentional transfer interrupt MUST still attempt the exact
+attributed export after the host process group and all mediator subprocesses are cancelled and joined.
 
 #### Scenario: Record live usage
 - **WHEN** a live session export reports usage
@@ -74,10 +157,26 @@ or raw host export.
 - **THEN** usage is unavailable with a reason rather than zero
 - **THEN** no transcript or raw export is persisted to compensate
 
+#### Scenario: Transfer intentionally interrupts the host
+- **WHEN** structured status first reports transfer and the harness interrupts the host process group
+- **THEN** the exact immutable session id is exported without starting or continuing another session
+- **THEN** transfer evidence remains operator-pending even if export usage is unavailable
+
+#### Scenario: A second session identity appears
+- **WHEN** a later event or exported assistant record identifies a different session
+- **THEN** session attribution fails
+- **THEN** values from the conflicting identity are not reported
+
 ### Requirement: A pilot is one fully planned paid session
 A pilot MUST execute exactly one planned paid session identified by one scenario/item, arm, repetition,
-host, model, prompt policy, and prompt-template version. The observed session MUST match that plan, and
-the harness MUST exit after it without expanding the item across arms or repetitions.
+host, model, prompt policy, prompt-template version, bounds, and external results root. The runner MUST
+wire the live path through an exact scalar `--live` pilot and MUST reject matrix/list/range expansion.
+The observed session MUST match that plan, and the harness MUST exit after it without expanding the
+item across arms or repetitions. The harness MUST derive the canonical repository root and
+materialized focal/seed roots internally and validate containment and disjointness. Observed identity
+MUST be derived independently from exact materialized manifest and sealed-request identities,
+canonical prompt, runspace, host, every event, and export evidence; it MUST NOT be copied from the plan
+or accepted as scalar caller attestation.
 
 #### Scenario: Execute a pilot plan
 - **WHEN** an operator invokes a valid pilot plan
@@ -88,14 +187,26 @@ the harness MUST exit after it without expanding the item across arms or repetit
 - **WHEN** the host, model, template policy, arm, item, or repetition differs from the pilot plan
 - **THEN** attribution fails and the session is not combined with the planned treatment
 
+#### Scenario: Observed identity lacks independent evidence
+- **WHEN** an observed identity field exists only in the authorization plan or is filled from it
+- **THEN** attribution fails before the session is reported as matching
+- **THEN** the plan remains comparison input rather than observation input
+
 ### Requirement: Live runs preserve the HITL boundary
 A live agent MUST stop at transfer while real operator approval is pending. It MUST NOT invoke or
 impersonate approval, fabricate an approver, edit lifecycle metadata to cross the boundary, or treat
 claim resolution as approval. Approval provenance MUST distinguish not reached, operator pending or
-decided, and synthetic fixture states. Synthetic approval MUST NOT count as live operator evidence.
+decided, and synthetic fixture states. Approval and terminal state MUST form an allowed pair:
+pre-transfer error/completion is `not-reached` and not terminal `awaiting-operator-approval`;
+intentional transfer stop is `awaiting-operator-approval` plus `operator-pending`; later
+operator-decided states require a separate real operator record referencing that run while the
+immutable session terminal remains `awaiting-operator-approval`; and synthetic states are fixture-only
+and cannot pair with a live terminal. Synthetic approval MUST NOT count as live operator evidence.
 
 #### Scenario: A live run reaches transfer
 - **WHEN** the agent reaches the transfer approval boundary
+- **THEN** the plugin refuses further tools and the harness immediately interrupts the host without
+  waiting for another turn
 - **THEN** execution stops with `operator-pending`
 - **THEN** no approve action or synthetic approval is recorded
 
@@ -109,15 +220,29 @@ decided, and synthetic fixture states. Synthetic approval MUST NOT count as live
 - **THEN** its state is explicitly synthetic and remains separate from operator evidence
 - **THEN** the initial live pilot rejects the synthetic state
 
+#### Scenario: Approval and terminal states disagree
+- **WHEN** a record contains a pairing outside the allowed live or fixture state matrix
+- **THEN** validation rejects the record rather than normalizing either state
+- **THEN** initial-session evidence cannot contain an operator-decided or synthetic approval
+
 ### Requirement: Prompt treatments are versioned and expectation-blind
 Every prompt MUST declare a versioned template and treatment policy. Prompts MUST exclude planted
 defects, expected detections, expected retrievals, negative controls, and scoring vocabulary. Reports
 MUST NOT aggregate differing template versions or assisted and unassisted policies.
+Live prompts MUST be canonical immutable `BuiltPrompt` values created by
+`build_prompt(PromptInputs, PromptLeakSignals)`. The transfer-stop instruction MUST be included before
+construction and leak validation. The exact submitted bytes, template hash, and submitted-prompt hash
+MUST be recomputed and validated before host startup; no text may be appended afterward.
 
 #### Scenario: Build an expectation-blind prompt
 - **WHEN** a prompt is built for any evaluation question
 - **THEN** it contains no fixture expectation or scoring answer
 - **THEN** a detected leak fails before host execution
+
+#### Scenario: Submit a live prompt
+- **WHEN** a canonical `BuiltPrompt` is prepared for the host
+- **THEN** its construction provenance, leak result, template hash, and exact text hash validate
+- **THEN** the submitted bytes equal the validated text without post-validation mutation
 
 #### Scenario: Compare prompt treatments
 - **WHEN** records use assisted and unassisted policies or different template versions
@@ -167,7 +292,7 @@ usage additionally requires exact session attribution and host/model/version pro
 Every run MUST produce a schema-version-2 machine-readable record containing the identity,
 evaluation-question, corpus/scenario provenance, treatment factors, execution boundary, terminal and
 approval states, question-specific outcomes, cost, friction, and traceable structured evidence
-required by the authoritative schema-v2 design. Version 1 MUST be rejected explicitly. The record
+required by authoritative Design Decision 11. Version 1 MUST be rejected explicitly. The record
 MUST NOT contain a transcript, raw host export, or model-judged metric.
 
 #### Scenario: Validate a version-2 record

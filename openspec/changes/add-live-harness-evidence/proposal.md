@@ -33,14 +33,29 @@ validation additionally needs at least one non-software scenario and exact negat
   aggregated. The first reuse pilot is assisted; spontaneous discovery under an unassisted policy is
   a later measurement.
 - Add one bounded live OpenCode session path for single-investigation workflow, observed cost, and
-  friction. Live execution remains disabled unless both the existing environment opt-in and an
-  explicit CLI opt-in are present.
+  friction. The harness owns an isolated OpenCode configuration and a hash-pinned mediation plugin,
+  and fails closed unless the host's effective configuration proves that no external plugin, MCP,
+  saved grant, loader/runtime environment injection, or unmediated shell path is active. Connector-
+  owned fixed credential-variable allowlists and isolated XDG config/data/cache/state roots admit only
+  explicit credentials. Live execution remains disabled unless both the existing environment opt-in
+  and an exact scalar `--live` CLI opt-in are present.
 - Define a pilot as exactly one planned paid session identified by one scenario/item, arm,
   repetition, host, model, and prompt-template policy. It reports exact session-attributed usage and
   cost before any additional paid session is authorized.
 - Stop live lifecycle runs at transfer while real operator approval is pending. The agent never
-  invokes or impersonates HITL approval. Approval-not-reached, operator, and synthetic fixture states
-  remain distinct, and the initial pilot does not use synthetic approval.
+  invokes or impersonates HITL approval. A harness-owned plugin exposes only a narrow argv/no-shell
+  lifecycle tool, denies direct or unmediated `sdr.yaml` writes, serializes lifecycle commands, and
+  permits only the exact metadata transition produced by an authorized command. It independently
+  validates initial and post-command `sdr status <slug> --json` and
+  `sdr check <slug> --offline --json`, rejects unexplained metadata changes, and immediately
+  interrupts the host when transfer is observed. Approval-not-reached, operator, and synthetic
+  fixture states remain distinct and consistent with terminal state; the initial pilot does not use
+  synthetic approval.
+- Derive the observed pilot identity from independently materialized corpus, scenario, request,
+  canonical `BuiltPrompt`, runspace, host, and export evidence rather than copying the authorization
+  plan or trusting scalar caller attestations. Require exact manifest and sealed-request identities,
+  reconcile every session-bearing event to one immutable identifier, and preserve exact attributed
+  export after the intentional transfer stop without a model-derived fallback.
 - **BREAKING** (to the unreleased run-record format): replace the incomplete prior record shape with
   one complete schema version 2 after all lifecycle, live, reuse, treatment, approval, and provenance
   fields are specified. Version 1 records are rejected rather than silently coerced.
@@ -48,7 +63,8 @@ validation additionally needs at least one non-software scenario and exact negat
   mutation, and metamorphic paths remain credential-free; only the explicitly enabled live host
   receives the narrowly required inherited host environment.
 - Preserve no repository writes, no transcript persistence, bounded process-tree teardown, exact
-  session attribution, and host/model/version provenance.
+  session attribution, host/model/version provenance, and write access only to the focal research
+  artifacts required by the authorized workflow.
 
 ## Capabilities
 
@@ -69,7 +85,8 @@ validation additionally needs at least one non-software scenario and exact negat
 ## Impact
 
 - Expected future implementation scope is confined to `bench/`, its tests, and harness
-  documentation; shipped lifecycle behavior and cross-investigation semantics do not change.
+  documentation. The isolated OpenCode config/plugin are harness fixtures under that scope; shipped
+  lifecycle behavior and cross-investigation semantics do not change.
 - Existing software corpus items are migrated to current snapshot provenance and explicit decision
   lineage before replacement baselines are accepted.
 - New reuse fixtures include at least one non-software domain, immutable completed seeds, one focal

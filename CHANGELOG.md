@@ -33,6 +33,9 @@ single source of truth is `src/sdr/__init__.py`.
   and anchored-claim joins, explicit historical decision lineage, advisory
   source-health reporting, scoped degradation acknowledgements, and offline
   operation with explicit online reachability opt-in.
+- A two-key, scalar live OpenCode pilot for one bounded investigation, with an
+  isolated mediated tool boundary, exact session attribution, and external-only
+  research and result roots.
 
 ### Changed
 

@@ -59,11 +59,15 @@ query projection exactly. It MUST distinguish `not-consulted`, `not-exercised`, 
 Assisted prompts MUST direct the agent to consult the cross CLI without revealing expected queries or
 results. Unassisted prompts MUST omit cross-consultation guidance. Results from the two policies MUST
 NOT be aggregated. The initial reuse pilot MUST be assisted; spontaneous discovery MUST be measured
-only in a separately planned later unassisted treatment.
+only in a separately planned later unassisted treatment. A live assisted prompt MUST use the same
+canonical `BuiltPrompt` construction, hash, and leak validation required by the research evaluation
+harness; generic cross guidance MUST be incorporated before validation rather than appended by the
+live connector.
 
 #### Scenario: Run the first reuse pilot
 - **WHEN** the initial reuse pilot plan is validated
 - **THEN** its prompt policy is assisted
+- **THEN** its submitted prompt exactly matches the validated canonical `BuiltPrompt`
 - **THEN** its result is not labelled spontaneous discovery
 
 #### Scenario: Report both policies

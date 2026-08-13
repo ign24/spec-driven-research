@@ -34,19 +34,51 @@ output path -- are reported as one line on stderr with exit status
 from __future__ import annotations
 
 import argparse
+import json
+import shutil
 import sys
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final, TextIO
 
-from bench.harness.actor import ARMS, ScriptedActor
+from bench.harness.actor import ARMS, ScriptedActor, TokenUsage, TokenUsageUnavailable
 from bench.harness.arms import DEFAULT_REPETITIONS, ArmExecutionError, execute_arms
 from bench.harness.corpus import DEFAULT_CORPUS_ROOT, CorpusError, load_corpus
 from bench.harness.cost import DurationReporting
-from bench.harness.record import RunRecordSet, build_run_record_set
+from bench.harness.enforcement import BoundaryError
+from bench.harness.live import (
+    LiveBounds,
+    LiveError,
+    MonetaryCost,
+    MonetaryCostUnavailable,
+    OpenCodeConnector,
+    audit_repository,
+    create_live_request,
+    resolve_live_opt_in,
+)
+from bench.harness.pilot import PilotAttributionError, PilotExitReport, PilotPlan, execute_pilot
+from bench.harness.prompts import (
+    EvaluationQuestion,
+    HistoryCondition,
+    PromptInputs,
+    PromptLeakSignals,
+    PromptPolicy,
+    build_prompt,
+)
+from bench.harness.record import RunRecordSet
+from bench.harness.record_builders import build_lifecycle_record_set
 from bench.harness.report import ReportError, render_report
-from bench.harness.runspace import DEFAULT_MAX_WORKERS, REPOSITORY_ROOT, RunspaceError
+from bench.harness.reuse import load_reuse_corpus, prepare_reuse_scenario
+from bench.harness.runspace import (
+    DEFAULT_MAX_WORKERS,
+    REPOSITORY_ROOT,
+    Runspace,
+    RunspaceError,
+    runspace,
+)
+from sdr.research import Research
 
 #: The run completed and every requested output was written.
 EXIT_OK: Final[int] = 0
@@ -151,6 +183,21 @@ def build_parser() -> argparse.ArgumentParser:
             "measured (default: %(default)s)"
         ),
     )
+    parser.add_argument("--live", action="store_true", help="execute exactly one scalar live pilot")
+    parser.add_argument("--live-item", default=None)
+    parser.add_argument("--live-scenario", default=None)
+    parser.add_argument("--live-arm", choices=list(ARMS), default=None)
+    parser.add_argument("--live-repetition", type=int, default=None)
+    parser.add_argument("--live-host", choices=["opencode"], default=None)
+    parser.add_argument("--live-host-version", default=None)
+    parser.add_argument("--live-model", default=None)
+    parser.add_argument(
+        "--live-prompt-policy", choices=["standard", "assisted", "unassisted"], default=None
+    )
+    parser.add_argument("--live-template-version", default=None)
+    parser.add_argument("--live-max-turns", type=int, default=None)
+    parser.add_argument("--live-wall-clock", type=float, default=None)
+    parser.add_argument("--live-results-root", default=None)
     return parser
 
 
@@ -172,6 +219,9 @@ def main(
         ReportError,
         RunnerError,
         RunspaceError,
+        BoundaryError,
+        LiveError,
+        PilotAttributionError,
         ValueError,
     ) as error:
         print(f"{_PROGRAM}: {error}", file=err)
@@ -180,6 +230,10 @@ def main(
 
 
 def _execute(args: argparse.Namespace, out: TextIO) -> None:
+    if args.live:
+        _validate_live_args(args)
+        out.write(_execute_scalar_live(args) + "\n")
+        return
     if args.repetitions < 1:
         raise RunnerError(f"repetitions must be at least 1: {args.repetitions}")
     records_target = _target(args.records)
@@ -195,9 +249,252 @@ def _execute(args: argparse.Namespace, out: TextIO) -> None:
         )
 
 
+def _validate_live_args(args: argparse.Namespace) -> None:
+    if (
+        args.arm
+        or args.repetitions != DEFAULT_REPETITIONS
+        or args.max_workers != DEFAULT_MAX_WORKERS
+    ):
+        raise RunnerError(
+            "scalar --live cannot be combined with matrix arm/repetition/worker flags"
+        )
+    required = (
+        "live_arm",
+        "live_repetition",
+        "live_host",
+        "live_host_version",
+        "live_model",
+        "live_prompt_policy",
+        "live_template_version",
+        "live_max_turns",
+        "live_wall_clock",
+        "live_results_root",
+    )
+    missing = [name for name in required if getattr(args, name) is None]
+    if (args.live_item is None) == (args.live_scenario is None):
+        missing.append("exactly one live item or scenario")
+    if missing:
+        raise RunnerError("scalar --live is missing: " + ", ".join(missing))
+    if args.live_repetition < 0 or args.live_max_turns < 1 or args.live_wall_clock <= 0:
+        raise RunnerError("scalar --live bounds and repetition are invalid")
+
+
+def _execute_scalar_live(args: argparse.Namespace) -> str:
+    executable = shutil.which("opencode")
+    if executable is None:
+        raise RunnerError("scalar --live requires the installed OpenCode executable")
+    results_root = Path(args.live_results_root).expanduser().resolve(strict=True)
+    if args.live_item is not None:
+        corpus = load_corpus(args.corpus)
+        matches = [item for item in corpus.items if item.id == args.live_item]
+        if len(matches) != 1:
+            raise RunnerError(f"live item is not an exact corpus identity: {args.live_item}")
+        with runspace(prefix=f"sdr-live-{args.live_item}-r{args.live_repetition}-") as space:
+            item = matches[0]
+            research = Research.create(
+                space.root,
+                item.id,
+                item.title,
+                item.question,
+                mode=item.mode,
+                owner="SDR live harness",
+            )
+            artifacts: list[str] = []
+            for declared, content in sorted(item.artifacts.items()):
+                relative = Path(declared)
+                if not relative.parts or relative.parts[0] != item.id:
+                    raise RunnerError("live item artifact is outside its focal investigation")
+                focal_relative = Path(*relative.parts[1:])
+                target = research.root / focal_relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(content, encoding="utf-8")
+                artifacts.append(focal_relative.as_posix())
+            _write_live_manifest(
+                space,
+                identity_kind="item",
+                identity=item.id,
+                arm=args.live_arm,
+                focal_slug=item.id,
+                seed_slugs=(),
+                stage="intake",
+                artifacts=tuple(artifacts),
+                cross_argv=(),
+                resumed_reuse=False,
+            )
+            return _run_live_materialization(args, space, item.question, results_root, executable)
+
+    reuse = load_reuse_corpus()
+    try:
+        scenario = reuse.by_id(args.live_scenario)
+    except KeyError as error:
+        raise RunnerError(
+            f"live scenario is not an exact reuse identity: {args.live_scenario}"
+        ) from error
+    if args.live_prompt_policy != "assisted":
+        raise RunnerError("the initial reuse pilot accepts assisted policy only")
+    prepared = prepare_reuse_scenario(scenario, repetition=args.live_repetition)
+    with prepared as materialized:
+        knowledge = materialized.path / "knowledge"
+        knowledge.mkdir()
+        space = Runspace(materialized.path, materialized.research_root, knowledge)
+        metadata = Research.load(materialized.focal_root, within=materialized.research_root).meta
+        artifacts = tuple(
+            artifact.path for artifact in scenario.focal.artifacts if artifact.path != "sdr.yaml"
+        )
+        cross = tuple(
+            ("sdr", *expectation.command)
+            for expectation in (*scenario.positive_expectations, *scenario.negative_controls)
+        )
+        _write_live_manifest(
+            space,
+            identity_kind="scenario",
+            identity=scenario.id,
+            arm=args.live_arm,
+            focal_slug=scenario.focal.id,
+            seed_slugs=tuple(materialized.seed_roots),
+            stage=metadata.stage,
+            artifacts=artifacts,
+            cross_argv=cross,
+            resumed_reuse=False,
+        )
+        return _run_live_materialization(
+            args, space, f"Investigate reuse scenario {scenario.id}.", results_root, executable
+        )
+
+
+def _write_live_manifest(
+    space: Runspace,
+    *,
+    identity_kind: str,
+    identity: str,
+    arm: str,
+    focal_slug: str,
+    seed_slugs: tuple[str, ...],
+    stage: str,
+    artifacts: tuple[str, ...],
+    cross_argv: tuple[tuple[str, ...], ...],
+    resumed_reuse: bool,
+) -> None:
+    payload = {
+        "schema_version": 1,
+        "identity_kind": identity_kind,
+        "identity": identity,
+        "arm": arm,
+        "focal_slug": focal_slug,
+        "seed_slugs": list(seed_slugs),
+        "stage": stage,
+        "artifacts": list(artifacts),
+        "cross_argv": [list(argv) for argv in cross_argv],
+        "resumed_reuse": resumed_reuse,
+    }
+    (space.path / "live-manifest.json").write_text(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")), encoding="utf-8"
+    )
+
+
+def _run_live_materialization(
+    args: argparse.Namespace,
+    space: Runspace,
+    question: str,
+    results_root: Path,
+    executable: str,
+) -> str:
+    policy = (
+        None if args.live_prompt_policy == "standard" else PromptPolicy(args.live_prompt_policy)
+    )
+    evaluation = (
+        EvaluationQuestion.CROSS_RETRIEVAL
+        if args.live_scenario is not None
+        else EvaluationQuestion.LIVE_SINGLE_INVESTIGATION
+    )
+    prompt = build_prompt(
+        PromptInputs(
+            evaluation,
+            question,
+            args.live_arm,
+            policy,
+            HistoryCondition.PRESENT if evaluation is EvaluationQuestion.CROSS_RETRIEVAL else None,
+            stop_at_transfer=True,
+        ),
+        PromptLeakSignals(),
+    )
+    if prompt.template.version != args.live_template_version:
+        raise RunnerError("live template version differs from the scalar authorization")
+    bounds = LiveBounds(args.live_max_turns, args.live_wall_clock)
+    request = create_live_request(
+        space,
+        prompt,
+        bounds=bounds,
+        repetition=args.live_repetition,
+        model=args.live_model,
+        results_root=results_root,
+    )
+    connector = OpenCodeConnector(Path(executable), args.live_model)
+    plan = PilotPlan(
+        request.manifest.identity if request.manifest.identity_kind == "scenario" else None,
+        request.manifest.identity if request.manifest.identity_kind == "item" else None,
+        args.live_arm,
+        args.live_repetition,
+        args.live_host,
+        args.live_host_version,
+        args.live_model,
+        None,
+        prompt,
+        bounds,
+        results_root,
+    )
+    report = execute_pilot(
+        plan,
+        request=request,
+        connector=connector,
+        opt_in=resolve_live_opt_in(cli_opt_in=True),
+    )
+    return json.dumps(
+        _pilot_report_payload(report),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _pilot_report_payload(report: PilotExitReport) -> dict[str, object]:
+    if isinstance(report.tokens, TokenUsage):
+        usage: dict[str, object] = {
+            "available": True,
+            "input_tokens": report.tokens.input_tokens,
+            "output_tokens": report.tokens.output_tokens,
+            "total_tokens": report.tokens.total_tokens,
+            "model": report.tokens.model,
+        }
+    elif isinstance(report.tokens, TokenUsageUnavailable):
+        usage = {"available": False, "reason": report.tokens.reason}
+    else:
+        raise RunnerError("pilot report has invalid token accounting")
+    if isinstance(report.cost, MonetaryCost):
+        cost: dict[str, object] = {
+            "available": True,
+            "amount": str(report.cost.amount),
+            "currency": report.cost.currency,
+        }
+    elif isinstance(report.cost, MonetaryCostUnavailable):
+        cost = {"available": False, "reason": report.cost.reason}
+    else:
+        raise RunnerError("pilot report has invalid monetary accounting")
+    return {
+        "session_id": report.session_id,
+        "terminal_state": report.terminal_state,
+        "approval_state": report.approval.state.value,
+        "attributed": report.attributed,
+        "wall_clock_seconds": report.wall_clock_seconds,
+        "usage": usage,
+        "cost": cost,
+    }
+
+
 def _executed_records(args: argparse.Namespace) -> RunRecordSet:
     """Execute the corpus with the scripted actor and build the durable record set."""
     corpus = load_corpus(args.corpus)
+    started_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    repository_before = audit_repository()
     runs = execute_arms(
         corpus,
         actor=ScriptedActor(),
@@ -205,11 +502,13 @@ def _executed_records(args: argparse.Namespace) -> RunRecordSet:
         repetitions=args.repetitions,
         max_workers=args.max_workers,
     )
-    return build_run_record_set(
-        corpus_version=corpus.version,
-        repetitions=args.repetitions,
-        items=corpus.items,
+    repository_after = audit_repository()
+    return build_lifecycle_record_set(
+        corpus=corpus,
         runs=runs,
+        started_at=started_at,
+        repository_before_sha256=repository_before,
+        repository_after_sha256=repository_after,
     )
 
 
