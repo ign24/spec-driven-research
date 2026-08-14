@@ -8,6 +8,8 @@ single source of truth is `src/sdr/__init__.py`.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-14
+
 ### Added
 
 - Outcome-first English and Spanish onboarding, task-oriented documentation

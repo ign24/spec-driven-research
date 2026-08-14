@@ -92,17 +92,22 @@ commit-producing transition.
 
 SDR requires Python 3.12 or newer. No package-index release exists: SDR is not
 published to PyPI and cannot be installed from a package index. The supported
-route installs the canonical repository at an explicit revision. Replace
-`REVISION` with a full commit SHA:
+route installs the canonical repository at an explicit revision:
 
 ```bash
-REVISION=REPLACE_WITH_FULL_COMMIT_SHA
-uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+uv tool install "git+https://github.com/ign24/spec-driven-research@v0.2.0"
 sdr --help
 ```
 
 Pinning a revision is required, not optional. An unpinned install follows the
-default branch and is not reproducible.
+default branch and is not reproducible. A tag is explicit but can be moved; for
+an install that cannot change under you, pin the full commit SHA the tag points
+at:
+
+```bash
+REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.2.0 | cut -f1)
+uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+```
 
 From an existing checkout, `uv tool install .` is the isolated-tool equivalent.
 `python -m pip install .` also installs that checkout. Contributors should use
