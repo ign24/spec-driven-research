@@ -36,6 +36,24 @@ single source of truth is `src/sdr/__init__.py`.
 - A two-key, scalar live OpenCode pilot for one bounded investigation, with an
   isolated mediated tool boundary, exact session attribution, and external-only
   research and result roots.
+- A canonical public repository coordinate declared under `[project.urls]`, with
+  validation that every documented repository URL matches it exactly and that a
+  URL reaching the repository only through a rename redirect is reported rather
+  than accepted. The check is textual and does not consult the network.
+- Executed verification of the documented installation route: SDR is installed
+  from a pinned repository revision into an environment outside the checkout,
+  with the source tree absent from the import path and publication credentials
+  removed, and a complete light lifecycle is driven through the installed `sdr`
+  console script. An unavailable verification records an explicit skip reason so
+  it stays distinguishable from a verification that never existed. The suite runs
+  under the `installation` marker and in a dedicated CI job with network access
+  declared.
+- A canonical agent routing block shipped as a package resource, stating when a
+  host agent invokes SDR and when it must not, published unchanged in the Claude
+  Code, Codex, and OpenCode guides and in both README languages. Integration
+  validation reports any divergent or one-sided copy. The block is guidance a
+  user installs into a host agent, not enforcement, and publishing it does not
+  change any adapter status.
 
 ### Changed
 
@@ -46,6 +64,13 @@ single source of truth is `src/sdr/__init__.py`.
   canonical GitHub and immutable-revision installation, and validates bilingual
   navigation, fixture links, Git effects, confidence limits, and documented
   agent status.
+- Installation documentation now presents the revision-pinned Git route as the
+  supported one and states that no package-index release exists. Pinning a
+  revision is required rather than optional, and an unpinned documented install
+  command is reported. Previous guidance that presented package-index
+  installation as a planned future route has been removed; the
+  `release-hardening-and-public-distribution` change is withdrawn, with its
+  installation-relevant scope inherited here and its publication scope dropped.
 - Current and future distributions are licensed under MIT; historical Apache-2.0 grants are not revoked.
 - Narrowed the documented Agent Skills adapter set to Claude Code, Codex, and
   OpenCode; removed Hermes Agent and OpenClaw adapters and support claims.
@@ -57,6 +82,9 @@ single source of truth is `src/sdr/__init__.py`.
 
 ### Fixed
 
+- The five-minute tour in both READMEs cloned `spec-driven-research` and then
+  changed into a `sdr` directory that the clone never created, so the first
+  command a new reader copied could not succeed.
 - The source distribution no longer packages a local `.codegraph` index
   directory.
 - Committed corpus fixtures under `bench/corpus` and `bench/reuse-corpus` are no

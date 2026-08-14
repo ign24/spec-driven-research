@@ -41,6 +41,16 @@ install, or reference those directories. Released wheels contain byte-equivalent
 package resources for installation; do not copy and modify skill content in an
 integration because modified copies drift from stage guards and CLI behavior.
 
+## Agent routing block
+
+The conditions under which a host agent should reach for SDR, and the
+conditions under which it must not, are stated once in a canonical routing
+block shipped as a package resource. Each adapter guide publishes that exact
+text with host-specific installation instructions and does not redefine its
+conditions; validation reports any adapter whose published copy diverges from
+the canonical source. The block is guidance a user installs into a host agent,
+not enforcement, so publishing it does not change any adapter status.
+
 ## Validation and installation
 
 Inspect each `integrations/<agent>/README.md` and `adapter.yaml` before installing.

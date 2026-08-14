@@ -68,7 +68,7 @@ explicit synthetic approval, does not run a probe, and completes mandatory reuse
 
 ```bash
 git clone https://github.com/ign24/spec-driven-research.git
-cd sdr
+cd spec-driven-research
 uv sync --locked --all-extras --dev
 TOUR_ROOT="$(mktemp -d)/research"
 uv run python examples/runner.py light-complete --root "$TOUR_ROOT"
@@ -90,19 +90,19 @@ commit-producing transition.
 
 ## Install from source
 
-SDR requires Python 3.12 or newer. Install the current canonical source:
-
-```bash
-uv tool install "git+https://github.com/ign24/spec-driven-research"
-sdr --help
-```
-
-For a reproducible install, replace `REVISION` with a full commit SHA:
+SDR requires Python 3.12 or newer. No package-index release exists: SDR is not
+published to PyPI and cannot be installed from a package index. The supported
+route installs the canonical repository at an explicit revision. Replace
+`REVISION` with a full commit SHA:
 
 ```bash
 REVISION=REPLACE_WITH_FULL_COMMIT_SHA
 uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+sdr --help
 ```
+
+Pinning a revision is required, not optional. An unpinned install follows the
+default branch and is not reproducible.
 
 From an existing checkout, `uv tool install .` is the isolated-tool equivalent.
 `python -m pip install .` also installs that checkout. Contributors should use
@@ -177,6 +177,21 @@ controls research storage. `documented` means discovery guidance and
 deterministic adapter checks exist, not host E2E. `verified` requires recorded,
 version-matched host E2E evidence; `experimental` marks a provisional contract.
 See [integrations](docs/integrations.md).
+
+### Agent routing block
+
+Installing the skills does not tell a host agent *when* to reach for SDR. That
+question is answered once, by a canonical routing block shipped as a package
+resource and published unchanged in each adapter guide. It states when a host
+agent invokes SDR — an investigation whose conclusion must stay auditable after
+the session ends, whose sources and claims must remain separately checkable, and
+whose recommendation becomes a decision only after explicit human approval — and
+when it must not: quick factual lookups, single-shot questions, ordinary coding
+work, or any case where the cost of a staged investigation exceeds the value of
+the answer.
+
+The block is guidance a user installs into a host agent, not enforcement. Copy it
+from the [routing block section](docs/integrations.md#agent-routing-block).
 
 ## Find the right documentation
 

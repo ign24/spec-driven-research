@@ -36,6 +36,9 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/ign24/spec-driven-research"
+
 [project.optional-dependencies]
 snapshot = [
     "trafilatura>=1.12",
@@ -91,3 +94,6 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "."]
+markers = [
+    "installation: verifies a pinned repository revision by installing it; requires network access",
+]

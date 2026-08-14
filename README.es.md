@@ -70,7 +70,7 @@ aprobación sintética explícita, no ejecuta un probe y completa el reuse oblig
 
 ```bash
 git clone https://github.com/ign24/spec-driven-research.git
-cd sdr
+cd spec-driven-research
 uv sync --locked --all-extras --dev
 TOUR_ROOT="$(mktemp -d)/research"
 uv run python examples/runner.py light-complete --root "$TOUR_ROOT"
@@ -92,19 +92,19 @@ transición que podría crear un commit.
 
 ## Instalación desde el código fuente
 
-SDR requiere Python 3.12 o posterior. Instala el código fuente canónico actual:
-
-```bash
-uv tool install "git+https://github.com/ign24/spec-driven-research"
-sdr --help
-```
-
-Para una instalación reproducible, reemplaza `REVISION` por un SHA completo:
+SDR requiere Python 3.12 o posterior. No hay release en ningún índice de
+paquetes: SDR no se publica en PyPI y no se puede instalar desde un índice. La
+ruta admitida instala el repositorio canónico en una revisión explícita.
+Reemplaza `REVISION` por un SHA completo:
 
 ```bash
 REVISION=REEMPLAZAR_POR_SHA_COMPLETO
 uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+sdr --help
 ```
+
+Fijar la revisión es obligatorio, no opcional. Una instalación sin revisión
+sigue la rama por defecto y no es reproducible.
 
 Desde un checkout existente, `uv tool install .` ofrece la instalación aislada.
 `python -m pip install .` también instala ese checkout. Para contribuir, usa
@@ -182,6 +182,23 @@ el almacenamiento de investigación. `documented` indica que existen guías de
 descubrimiento y checks determinísticos, no un E2E del host. `verified` exige
 evidencia E2E registrada y compatible por versión; `experimental` indica un
 contrato provisional. Consulta [integraciones](docs/integrations.md).
+
+### Bloque de enrutamiento para agentes
+
+Instalar las skills no le dice al agente anfitrión *cuándo* recurrir a SDR. Esa
+pregunta se responde una sola vez, en un bloque de enrutamiento canónico que se
+distribuye como recurso del paquete y se publica sin cambios en cada guía de
+adaptador. Indica cuándo invocar SDR — una investigación cuya conclusión debe
+seguir siendo auditable después de la sesión, cuyas fuentes y afirmaciones deben
+poder verificarse por separado, y cuya recomendación se convierte en decisión
+solo tras aprobación humana explícita — y cuándo no hacerlo: consultas
+factuales rápidas, preguntas de una sola vuelta, trabajo de programación
+corriente, o cualquier caso en que el costo de una investigación por etapas
+supere el valor de la respuesta.
+
+El bloque es una guía que la persona instala en su agente anfitrión, no un
+mecanismo de cumplimiento. Cópialo desde la
+[sección del bloque de enrutamiento](docs/integrations.md#agent-routing-block).
 
 ## Encuentra la documentación adecuada
 

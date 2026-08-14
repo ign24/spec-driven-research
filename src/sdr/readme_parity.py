@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import tomllib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -120,6 +121,11 @@ PAIR_CONTRACTS = {
             "`new`, `advance`, `reopen`, `drop`, and `archive` commit by default",
             "--no-commit",
         ),
+        "agent-routing": (
+            "routing block",
+            "when a host agent invokes SDR|when to invoke SDR",
+            "when it must not",
+        ),
     },
     "README.es.md": {
         "outcome-chain": (
@@ -142,6 +148,11 @@ PAIR_CONTRACTS = {
         "git-side-effects": (
             "`new`, `advance`, `reopen`, `drop` y `archive` crean commits por defecto",
             "--no-commit",
+        ),
+        "agent-routing": (
+            "bloque de enrutamiento|routing block",
+            "cuándo invocar SDR|cuándo un agente anfitrión invoca SDR",
+            "cuándo no",
         ),
     },
     "docs/README.md": {
@@ -208,7 +219,38 @@ PACKAGE_INDEX_CLAIMS = (
     re.compile(r"\buv tool install\s+(?![\"']?\.)sdr\b", re.IGNORECASE),
     re.compile(r"https?://pypi\.org/project/sdr(?:/|\b)", re.IGNORECASE),
     re.compile(r"\b(?:install(?:ed)? from|available on) PyPI\b", re.IGNORECASE),
+    re.compile(r"\bpip install\s+[\"']?spec-driven-research\b", re.IGNORECASE),
+    re.compile(r"\buv tool install\s+[\"']?spec-driven-research\b", re.IGNORECASE),
+    re.compile(r"https?://pypi\.org/project/spec-driven-research(?:/|\b)", re.IGNORECASE),
+    re.compile(
+        r"\b(?:planned|future|intended|upcoming|planeado|futur\w*|previst\w*)\b[^.\n]{0,80}\bPyPI\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\bPyPI\b[^.\n]{0,80}\b(?:planned|intended|future release|will be published"
+        r"|coming soon|se publicar\w*|planeado|previst\w*)\b",
+        re.IGNORECASE,
+    ),
 )
+REPOSITORY_URL = re.compile(r"https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
+GIT_INSTALL_URL = re.compile(
+    r"git\+(?P<repository>https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+)"
+    r"(?P<revision>@[^\s\"']+)?"
+)
+IDENTITY_SOURCE_ROOT = "src/sdr"
+INSTALL_ROUTES = {
+    "git-revision": re.compile(
+        r"git\+https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+@[^\s\"']+"
+    ),
+    "git-unpinned": re.compile(
+        r"git\+https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(?![@A-Za-z0-9._/-])"
+    ),
+    "checkout-uv": re.compile(r"uv tool install\s+[\"']?\.[\"']?"),
+    "checkout-pip": re.compile(r"pip install\s+[\"']?\.[\"']?"),
+    "checkout-pipx": re.compile(r"pipx install\s+[\"']?\.[\"']?"),
+    "contributor-sync": re.compile(r"uv sync\b"),
+}
+ROUTE_PAIRS = (("README.md", "README.es.md"),)
 
 
 def validate_readme_parity(root: Path) -> list[ParityFinding]:
@@ -244,9 +286,118 @@ def validate_readme_parity(root: Path) -> list[ParityFinding]:
 
         _validate_local_links(findings, root, filename, text)
 
-    _reject_package_index_claims_when_disabled(findings, root)
+    _reject_package_index_claims(findings, root)
+    _validate_repository_identity(findings, root)
+    _require_pinned_install_revision(findings, root)
+    _require_matching_install_routes(findings, root)
 
     return sorted(findings, key=lambda item: (item.path, item.code, item.message))
+
+
+def normalize_repository(url: str) -> str:
+    """Reduce a repository URL to its bare canonical coordinate form."""
+    return url.rstrip("/").removesuffix(".git")
+
+
+def declared_repository_coordinates(root: Path) -> list[str]:
+    """Return every repository coordinate declared under `[project.urls]`."""
+    manifest = root / "pyproject.toml"
+    if not manifest.is_file():
+        return []
+    config = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    urls = config.get("project", {}).get("urls", {})
+    coordinates = {
+        normalize_repository(str(value))
+        for value in urls.values()
+        if REPOSITORY_URL.fullmatch(normalize_repository(str(value)))
+    }
+    return sorted(coordinates)
+
+
+def canonical_repository(root: Path) -> str | None:
+    """Return the single declared repository coordinate, or None when it is not unique."""
+    coordinates = declared_repository_coordinates(root)
+    if len(coordinates) != 1:
+        return None
+    return coordinates[0]
+
+
+def public_documents(root: Path) -> list[str]:
+    """List the public documentation files subject to repository and install contracts."""
+    names = [name for name in ("README.md", "README.es.md") if (root / name).is_file()]
+    docs = root / "docs"
+    if docs.is_dir():
+        names.extend(f"docs/{path.name}" for path in sorted(docs.glob("*.md")))
+    return names
+
+
+def _validate_repository_identity(findings: list[ParityFinding], root: Path) -> None:
+    canonical = canonical_repository(root)
+    if canonical is None:
+        findings.append(
+            ParityFinding(
+                "repository-coordinate",
+                "pyproject.toml",
+                "declare exactly one canonical repository coordinate under [project.urls]",
+            )
+        )
+        return
+
+    for filename in public_documents(root):
+        text = (root / filename).read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            for match in REPOSITORY_URL.finditer(line):
+                documented = normalize_repository(match.group(0))
+                if documented == canonical:
+                    continue
+                findings.append(
+                    ParityFinding(
+                        "repository-identity",
+                        filename,
+                        f"line {number}: replace documented repository {documented} "
+                        f"with the declared coordinate {canonical}; "
+                        "a rename redirect is not an accepted resolution",
+                    )
+                )
+
+    _reject_second_identity_source(findings, root)
+
+
+def _reject_second_identity_source(findings: list[ParityFinding], root: Path) -> None:
+    package = root / IDENTITY_SOURCE_ROOT
+    if not package.is_dir():
+        return
+    for module in sorted(package.rglob("*.py")):
+        relative = module.relative_to(root).as_posix()
+        for number, line in enumerate(module.read_text(encoding="utf-8").splitlines(), start=1):
+            match = REPOSITORY_URL.search(line)
+            if not match:
+                continue
+            findings.append(
+                ParityFinding(
+                    "repository-identity-source",
+                    relative,
+                    f"line {number}: remove the repository coordinate {match.group(0)}; "
+                    "[project.urls] is the only identity source",
+                )
+            )
+
+
+def _require_pinned_install_revision(findings: list[ParityFinding], root: Path) -> None:
+    for filename in public_documents(root):
+        text = (root / filename).read_text(encoding="utf-8")
+        for number, line in enumerate(text.splitlines(), start=1):
+            for match in GIT_INSTALL_URL.finditer(line):
+                if match.group("revision"):
+                    continue
+                findings.append(
+                    ParityFinding(
+                        "install-revision",
+                        filename,
+                        f"line {number}: pin an explicit revision on "
+                        f"{match.group('repository')}; unpinned git installs are not supported",
+                    )
+                )
 
 
 def _validate_documented_agents(findings: list[ParityFinding], filename: str, text: str) -> None:
@@ -279,23 +430,15 @@ def _validate_local_links(
         findings.append(ParityFinding(code, filename, f"fix unresolved local target: {target}"))
 
 
-def _reject_package_index_claims_when_disabled(findings: list[ParityFinding], root: Path) -> None:
-    release_policy = root / "docs" / "releasing.md"
-    if not release_policy.is_file():
-        return
-    policy = release_policy.read_text(encoding="utf-8").casefold()
-    if "does not publish to pypi" not in policy or "not enabled" not in policy:
-        return
-    for filename in ONBOARDING_DOCUMENTS:
-        path = root / filename
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8")
+def _reject_package_index_claims(findings: list[ParityFinding], root: Path) -> None:
+    for filename in public_documents(root):
+        text = (root / filename).read_text(encoding="utf-8")
         for pattern in PACKAGE_INDEX_CLAIMS:
             match = pattern.search(text)
             if match:
                 message = (
-                    f"remove package-index claim {match.group(0)!r} while publication is disabled"
+                    f"remove package-index claim {match.group(0)!r}; no package-index "
+                    "release exists and publication is disabled"
                 )
                 findings.append(
                     ParityFinding(
@@ -305,6 +448,36 @@ def _reject_package_index_claims_when_disabled(findings: list[ParityFinding], ro
                     )
                 )
                 break
+
+
+def documented_install_routes(root: Path, filename: str) -> set[str]:
+    """Return the identifiers of the installation routes a document presents."""
+    path = root / filename
+    if not path.is_file():
+        return set()
+    text = path.read_text(encoding="utf-8")
+    return {route for route, pattern in INSTALL_ROUTES.items() if pattern.search(text)}
+
+
+def _require_matching_install_routes(findings: list[ParityFinding], root: Path) -> None:
+    for english, spanish in ROUTE_PAIRS:
+        english_routes = documented_install_routes(root, english)
+        spanish_routes = documented_install_routes(root, spanish)
+        for filename, counterpart, unmatched in (
+            (english, spanish, english_routes - spanish_routes),
+            (spanish, english, spanish_routes - english_routes),
+        ):
+            if not unmatched:
+                continue
+            findings.append(
+                ParityFinding(
+                    "install-route-parity",
+                    filename,
+                    f"{filename} documents installation route(s) "
+                    f"{', '.join(sorted(unmatched))} that {counterpart} does not; "
+                    "both languages must present the same supported route",
+                )
+            )
 
 
 def _require_markers(
