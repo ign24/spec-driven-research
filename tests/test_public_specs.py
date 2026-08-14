@@ -8,6 +8,7 @@ CAPABILITIES = {
     "python-distribution",
     "agent-integrations",
     "cross-investigation-reuse",
+    "github-installation",
     "public-documentation",
     "release-quality-and-security",
     "research-evaluation-harness",
