@@ -28,9 +28,10 @@ in one canonical place.
 | --- | --- |
 | Install SDR skills for a documented coding agent | [Integrations](integrations.md) |
 | Run contributor and documentation gates | [Maintenance and validation](validation.md) |
-| Understand alpha availability and future publication controls | [Releasing](releasing.md) |
+| Understand alpha availability and the absence of a package-index route | [Releasing](releasing.md) |
 | Propose or implement a framework change | [Contributing](../CONTRIBUTING.md) |
 
-SDR is currently alpha and source-only. There is no GitHub or PyPI release; the
-[root README](../README.md#install-from-source) contains the canonical source
-installation commands.
+SDR is currently alpha and source-only. There is no GitHub release and no
+package-index release; installation from a package index is not available. The
+[root README](../README.md#install-from-source) contains the canonical
+revision-pinned installation command.

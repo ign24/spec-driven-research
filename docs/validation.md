@@ -35,6 +35,32 @@ Package validation builds both a wheel and source distribution, verifies that
 member allowlists, audits extracted content with `sdr.public_tree_audit`, and
 installs each artifact in a separate environment for smoke tests.
 
+## Installation verification
+
+`sdr.install_verification` proves by execution that the documented installation
+route works. It installs the canonical repository at an explicit revision into a
+temporary environment outside the checkout, with `PYTHONPATH` and publication
+credentials stripped from the child environment, then drives a complete light
+lifecycle through the installed `sdr` console script and compares the created
+`brief.md` against the packaged template. Asserting only that `sdr --help` exits
+zero would not detect missing packaged resources, which is the failure that
+separates a working install from an importable one.
+
+These tests carry the `installation` marker and require network access, because
+the pinned revision must be reachable at the canonical repository. The default
+gate above deselects them:
+
+```bash
+uv run pytest -rs -m "not installation"
+uv run pytest -rs -m installation
+```
+
+A revision that is not yet published records an explicit skip reason rather than
+passing silently, so a skipped verification stays distinguishable from a
+verification that does not exist. Always run with `-rs` so those reasons are
+printed. In CI the revision under test is always published, so the dedicated
+`installation` job runs the verification for real.
+
 ## Documentation checks
 
 `tests/test_templates.py` verifies the public documentation inventory,
@@ -45,10 +71,24 @@ full fixtures offline and verifies their final states without modifying them.
 `sdr.readme_parity` verifies concept coverage across all three bilingual pairs:
 the root READMEs, documentation homes, and beginner guides. It also resolves
 their local links and fixture references and rejects package-index installation
-claims while publication is disabled. Findings are actionable; equivalent
+claims. It derives the canonical repository coordinate from `[project.urls]` in
+`pyproject.toml`, reports any documented repository URL that names a different
+coordinate with its file, line, and documented value, and reports a documented
+git install that does not pin an explicit revision. A URL that reaches the
+canonical repository only through a rename redirect is a finding, not a pass;
+the check never consults the network. Findings are actionable; equivalent
 nonliteral translations are accepted.
-`tests/test_packaging.py` verifies README, license, author, version, and changelog
-metadata.
+`tests/test_packaging.py` verifies README, license, author, version, changelog,
+and repository-coordinate metadata. `sdr.readme_parity` also requires both
+languages to document the same set of installation routes and to reference the
+same agent routing conditions, reporting the language that claims a route or
+states a condition its counterpart does not.
+
+`sdr.integration_validation` compares every published copy of the canonical
+agent routing block with its package resource and reports a divergent adapter by
+name. It also rejects a block that states only selecting conditions without
+excluding ones, and one that omits the statement that the block is guidance
+rather than enforcement. Author the block once; never edit a published copy.
 
 Add public maintenance guidance here and keep assertions tied to observable
 behavior. When any onboarding pair or the synthetic tour changes, preserve the
@@ -80,7 +120,7 @@ go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 6. Build artifacts and run the public-tree audit before publication.
 7. Inspect package metadata and wheel contents for private material.
 8. Verify integration statuses remain honest; `documented` is not E2E-tested.
-9. Follow [Releasing](releasing.md); no PyPI publishing workflow is currently enabled.
+9. Follow [Releasing](releasing.md); no package-index publishing route exists.
 
 ## Public content audit
 
@@ -90,7 +130,7 @@ names, or real investigation data. Run:
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 uv run python -m sdr.public_tree_audit . \
-  --exclude .git --exclude .claude --exclude .venv \
+  --exclude .git --exclude .claude --exclude .venv --exclude .codegraph \
   --exclude .pytest_cache --exclude .ruff_cache \
   --exclude build --exclude dist --exclude examples/__pycache__ \
   --exclude src/sdr/__pycache__ --exclude tests/__pycache__ \

@@ -12,6 +12,7 @@ import yaml
 from sdr import __version__
 from sdr.integration_validation import (
     ADAPTERS,
+    canonical_routing_block,
     install_canonical_skills,
     validate_integrations,
 )
@@ -474,6 +475,23 @@ def test_validator_rejects_divergent_or_unsafe_adapter_content(tmp_path: Path) -
         "unknown-command",
         "divergent-lifecycle",
     }
+
+
+def test_validator_reports_routing_block_findings_per_adapter(tmp_path: Path) -> None:
+    root = _copy_integrations(tmp_path)
+    block = canonical_routing_block()
+    readme = root / "integrations" / "claude-code" / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(block, block + "\n\n" + block),
+        encoding="utf-8",
+    )
+
+    findings = validate_integrations(root)
+
+    assert any(
+        finding.agent == "claude-code" and finding.code == "duplicate-routing-block"
+        for finding in findings
+    )
 
 
 def test_module_cli_validates_source_checkout(tmp_path: Path) -> None:

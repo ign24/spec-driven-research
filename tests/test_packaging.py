@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import sys
 import tarfile
@@ -9,6 +10,7 @@ from pathlib import Path
 import sdr
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_COORDINATE = re.compile(r"https://github\.com/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+")
 CANONICAL_SKILLS = {
     f"sdr/resources/skills/{path.parent.name}/SKILL.md": path
     for path in sorted((PROJECT_ROOT / "skills").glob("sdr-*/SKILL.md"))
@@ -30,7 +32,9 @@ def test_package_metadata_uses_sdr_version_as_single_source(tmp_path):
     assert config["project"]["readme"] == "README.md"
     assert config["project"]["license"] == "MIT"
     assert config["project"]["authors"] == [{"name": "Ignacio Zúñiga Navarro"}]
-    assert "urls" not in config["project"]
+    assert config["project"]["urls"] == {
+        "Repository": "https://github.com/ign24/spec-driven-research"
+    }
 
     dist = tmp_path / "dist"
     subprocess.run(
@@ -48,6 +52,20 @@ def test_package_metadata_uses_sdr_version_as_single_source(tmp_path):
 
     assert f"Version: {sdr.__version__}\n" in metadata
     assert "License-Expression: MIT\n" in metadata
+
+
+def test_pyproject_declares_exactly_one_canonical_repository_coordinate():
+    config = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+
+    urls = config["project"]["urls"]
+    coordinates = {
+        value
+        for value in urls.values()
+        if REPOSITORY_COORDINATE.fullmatch(value.rstrip("/").removesuffix(".git"))
+    }
+
+    assert len(urls) == 1
+    assert coordinates == {"https://github.com/ign24/spec-driven-research"}
 
 
 def test_sdist_contains_public_package_files_and_excludes_active_changes(tmp_path):

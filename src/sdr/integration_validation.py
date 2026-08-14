@@ -25,6 +25,12 @@ ADAPTERS = (
 )
 VALID_STATUSES = frozenset({"documented", "verified", "experimental"})
 
+ROUTING_BLOCK_RESOURCE = "agent_routing.md"
+ROUTING_BLOCK_TITLE = "# Spec-Driven Research routing"
+ROUTING_SELECTING_HEADING = "## Use SDR when"
+ROUTING_EXCLUDING_HEADING = "## Do not use SDR when"
+ROUTING_GUIDANCE_MARKER = "guidance the user installs"
+
 _ADAPTER_NAMES = {
     "Claude Code": "claude-code",
     "Codex": "codex",
@@ -148,6 +154,108 @@ def install_canonical_skills(destination: Path) -> list[Path]:
     return installed
 
 
+def canonical_routing_block() -> str:
+    """Return the canonical agent routing block shipped as a package resource."""
+    resource = importlib.resources.files("sdr").joinpath(ROUTING_BLOCK_RESOURCE)
+    if not resource.is_file():
+        raise FileNotFoundError(f"canonical routing block is missing: {ROUTING_BLOCK_RESOURCE}")
+    return resource.read_text(encoding="utf-8").strip()
+
+
+def validate_routing_block(block: str) -> list[IntegrationFinding]:
+    """Validate that a routing block is two-sided and states its own limits."""
+    findings: list[IntegrationFinding] = []
+    text = block.strip()
+    if not text.startswith(ROUTING_BLOCK_TITLE):
+        findings.append(
+            IntegrationFinding("routing", "invalid-routing-block", "routing block title is missing")
+        )
+    selecting = _routing_conditions(text, ROUTING_SELECTING_HEADING)
+    excluding = _routing_conditions(text, ROUTING_EXCLUDING_HEADING)
+    if not selecting or not excluding:
+        findings.append(
+            IntegrationFinding(
+                "routing",
+                "one-sided-routing-block",
+                "routing block must state selecting and excluding conditions",
+            )
+        )
+    normalized = " ".join(text.split())
+    if ROUTING_GUIDANCE_MARKER not in normalized or "not enforcement" not in normalized:
+        findings.append(
+            IntegrationFinding(
+                "routing",
+                "unenforceable-routing-block",
+                "routing block must state that it is user-installed guidance, not enforcement",
+            )
+        )
+    findings.extend(_validate_text("routing", text))
+    return findings
+
+
+def _routing_conditions(text: str, heading: str) -> list[str]:
+    if heading not in text:
+        return []
+    section = text.split(heading, 1)[1].split("\n## ", 1)[0]
+    return [line.strip() for line in section.splitlines() if line.strip().startswith("- ")]
+
+
+def _validate_canonical_routing_block() -> list[IntegrationFinding]:
+    try:
+        canonical = canonical_routing_block()
+    except FileNotFoundError:
+        return [
+            IntegrationFinding(
+                "routing", "missing-routing-block", "canonical routing block resource is missing"
+            )
+        ]
+    return validate_routing_block(canonical)
+
+
+def _validate_published_routing_blocks(agent: str, text: str) -> list[IntegrationFinding]:
+    try:
+        canonical = canonical_routing_block()
+    except FileNotFoundError:
+        return [
+            IntegrationFinding(
+                "routing", "missing-routing-block", "canonical routing block resource is missing"
+            )
+        ]
+    occurrences = text.count(ROUTING_BLOCK_TITLE)
+    if occurrences == 0:
+        return [
+            IntegrationFinding(
+                agent, "missing-routing-block", "the canonical routing block is not published"
+            )
+        ]
+    if occurrences > 1:
+        return [
+            IntegrationFinding(
+                agent, "duplicate-routing-block", "the routing block is published more than once"
+            )
+        ]
+    if _published_routing_block(text) != canonical:
+        return [
+            IntegrationFinding(
+                agent,
+                "divergent-routing-block",
+                "published block differs from the canonical source",
+            )
+        ]
+    return []
+
+
+def _published_routing_block(text: str) -> str:
+    lines = text.splitlines()
+    start = next(index for index, line in enumerate(lines) if line.startswith(ROUTING_BLOCK_TITLE))
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        if lines[index].startswith("```"):
+            end = index
+            break
+    return "\n".join(lines[start:end]).strip()
+
+
 def validate_integrations(project_root: Path) -> list[IntegrationFinding]:
     """Validate all public integration adapters without invoking agent binaries."""
     root = Path(project_root)
@@ -239,6 +347,12 @@ def validate_integrations(project_root: Path) -> list[IntegrationFinding]:
             text = path.read_text(encoding="utf-8")
             findings.extend(_validate_text(agent, text))
 
+        if readme.is_file():
+            findings.extend(
+                _validate_published_routing_blocks(agent, readme.read_text(encoding="utf-8"))
+            )
+
+    findings.extend(_validate_canonical_routing_block())
     findings.extend(_validate_canary_evidence(root))
     findings.extend(_validate_public_statuses(root, statuses))
     return sorted(set(findings))

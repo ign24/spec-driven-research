@@ -48,6 +48,31 @@ def test_ci_uses_read_only_permissions_linux_python_matrix_and_required_gates() 
         assert command in text
 
 
+def test_ci_runs_the_installation_verification_with_network_access_declared() -> None:
+    text, workflow = _workflow("ci.yml")
+    jobs = workflow["jobs"]
+    installation = jobs["installation"]
+
+    assert workflow["permissions"] == {"contents": "read"}
+    assert installation.get("permissions", {"contents": "read"}) == {"contents": "read"}
+    assert installation["needs"] == "quality"
+    assert installation["runs-on"] == "ubuntu-latest"
+
+    verification = next(
+        step for step in installation["steps"] if "-m installation" in str(step.get("run", ""))
+    )
+    assert "network" in str(verification["name"]).lower()
+    assert "-rs" in verification["run"], "an unavailable verification must report its skip reason"
+
+    quality_pytest = next(
+        step for step in jobs["quality"]["steps"] if "pytest" in str(step.get("run", ""))
+    )
+    assert "not installation" in quality_pytest["run"], (
+        "the general suite must deselect the network verification the dedicated job owns"
+    )
+    assert "-rs" in quality_pytest["run"]
+
+
 def test_security_workflow_scans_dependencies_tree_history_staged_and_artifacts() -> None:
     text, workflow = _workflow("security.yml")
 
