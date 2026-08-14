@@ -104,7 +104,7 @@ def test_wheel_contains_only_canonical_integration_resources_byte_for_byte(tmp_p
 def test_changelog_records_current_version_without_defining_package_version():
     changelog = (PROJECT_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
-    assert "## [0.1.0]" in changelog
+    assert f"## [{sdr.__version__}]" in changelog
     assert "src/sdr/__init__.py" in changelog
     assert "source of truth" in changelog
 

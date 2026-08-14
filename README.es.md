@@ -94,17 +94,22 @@ transición que podría crear un commit.
 
 SDR requiere Python 3.12 o posterior. No hay release en ningún índice de
 paquetes: SDR no se publica en PyPI y no se puede instalar desde un índice. La
-ruta admitida instala el repositorio canónico en una revisión explícita.
-Reemplaza `REVISION` por un SHA completo:
+ruta admitida instala el repositorio canónico en una revisión explícita:
 
 ```bash
-REVISION=REEMPLAZAR_POR_SHA_COMPLETO
-uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+uv tool install "git+https://github.com/ign24/spec-driven-research@v0.2.0"
 sdr --help
 ```
 
 Fijar la revisión es obligatorio, no opcional. Una instalación sin revisión
-sigue la rama por defecto y no es reproducible.
+sigue la rama por defecto y no es reproducible. Un tag es explícito pero puede
+moverse; para una instalación que no pueda cambiar sin aviso, fija el SHA
+completo al que apunta el tag:
+
+```bash
+REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.2.0 | cut -f1)
+uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
+```
 
 Desde un checkout existente, `uv tool install .` ofrece la instalación aislada.
 `python -m pip install .` también instala ese checkout. Para contribuir, usa
