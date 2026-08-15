@@ -7,11 +7,11 @@ verify:
   expect: SYNTHETIC_PROBE_OK
 ---
 
-## Resultados por criterio
-- C1: cumple según el fixture.
-- C2: cumple según el fixture.
+## Results by criterion
+- C1: meets, according to the fixture.
+- C2: meets, according to the fixture.
 
-## Reproducción
+## Reproduction
 ```bash
 python check.py
 ```

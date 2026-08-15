@@ -1,4 +1,4 @@
-"""Captura de snapshots textuales de fuentes declaradas en explore."""
+"""Capture of textual snapshots for the sources declared in explore."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ from sdr.research import Research
 
 @dataclass(frozen=True)
 class FetchResult:
-    """Respuesta mínima necesaria para capturar una fuente."""
+    """Minimal response required to capture a source."""
 
     declared_url: str
     final_url: str
@@ -43,7 +43,7 @@ class FetchResult:
 
 @dataclass(frozen=True)
 class SnapshotResult:
-    """Resultado persistido de una captura de fuente."""
+    """Persisted result of a source capture."""
 
     source_id: str
     url: str
@@ -57,7 +57,7 @@ class SnapshotResult:
     content_eligible: bool
 
     def to_dict(self) -> dict[str, object]:
-        """Representa el resultado con provenance serializable en orden de recuperación."""
+        """Represent the result with serializable provenance in retrieval order."""
         return {
             "source_id": self.source_id,
             "url": self.url,
@@ -109,7 +109,7 @@ def fetch_url(
     resolver: Resolver | None = None,
     max_response_bytes: int = MAX_RESPONSE_BYTES,
 ) -> FetchResult:
-    """Descarga texto HTTP mediante la política de red segura compartida."""
+    """Download HTTP text through the shared safe network policy."""
     response = fetch_http(
         url,
         mock_transport=mock_transport,
@@ -137,7 +137,7 @@ def capture_source_snapshot(
     fetcher: Fetcher = fetch_url,
     archive_url: str = "",
 ) -> SnapshotResult:
-    """Captura una fuente en `notes/sources/<source_id>/`."""
+    """Capture a source under `notes/sources/<source_id>/`."""
     fetched = fetcher(url)
     canonical = canonicalize_fetched_content(url, fetched)
     title = _extract_title(fetched.text) if canonical.status == "ok" else ""
@@ -235,7 +235,7 @@ def _provenance_complete(url: str, fetched: FetchResult) -> bool:
 
 
 def assign_source_ids(research: Research) -> int:
-    """Asigna IDs S<n> a fuentes de notas que no los tengan, preservando el orden."""
+    """Assign S<n> IDs to note sources that lack them, preserving order."""
     directory = research.artifact_path("notes")
     if not directory.is_dir():
         return 0
@@ -270,7 +270,7 @@ def capture_declared_sources(
     *,
     fetcher: Fetcher | None = None,
 ) -> list[SnapshotResult]:
-    """Asigna IDs y captura snapshots de todas las fuentes declaradas en notas."""
+    """Assign IDs and capture snapshots for every source declared in the notes."""
     fetcher = fetcher or fetch_url
     assign_source_ids(research)
     results: list[SnapshotResult] = []
@@ -295,7 +295,7 @@ def capture_declared_sources(
 
 
 def write_orgs_yaml(research: Research) -> None:
-    """Genera `notes/sources/orgs.yaml` con organizaciones derivadas y aliases editables."""
+    """Generate `notes/sources/orgs.yaml` with derived organizations and editable aliases."""
     sources = _iter_note_sources(research)
     source_orgs = {
         str(source.get("id")): _org(str(source.get("url") or ""))
@@ -316,7 +316,7 @@ def write_orgs_yaml(research: Research) -> None:
 
 
 def ensure_explore_snapshots(research: Research, *, offline: bool = False) -> list[SnapshotResult]:
-    """Captura snapshots requeridos para explore v2; offline omite la captura."""
+    """Capture the snapshots required by explore v2; offline skips the capture."""
     if offline or research.meta.schema_version < 2 or research.meta.stage != "explore":
         return []
     return capture_declared_sources(research)

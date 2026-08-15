@@ -21,9 +21,9 @@ Read `research/<slug>/brief.md`, all files under `research/<slug>/notes/`, and
 from `sdr.yaml` without editing it. Modify only
 `research/<slug>/decision-memo.md`; do not change prior evidence or assets.
 
-Preserve the Spanish headings `Recomendación`, `Alternativas evaluadas`,
-`Criterios de selección`, `Riesgos y limitaciones`, `Próximos pasos`, and
-`Audiencia`. The recommendation must be a complete Y-statement tied to criterion
+Preserve the Spanish headings `Recommendation`, `Alternatives evaluated`,
+`Selection criteria`, `Risks and limitations`, `Next steps`, and
+`Audience`. The recommendation must be a complete Y-statement tied to criterion
 evidence. Choose `adopt`, `trial`, `assess`, or `hold`; `adopt` and `trial`
 require a verified full-mode probe, while light mode is capped at `assess`.
 

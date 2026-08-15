@@ -25,8 +25,8 @@ files remain unchanged.
 
 ```bash
 uv run sdr new synthetic-light \
-  --title "Evaluación sintética de un clasificador de reglas" \
-  --question "¿Conviene evaluar un clasificador determinístico para ordenar tarjetas ficticias?" \
+  --title "Synthetic evaluation of a rule-based classifier" \
+  --question "Is it worth evaluating a deterministic classifier to sort fictional cards?" \
   --mode light \
   --owner "Example Researcher" \
   --timebox 2 \

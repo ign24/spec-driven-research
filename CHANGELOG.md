@@ -8,6 +8,54 @@ single source of truth is `src/sdr/__init__.py`.
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING.** Artifact sections are declared in English. `Pregunta`,
+  `Hipótesis`, `Contexto`, `Alcance`, `Criterios de evaluación`,
+  `Riesgos de adopción`, `Alternativas evaluadas`, `Madurez`, `Costos`,
+  `Riesgos`, `Contra-evidencia`, `Resultados por criterio`, `Reproducción`,
+  `Recomendación`, `Criterios de selección`, `Riesgos y limitaciones`,
+  `Próximos pasos`, and `Audiencia` become `Question`, `Hypothesis`, `Context`,
+  `Scope`, `Evaluation criteria`, `Adoption risks`, `Alternatives evaluated`,
+  `Maturity`, `Costs`, `Risks`, `Counter-evidence`, `Results by criterion`,
+  `Reproduction`, `Recommendation`, `Selection criteria`,
+  `Risks and limitations`, `Next steps`, and `Audience`. An investigation
+  created before this change does not validate until migrated. Every section
+  name now resolves from one declaration, so templates, the required-section
+  contract, and the gate engine cannot drift apart.
+- The product surface is English: command help, every message printed on
+  success, refusal, or failure, and the artifact templates the tool writes.
+  Spanish remains a documentation translation and is not a runtime language.
+  No command, option, stage, or field name changed.
+- The transfer gate accepted only Spanish decision memos. `y_statement`
+  matched Spanish tokens inside the user's own recommendation prose, so a memo
+  written in English failed a gate the English documentation told the reader
+  how to satisfy, with a message that did not say language was the problem. It
+  now matches English and tolerates a clause split across a line wrap.
+- `sdr context query` no longer maps Spanish question keywords. Questions must
+  be asked in English.
+
+### Added
+
+- `sdr migrate` rewrites the structural section headings of an investigation
+  created under the previous Spanish contract, reports each heading it changed,
+  is idempotent, and leaves the author's own prose byte-identical.
+- `sdr --version`, reporting the single declared version source.
+- `sdr.product_language`, a deterministic offline check that the product
+  surface is English, reporting each finding with its file and line. It scans
+  the packaged modules, the artifact templates, the English documentation, and
+  the canonical skills; documentation translations are excluded by path.
+
+### Fixed
+
+- `bench/harness/friction.py` classified advance blocked reasons by matching
+  Spanish prose that the product no longer emitted, so every mapping was
+  unreachable. Its tests passed because they built the reasons as literals
+  instead of obtaining them from the lifecycle; they now drive real blocked
+  states and assert against what the product actually returns.
+- `cross_investigation` matched a consistency issue by its Spanish prefix. The
+  prefix is now derived from `lifecycle`, so it cannot silently stop matching.
+
 ## [0.2.0] - 2026-08-14
 
 ### Added

@@ -8,20 +8,20 @@ evidence_claim_ids:
   - claim-177493d06c4bd97a27eb4fdb473d649e2575a1c67c652c983ac5449cad37fb2e
 ---
 
-## Recomendación
+## Recommendation
 Use the invented fixed retry window only inside this synthetic exercise.
 
-## Alternativas evaluadas
+## Alternatives evaluated
 Fixed and variable invented windows.
 
-## Criterios de selección
+## Selection criteria
 Deterministic fixture behavior.
 
-## Riesgos y limitaciones
+## Risks and limitations
 This is not production evidence.
 
-## Próximos pasos
+## Next steps
 Retain only as a benchmark seed.
 
-## Audiencia
+## Audience
 Synthetic internal team.

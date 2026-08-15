@@ -1,7 +1,7 @@
-"""Generación del índice global de investigaciones (`research/INDEX.md`).
+"""Generation of the global investigation index (`research/INDEX.md`).
 
-Vista para reporting: una tabla con todas las investigaciones ordenadas por
-última actividad. Se regenera, nunca se edita a mano.
+A reporting view: one table with every investigation ordered by last activity.
+It is regenerated, never edited by hand.
 """
 
 from __future__ import annotations
@@ -35,14 +35,14 @@ def _ring(research: Research) -> str:
 
 
 def build_index(base: str | Path) -> str:
-    """Construye el markdown del índice para las investigaciones bajo `base`."""
+    """Build the index markdown for the investigations under `base`."""
     base = resolve_root(base)
     rows = sorted(_iter_research(base), key=lambda r: r.meta.updated, reverse=True)
     lines = [
-        "# Índice de investigaciones",
+        "# Investigation index",
         "",
-        "| Investigación | Título | Modo | Etapa | Estado | "
-        "Recomendación | Claims | Ledger | Auditoría | Actividad |",
+        "| Investigation | Title | Mode | Stage | Status | "
+        "Recommendation | Claims | Ledger | Audit | Activity |",
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for r in rows:
@@ -60,7 +60,7 @@ def build_index(base: str | Path) -> str:
 
 
 def write_index(base: str | Path) -> Path:
-    """Regenera `INDEX.md` en `base` y devuelve su ruta."""
+    """Regenerate `INDEX.md` under `base` and return its path."""
     base = resolve_root(base)
     path = resolve_child(base, INDEX_FILE)
     path.write_text(build_index(base), encoding="utf-8")

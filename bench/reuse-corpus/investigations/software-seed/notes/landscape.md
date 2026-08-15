@@ -9,17 +9,17 @@ sources:
     date: 2026-08-01
 ---
 
-## Alternativas evaluadas
+## Alternatives evaluated
 The invented queue uses a fixed seven-second retry window [S1].
 
-## Madurez
+## Maturity
 The source is synthetic.
 
-## Costos
+## Costs
 No external service is used.
 
-## Riesgos
+## Risks
 The fixture is not representative.
 
-## Contra-evidencia
+## Counter-evidence
 No external evidence was consulted.

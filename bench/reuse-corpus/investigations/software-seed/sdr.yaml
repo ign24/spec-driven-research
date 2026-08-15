@@ -11,7 +11,7 @@ updated: '2026-08-01'
 tags: [synthetic, software]
 schema_version: 2
 validation:
-  transfer: 07aebe5f1979a542eb97003f0f274cd3c67dc7075390fcf4dde65f47ab2f3cfd
+  transfer: 308e527e2e5b019a80e668b53b791af8a3b9a94bfee3561f2ee36b853ca600d6
 judge: {}
 verify_probe: {}
 overrides: []

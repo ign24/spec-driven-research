@@ -81,23 +81,23 @@ artifacts:
     timebox: 2
     ---
 
-    ## Pregunta
+    ## Question
     ¿Un enrutador local puede asignar tres categorías inventadas de forma estable sin red?
 
-    ## Hipótesis
+    ## Hypothesis
     Un conjunto de reglas ordenadas devolverá la misma categoría para las mismas entradas.
 
-    ## Contexto
+    ## Context
     El ejercicio es sintético y solo usa cadenas inventadas embebidas en el propio artefacto.
 
-    ## Alcance
+    ## Scope
     Incluye tres categorías inventadas. No incluye red, persistencia, idiomas ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: las tres entradas del fixture producen la categoría esperada.
     - C2: dos ejecuciones consecutivas producen exactamente la misma salida.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     El fixture es diminuto y no representa la variedad de etiquetas de un sistema real.
   clean-light-label-router/notes/landscape.md: |
     ---
@@ -117,20 +117,20 @@ artifacts:
         alternative: enrutador-local
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     El espacio inventado compara un enrutador local con una tabla estática [cf. S2].
     El enrutador declara tres categorías fijas y no admite categorías dinámicas [S1].
 
-    ## Madurez
+    ## Maturity
     Ambas alternativas se consideran suficientes para un ejercicio de capacitación [cf. S1].
 
-    ## Costos
+    ## Costs
     La tabla estática exige mantenimiento manual por cada categoría nueva [S2].
 
-    ## Riesgos
+    ## Risks
     Un conjunto fijo de reglas puede favorecer accidentalmente a una de las alternativas.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     No se buscó evidencia en contra fuera de las dos fuentes inventadas declaradas arriba.
   clean-light-label-router/decision-memo.md: |
     ---
@@ -144,25 +144,25 @@ artifacts:
       - claim-adb9d4f58d5cab7e806965b9053f3fc2f543a1b7952a64537f6eba5a3b0bf120
     ---
 
-    ## Recomendación
-    En el contexto del ejercicio de etiquetas inventadas, ante la falta de una prueba
-    ejecutable en modo light, decidimos evaluar el enrutador local para lograr salidas
-    estables, porque la evidencia declarada cubre C1 y C2 solo de forma documental,
-    aceptando el trade-off de no contar con resultados reproducibles.
+    ## Recommendation
+    In the context of the invented label exercise, faced with the absence of an executable
+    test in light mode, we decided to assess the local router to obtain stable outputs,
+    because the declared evidence covers C1 and C2 only documentally, accepting the
+    trade-off of having no reproducible results.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Enrutador local con reglas ordenadas y tabla estática mantenida a mano.
 
-    ## Criterios de selección
+    ## Selection criteria
     Estabilidad de la salida y costo de mantenimiento por categoría nueva.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     No se midió rendimiento, no se probó con entradas hostiles y no hubo etapa probe.
 
-    ## Próximos pasos
+    ## Next steps
     Conservar el ejercicio como fixture de referencia y no extrapolar su resultado.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de capacitación interna.
   clean-light-label-router/assets/playbook.md: |
     ---

@@ -9,17 +9,17 @@ sources:
     date: 2026-08-01
 ---
 
-## Alternativas evaluadas
+## Alternatives evaluated
 The invented rooftop bed receives twelve liters every third morning [S4].
 
-## Madurez
+## Maturity
 The gardening source is synthetic.
 
-## Costos
+## Costs
 No physical garden is used.
 
-## Riesgos
+## Risks
 Weather is deliberately excluded.
 
-## Contra-evidencia
+## Counter-evidence
 No external evidence was consulted.

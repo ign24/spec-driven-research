@@ -1,8 +1,8 @@
-"""Orquestación determinista del avance de etapa.
+"""Deterministic orchestration of stage advancement.
 
-`advance` ejecuta las capas de validación en orden: estructura/evidencia,
-anclaje textual en explore, verificación persistida en probe y aprobación humana
-en transfer. Se detiene en el primer fallo y solo entonces mueve la etapa.
+`advance` runs the validation layers in order: structure/evidence, textual
+anchoring in explore, stored verification in probe, and human approval in
+transfer. It stops at the first failure and only then moves the stage.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def _stage_files(research: Research, stage: str) -> list[Path]:
 
 
 def stage_hash(research: Research, stage: str) -> str:
-    """Hash sha256 del contenido de los artefactos de la etapa."""
+    """sha256 hash of the contents of the stage artifacts."""
     digest = hashlib.sha256()
     for path in _stage_files(research, stage):
         digest.update(path.read_bytes())
@@ -47,7 +47,7 @@ def advance(
     *,
     offline: bool = False,
 ) -> AdvanceResult:
-    """Valida la etapa actual y avanza solo si todas las capas pasan."""
+    """Validate the current stage and advance only if every layer passes."""
     stage = research.meta.stage
 
     consistency_issues = check_consistency(research)
@@ -55,23 +55,23 @@ def advance(
         return AdvanceResult(
             False,
             stage,
-            blocked_reason="consistencia de hashes en rojo: " + "; ".join(consistency_issues),
+            blocked_reason="hash consistency failed: " + "; ".join(consistency_issues),
         )
 
     if stage == "explore" and research.meta.schema_version >= 2:
         snapshot_mod.ensure_explore_snapshots(research, offline=offline)
 
-    # Capa 1-2: estructura y evidencia.
+    # Layers 1-2: structure and evidence.
     report = gates.check_stage(research, stage=stage, offline=offline)
     if not report.passed:
         return AdvanceResult(
             False,
             stage,
             gate_report=report,
-            blocked_reason="gates estructurales/evidenciales en rojo",
+            blocked_reason="structural/evidential gates failed",
         )
 
-    # Capa 3: verificación anclada claim-vs-fuente para explore v2.
+    # Layer 3: anchored claim-versus-source verification for explore v2.
     if stage == "explore" and research.meta.schema_version >= 2:
         anchored = verification.verify_explore_claims(research)
         if not anchored.passed:
@@ -79,10 +79,10 @@ def advance(
                 False,
                 stage,
                 gate_report=report,
-                blocked_reason="verificación anclada en rojo: " + "; ".join(anchored.failures),
+                blocked_reason="anchored verification failed: " + "; ".join(anchored.failures),
             )
 
-    # Probe se ejecuta solo mediante `sdr verify-probe`; advance consume su evidencia.
+    # Probe runs only through `sdr verify-probe`; advance consumes its evidence.
     if stage == "probe":
         stored = research.meta.verify_probe or {}
         current_hash = probe_verify.hash_probe_dir(research)
@@ -91,26 +91,26 @@ def advance(
                 False,
                 stage,
                 gate_report=report,
-                blocked_reason="falta sdr verify-probe persistido y en verde",
+                blocked_reason="missing a stored passing sdr verify-probe",
             )
         if stored.get("probe_hash") != current_hash:
             return AdvanceResult(
                 False,
                 stage,
                 gate_report=report,
-                blocked_reason="la verificación de probe no está vigente; ejecute sdr verify-probe",
+                blocked_reason="probe verification is stale; run sdr verify-probe",
             )
 
-    # Transfer requiere aprobación humana registrada.
+    # Transfer requires a recorded human approval.
     if stage == "transfer" and research.meta.approval is None:
         return AdvanceResult(
             False,
             stage,
             gate_report=report,
-            blocked_reason="falta la aprobación humana (sdr approve)",
+            blocked_reason="missing human approval (sdr approve)",
         )
 
-    # Persistir evidencia de validación y avanzar.
+    # Store the validation evidence and advance.
     research.meta.validation[stage] = stage_hash(research, stage)
     research.advance_stage()
     return AdvanceResult(
@@ -121,30 +121,30 @@ def advance(
 
 
 def reopen(research: Research, to: str, reason: str) -> None:
-    """Retrocede la investigación a una etapa anterior con motivo registrado.
+    """Move the investigation back to an earlier stage with a recorded reason.
 
-    Invalida los hashes de validación de la etapa destino y posteriores: esa
-    evidencia deberá re-validarse al volver a avanzar. Reactiva investigaciones
-    en estado done.
+    Invalidates the validation hashes of the target stage and every stage after
+    it: that evidence must be re-validated on the way forward again. Reactivates
+    investigations in the done state.
     """
     from datetime import date
 
     from sdr.research import Reopen
 
     if not reason.strip():
-        raise ValueError("reopen requiere un motivo")
+        raise ValueError("reopen requires a reason")
     order = schema.stage_order(research.meta.mode)
     if to not in order:
-        raise ValueError(f"etapa {to!r} no pertenece al modo {research.meta.mode!r}")
+        raise ValueError(f"stage {to!r} does not belong to mode {research.meta.mode!r}")
     current = research.meta.stage
     if order.index(to) >= order.index(current):
         raise ValueError(
-            f"reopen solo retrocede: {to!r} no es anterior a la etapa actual {current!r}"
+            f"reopen only moves backwards: {to!r} is not before the current stage {current!r}"
         )
     research.meta.reopens.append(
         Reopen(from_stage=current, to_stage=to, reason=reason, date=date.today().isoformat())
     )
-    # La evidencia desde la etapa destino en adelante deja de estar validada.
+    # Evidence from the target stage onwards is no longer validated.
     for stage in order[order.index(to) :]:
         research.meta.validation.pop(stage, None)
     research.meta.stage = to
@@ -153,14 +153,23 @@ def reopen(research: Research, to: str, reason: str) -> None:
     research.save()
 
 
+def consistency_issue_prefix(stage: str) -> str:
+    """Prefix of a consistency issue for a stage.
+
+    Consumers match consistency issues by prefix. Deriving it here keeps them
+    from repeating the prose, which silently stops matching when it changes.
+    """
+    return f"stage {stage!r}: "
+
+
 def check_consistency(research: Research) -> list[str]:
-    """Detecta etapas cuyo hash validado ya no coincide con el contenido actual."""
+    """Detect stages whose validated hash no longer matches the current content."""
     issues: list[str] = []
     for stage, stored in research.meta.validation.items():
         current = stage_hash(research, stage)
         if current != stored:
             issues.append(
-                f"etapa {stage!r}: el artefacto cambió tras la validación "
-                f"(hash {stored[:8]} != {current[:8]}); re-validá con sdr advance"
+                consistency_issue_prefix(stage) + "the artifact changed after validation "
+                f"(hash {stored[:8]} != {current[:8]}); re-validate with sdr advance"
             )
     return issues

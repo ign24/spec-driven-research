@@ -46,7 +46,7 @@ def test_create_rejects_bad_slug(tmp_path):
     "slug", ["/tmp/eval-foo", "../eval-foo", "nested/eval-foo", "nested\\eval-foo"]
 )
 def test_create_rejects_path_like_slugs(tmp_path, slug):
-    with pytest.raises(ValueError, match="slug inválido"):
+    with pytest.raises(ValueError, match="invalid slug"):
         Research.create(base=tmp_path, slug=slug, title="x", question="y")
 
 
@@ -72,7 +72,7 @@ def test_load_rejects_research_symlink_outside_base(tmp_path):
     Research.create(base=outside, slug="eval-foo", title="Fuera", question="¿Q?")
     (base / "eval-foo").symlink_to(outside / "eval-foo", target_is_directory=True)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         Research.load(base / "eval-foo", within=base)
 
 
@@ -82,7 +82,7 @@ def test_artifact_path_rejects_symlink_escape(tmp_path):
     outside.mkdir()
     (research.root / "notes" / "linked").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         research.artifact_path("notes/linked/secret.md")
 
 
@@ -92,7 +92,7 @@ def test_artifact_directory_rejects_nested_symlink_escape_before_glob(tmp_path):
     outside.write_text("secret", encoding="utf-8")
     (research.root / "notes" / "linked.md").symlink_to(outside)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         research.artifact_path("notes")
 
 

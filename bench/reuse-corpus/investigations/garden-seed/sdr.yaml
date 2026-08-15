@@ -11,7 +11,7 @@ updated: '2026-08-01'
 tags: [synthetic, horticulture]
 schema_version: 2
 validation:
-  transfer: 3200fc20baa776194cb25bcfe8fdb30c85fdb80985dd70984329b8be579ce026
+  transfer: 473a83ddd1c03f41690d9aec27cc66a8ea1e21c2b4f3a57c8bdcb9075ac01fb5
 judge: {}
 verify_probe: {}
 overrides: []

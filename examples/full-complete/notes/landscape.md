@@ -13,17 +13,17 @@ sources:
     date: 2026-06-20
 ---
 
-## Alternativas evaluadas
-El ejercicio compara una función local con una tabla fija [cf. S1].
+## Alternatives evaluated
+The exercise compares a local function against a fixed lookup table [cf. S1].
 
-## Madurez
-Ambas alternativas se consideran suficientes para un probe de capacitación [cf. S1].
+## Maturity
+Both alternatives are considered sufficient for a training probe [cf. S1].
 
-## Costos
-La evaluación inventada contempla solo ejecución local con la biblioteca estándar [cf. S2].
+## Costs
+The invented evaluation considers only local execution with the standard library [cf. S2].
 
-## Riesgos
-El conjunto fijo puede favorecer accidentalmente una alternativa [cf. S2].
+## Risks
+The fixed set may accidentally favour one alternative [cf. S2].
 
-## Contra-evidencia
-Se mantiene explícita la posibilidad de que el resultado no generalice [cf. S2].
+## Counter-evidence
+The possibility that the result does not generalize is kept explicit [cf. S2].

@@ -9,20 +9,20 @@ verify:
   environment: clean  # clean | inherit
 ---
 
-## Resultados por criterio
+## Results by criterion
 
-<!-- Un resultado por cada criterio del brief, referenciado por su ID (C1, C2, ...):
-     cumple / no cumple / parcial, con la evidencia que lo respalda. -->
-- C1: <cumple|no cumple|parcial> - <evidencia>
-- C2: <cumple|no cumple|parcial> - <evidencia>
+<!-- One result per brief criterion, referenced by its ID (C1, C2, ...):
+     meets / does not meet / partial, with the evidence that supports it. -->
+- C1: <meets|does not meet|partial> - <evidence>
+- C2: <meets|does not meet|partial> - <evidence>
 
-## Reproducción
+## Reproduction
 
-<!-- Cómo reproducir la prueba: comandos y/o código versionado en probe/.
-     Toda tabla de benchmark debe ir acompañada de su bloque de comandos.
-     Ejecutá `sdr verify-probe <slug>` y dejalo en verde antes de avanzar. -->
+<!-- How to reproduce the test: commands and/or code versioned under probe/.
+     Every benchmark table must be accompanied by its command block.
+     Run `sdr verify-probe <slug>` and leave it green before advancing. -->
 
 ```bash
-# comandos para reproducir el benchmark/POC
+# commands to reproduce the benchmark/POC
 python probe/bench.py
 ```

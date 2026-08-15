@@ -11,13 +11,13 @@ def test_resolve_root_accepts_configured_absolute_path(tmp_path):
     "relative", ["/tmp/outside", "C:/outside", "../outside", "safe/../../outside"]
 )
 def test_resolve_child_rejects_absolute_and_parent_traversal(tmp_path, relative):
-    with pytest.raises(ValueError, match="ruta relativa inválida"):
+    with pytest.raises(ValueError, match="invalid relative path"):
         resolve_child(tmp_path, relative)
 
 
 @pytest.mark.parametrize("segment", ["nested/slug", "nested\\slug"])
 def test_resolve_segment_rejects_path_separators(tmp_path, segment):
-    with pytest.raises(ValueError, match="segmento inválido"):
+    with pytest.raises(ValueError, match="invalid segment"):
         resolve_segment(tmp_path, segment)
 
 
@@ -28,7 +28,7 @@ def test_resolve_child_rejects_symlink_escape(tmp_path):
     outside.mkdir()
     (root / "linked").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         resolve_child(root, "linked/secret.txt")
 
 

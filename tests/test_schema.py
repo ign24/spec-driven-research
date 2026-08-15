@@ -57,7 +57,7 @@ def test_every_stage_declares_an_artifact_spec():
     for stage in schema.STAGES:
         spec = schema.artifact_for(stage)
         assert spec.stage == stage
-        # Cada etapa valida por secciones obligatorias o por frontmatter+directorio.
+        # Every stage validates by required sections or by frontmatter plus directory.
         assert spec.required_sections or spec.frontmatter_required, (
             f"{stage} must declare a validation contract"
         )
@@ -66,17 +66,17 @@ def test_every_stage_declares_an_artifact_spec():
 def test_intake_artifact_requires_evaluation_criteria_section():
     spec = schema.artifact_for("intake")
     assert spec.primary_file == "brief.md"
-    assert "Criterios de evaluación" in spec.required_sections
+    assert "Evaluation criteria" in spec.required_sections
 
 
 def test_explore_artifact_schema_v1_does_not_require_counter_evidence():
     spec = schema.artifact_for("explore", schema_version=1)
-    assert "Contra-evidencia" not in spec.required_sections
+    assert "Counter-evidence" not in spec.required_sections
 
 
 def test_explore_artifact_schema_v2_requires_counter_evidence():
     spec = schema.artifact_for("explore", schema_version=2)
-    assert "Contra-evidencia" in spec.required_sections
+    assert "Counter-evidence" in spec.required_sections
 
 
 def test_transfer_artifact_schema_v1_allows_legacy_lineage_omission():

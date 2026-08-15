@@ -1,7 +1,7 @@
-"""Parser de artefactos markdown: frontmatter YAML + secciones por heading.
+"""Markdown artifact parser: YAML frontmatter plus sections by heading.
 
-Convierte un archivo markdown en un objeto consultable por los gates: el
-frontmatter como dict y cada heading como una sección con su contenido.
+Turns a markdown file into an object the gates can query: the frontmatter as a
+dict and every heading as a section with its content.
 """
 
 from __future__ import annotations
@@ -23,13 +23,13 @@ class DuplicateFrontmatterKeyError(ValueError):
 
 
 def _normalize(text: str) -> str:
-    """Colapsa espacios y aplica casefold para comparar headings."""
+    """Collapse whitespace and casefold in order to compare headings."""
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
 @dataclass
 class Artifact:
-    """Artefacto markdown parseado."""
+    """Parsed markdown artifact."""
 
     path: Path
     frontmatter: dict[str, Any]
@@ -37,11 +37,11 @@ class Artifact:
     sections: dict[str, str]
 
     def section(self, name: str) -> str | None:
-        """Contenido de la sección cuyo heading coincide con `name`.
+        """Content of the section whose heading matches `name`.
 
-        La coincidencia es insensible a mayúsculas y espacios, y admite una
-        anotación al final del heading (p. ej. "Criterios de evaluación (X)").
-        Devuelve None si no existe la sección.
+        The match ignores case and whitespace, and accepts an annotation at the
+        end of the heading (for example a heading "Sources (2)" matches "Sources").
+        Returns None if the section does not exist.
         """
         target = _normalize(name)
         for heading, content in self.sections.items():
@@ -51,13 +51,13 @@ class Artifact:
         return None
 
     def has_content(self, name: str) -> bool:
-        """True si la sección existe y tiene contenido no vacío."""
+        """True if the section exists and has non-empty content."""
         content = self.section(name)
         return bool(content and content.strip())
 
 
 def parse_artifact(path: str | Path) -> Artifact:
-    """Parsea el archivo markdown en `path` a un Artifact."""
+    """Parse the markdown file at `path` into an Artifact."""
     path = Path(path)
     _reject_duplicate_evidence_claim_ids(path)
     post = frontmatter.load(str(path))
@@ -94,7 +94,7 @@ def _reject_duplicate_evidence_claim_ids(path: Path) -> None:
 
 
 def _split_sections(body: str) -> dict[str, str]:
-    """Divide el cuerpo en secciones {heading: contenido hasta el próximo heading}."""
+    """Split the body into sections {heading: content up to the next heading}."""
     sections: dict[str, str] = {}
     current: str | None = None
     buffer: list[str] = []

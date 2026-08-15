@@ -20,22 +20,22 @@ _BRIEF_TEMPLATE = textwrap.dedent(
     timebox: 3
     ---
 
-    ## Pregunta
+    ## Question
     ¿Sirve Foo?
 
-    ## Hipótesis
+    ## Hypothesis
     Creemos que sí.
 
-    ## Contexto
+    ## Context
     Lo necesitamos para X.
 
-    ## Alcance
+    ## Scope
     Incluye A. No incluye B.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     __CRITERIA__
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Vendor lock-in.
     """
 ).lstrip()
@@ -67,7 +67,7 @@ def test_intake_gate_fails_with_empty_section(tmp_path):
     r.artifact_path("brief.md").write_text(body, encoding="utf-8")
     report = gates.check_stage(r, stage="intake")
     assert not report.passed
-    assert any("Pregunta" in f.detail for f in report.failures)
+    assert any("Question" in f.detail for f in report.failures)
 
 
 def test_intake_gate_fails_with_missing_frontmatter_field(tmp_path):
@@ -84,4 +84,4 @@ def test_intake_gate_fails_with_single_criterion(tmp_path):
     r.artifact_path("brief.md").write_text(_brief("- C1: solo uno"), encoding="utf-8")
     report = gates.check_stage(r, stage="intake")
     assert not report.passed
-    assert any("criterio" in f.detail.lower() for f in report.failures)
+    assert any("criteria" in f.detail.lower() for f in report.failures)

@@ -30,20 +30,20 @@ def query_context_graph(graph: ContextGraph, intent: str, *, criterion: str = ""
 
 
 def map_query_text_to_intent(text: str) -> tuple[str, dict[str, str]]:
-    """Map common Spanish/English graph questions to deterministic query intents."""
+    """Map common graph questions in English to deterministic query intents."""
     normalized = text.lower().strip()
     criterion = _extract_criterion(text)
-    if ("por qué" in normalized or "porque" in normalized or "why" in normalized) and any(
+    if "why" in normalized and any(
         ring in normalized for ring in ("hold", "trial", "adopt", "assess")
     ):
         return "why-ring", {}
-    if "fuente" in normalized or "source" in normalized:
+    if "source" in normalized:
         return "sources-for-result", {"criterion": criterion} if criterion else {}
-    if "linaje" in normalized or "lineage" in normalized or "traza" in normalized:
+    if "lineage" in normalized or "trace" in normalized:
         return "criterion-lineage", {"criterion": criterion} if criterion else {}
-    if "gap" in normalized or "falt" in normalized:
+    if "gap" in normalized or "missing" in normalized:
         return "gaps", {}
-    if "decisión" in normalized or "decision" in normalized or "soporta" in normalized:
+    if "decision" in normalized or "support" in normalized:
         return "decision-support", {}
     raise ContextGraphError(f"could not map question: {text}")
 
@@ -63,7 +63,7 @@ def _query_why_ring(graph: ContextGraph, nodes: dict[str, GraphNode]) -> dict[st
         based_on,
         "why-ring",
         warnings,
-        f"Ring {decision.metadata.get('ring', 'unknown')} basado en {len(based_on)} resultados.",
+        f"Ring {decision.metadata.get('ring', 'unknown')} based on {len(based_on)} results.",
     )
 
 
@@ -82,7 +82,7 @@ def _query_decision_support(graph: ContextGraph, nodes: dict[str, GraphNode]) ->
         based_on,
         "decision-support",
         warnings,
-        f"La decisión usa {len(based_on)} resultados como soporte.",
+        f"The decision uses {len(based_on)} results as support.",
     )
 
 
@@ -108,7 +108,7 @@ def _query_criterion_lineage(
         involved.add(edge.target)
     return _payload(
         "criterion-lineage",
-        f"Linaje de {target} con {len(edges)} enlaces.",
+        f"Lineage of {target} with {len(edges)} links.",
         sorted(involved),
         edges,
         nodes,
@@ -144,7 +144,7 @@ def _query_gaps(graph: ContextGraph) -> dict[str, Any]:
         if not any(edge.source == task.id or edge.target == task.id for edge in graph.edges):
             warnings.append(f"unlinked OpenSpec task: {task.id}")
     return {
-        "answer": f"Se encontraron {len(warnings)} gaps.",
+        "answer": f"Found {len(warnings)} gaps.",
         "evidence_snippets": [],
         "intent": "gaps",
         "involved_edges": [],
@@ -178,7 +178,7 @@ def _query_sources_for_result(
         )
     return _payload(
         "sources-for-result",
-        f"Fuentes para {result_id}.",
+        f"Sources for {result_id}.",
         sorted(involved),
         edges,
         nodes,
@@ -254,7 +254,7 @@ def _decision(nodes: dict[str, GraphNode]) -> GraphNode:
 def _criterion_id(value: str) -> str:
     criterion = _extract_criterion(value)
     if not criterion:
-        raise ContextGraphError("indique --criterion <ID>")
+        raise ContextGraphError("specify --criterion <ID>")
     return f"criterion:{criterion}"
 
 

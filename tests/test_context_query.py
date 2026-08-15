@@ -135,8 +135,8 @@ def test_query_errors_and_natural_language_mapping():
     with pytest.raises(ContextGraphError, match="unknown query intent"):
         query_context_graph(graph, "bogus")
 
-    assert map_query_text_to_intent("por qué fue hold")[0] == "why-ring"
-    assert map_query_text_to_intent("fuentes para el resultado C2") == (
+    assert map_query_text_to_intent("why was it hold")[0] == "why-ring"
+    assert map_query_text_to_intent("sources for result C2") == (
         "sources-for-result",
         {"criterion": "C2"},
     )

@@ -1,4 +1,4 @@
-## Criterios de evaluación
+## Evaluation criteria
 
-- C1: producir el marcador sintético.
-- C2: usar una ejecución local.
+- C1: produce the synthetic marker.
+- C2: use a local execution.

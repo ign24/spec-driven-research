@@ -1,9 +1,9 @@
-"""Fuente única de verdad del framework SDR.
+"""Single source of truth of the SDR framework.
 
-Define las etapas del ciclo de investigación, los artefactos de cada etapa
-(archivos, frontmatter y secciones obligatorias) y las reglas deterministas de
-gate. Tanto la validación como la generación/verificación de plantillas consumen
-estas estructuras, de modo que no puedan divergir.
+Declares the stages of the investigation lifecycle, the artifacts of each stage
+(files, frontmatter and required sections) and the deterministic gate rules.
+Validation and template generation/verification both consume these structures,
+so that they cannot diverge.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ STAGES: tuple[str, ...] = ("intake", "explore", "probe", "transfer", "reuse")
 
 MODES: tuple[str, ...] = ("full", "light")
 
-# Etapas que se omiten en cada modo.
+# Stages skipped in each mode.
 _MODE_SKIPS: dict[str, frozenset[str]] = {
     "full": frozenset(),
     "light": frozenset({"probe"}),
@@ -37,38 +37,84 @@ ASSET_TYPES: tuple[str, ...] = (
 )
 ASSET_AUDIENCES: tuple[str, ...] = ("internal", "external")
 
-# Anillos que exigen una etapa probe aprobada con resultados.
+# Rings that require an approved probe stage with results.
 RINGS_REQUIRING_PROBE: frozenset[str] = frozenset({"adopt", "trial"})
 _CLAIM_ID_RE = re.compile(r"^claim-[0-9a-f]{64}$")
 
 
+SECTION_QUESTION = "Question"
+SECTION_HYPOTHESIS = "Hypothesis"
+SECTION_CONTEXT = "Context"
+SECTION_SCOPE = "Scope"
+SECTION_EVALUATION_CRITERIA = "Evaluation criteria"
+SECTION_ADOPTION_RISKS = "Adoption risks"
+SECTION_ALTERNATIVES = "Alternatives evaluated"
+SECTION_MATURITY = "Maturity"
+SECTION_COSTS = "Costs"
+SECTION_RISKS = "Risks"
+SECTION_COUNTER_EVIDENCE = "Counter-evidence"
+SECTION_CRITERIA_RESULTS = "Results by criterion"
+SECTION_REPRODUCTION = "Reproduction"
+SECTION_RECOMMENDATION = "Recommendation"
+SECTION_SELECTION_CRITERIA = "Selection criteria"
+SECTION_RISKS_AND_LIMITS = "Risks and limitations"
+SECTION_NEXT_STEPS = "Next steps"
+SECTION_AUDIENCE = "Audience"
+
+_SECTIONS: tuple[str, ...] = (
+    SECTION_QUESTION,
+    SECTION_HYPOTHESIS,
+    SECTION_CONTEXT,
+    SECTION_SCOPE,
+    SECTION_EVALUATION_CRITERIA,
+    SECTION_ADOPTION_RISKS,
+    SECTION_ALTERNATIVES,
+    SECTION_MATURITY,
+    SECTION_COSTS,
+    SECTION_RISKS,
+    SECTION_COUNTER_EVIDENCE,
+    SECTION_CRITERIA_RESULTS,
+    SECTION_REPRODUCTION,
+    SECTION_RECOMMENDATION,
+    SECTION_SELECTION_CRITERIA,
+    SECTION_RISKS_AND_LIMITS,
+    SECTION_NEXT_STEPS,
+    SECTION_AUDIENCE,
+)
+
+
+def declared_sections() -> tuple[str, ...]:
+    """Return every artifact section name the product declares."""
+    return _SECTIONS
+
+
 @dataclass(frozen=True)
 class ArtifactSpec:
-    """Contrato estructural del artefacto de una etapa."""
+    """Structural contract of a stage's artifact."""
 
     stage: str
     primary_file: str
     required_sections: tuple[str, ...]
     frontmatter_required: tuple[str, ...] = ()
-    # Directorio que debe contener al menos un artefacto (explore, reuse).
+    # Directory that must contain at least one artifact (explore, reuse).
     collection_dir: str | None = None
-    # Verificaciones evidenciales/cruzadas que corren además de la estructura.
+    # Evidential and cross-artifact checks that run on top of the structure.
     checks: tuple[str, ...] = ()
 
 
 def stage_order(mode: str) -> tuple[str, ...]:
-    """Etapas activas para un modo, en orden."""
+    """Active stages for a mode, in order."""
     if mode not in _MODE_SKIPS:
-        raise ValueError(f"modo desconocido: {mode!r}; use uno de {MODES}")
+        raise ValueError(f"unknown mode: {mode!r}; use one of {MODES}")
     skips = _MODE_SKIPS[mode]
     return tuple(stage for stage in STAGES if stage not in skips)
 
 
 def next_stage(current: str, mode: str) -> str | None:
-    """Etapa siguiente en el modo dado, o None si `current` es la última."""
+    """Next stage in the given mode, or None if `current` is the last one."""
     order = stage_order(mode)
     if current not in order:
-        raise ValueError(f"etapa {current!r} no pertenece al modo {mode!r}")
+        raise ValueError(f"stage {current!r} does not belong to mode {mode!r}")
     idx = order.index(current)
     if idx + 1 >= len(order):
         return None
@@ -81,12 +127,12 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
         primary_file="brief.md",
         frontmatter_required=("research", "date", "stage", "owner", "timebox"),
         required_sections=(
-            "Pregunta",
-            "Hipótesis",
-            "Contexto",
-            "Alcance",
-            "Criterios de evaluación",
-            "Riesgos de adopción",
+            SECTION_QUESTION,
+            SECTION_HYPOTHESIS,
+            SECTION_CONTEXT,
+            SECTION_SCOPE,
+            SECTION_EVALUATION_CRITERIA,
+            SECTION_ADOPTION_RISKS,
         ),
         checks=("min_evaluation_criteria",),
     ),
@@ -96,10 +142,10 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
         collection_dir="notes",
         frontmatter_required=("research", "date", "stage", "sources"),
         required_sections=(
-            "Alternativas evaluadas",
-            "Madurez",
-            "Costos",
-            "Riesgos",
+            SECTION_ALTERNATIVES,
+            SECTION_MATURITY,
+            SECTION_COSTS,
+            SECTION_RISKS,
         ),
         checks=("source_tiers", "source_dates", "source_triangulation", "links_resolve"),
     ),
@@ -108,8 +154,8 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
         primary_file="probe/results.md",
         frontmatter_required=("research", "date", "stage"),
         required_sections=(
-            "Resultados por criterio",
-            "Reproducción",
+            SECTION_CRITERIA_RESULTS,
+            SECTION_REPRODUCTION,
         ),
         checks=("criteria_cross_reference", "benchmark_reproducible", "probe_artifacts_exist"),
     ),
@@ -125,12 +171,12 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
             "evidence_claim_ids",
         ),
         required_sections=(
-            "Recomendación",
-            "Alternativas evaluadas",
-            "Criterios de selección",
-            "Riesgos y limitaciones",
-            "Próximos pasos",
-            "Audiencia",
+            SECTION_RECOMMENDATION,
+            SECTION_ALTERNATIVES,
+            SECTION_SELECTION_CRITERIA,
+            SECTION_RISKS_AND_LIMITS,
+            SECTION_NEXT_STEPS,
+            SECTION_AUDIENCE,
         ),
         checks=("y_statement", "ring_backed_by_evidence", "evidence_claim_ids"),
     ),
@@ -144,14 +190,14 @@ _ARTIFACTS: dict[str, ArtifactSpec] = {
     ),
 }
 
-# Cantidad mínima de criterios de evaluación verificables en el brief.
+# Minimum number of verifiable evaluation criteria in the brief.
 MIN_EVALUATION_CRITERIA: int = 2
 
-# Cantidad mínima de hosts declarados distintos en las fuentes de explore.
+# Minimum number of distinct declared hosts across the explore sources.
 MIN_DISTINCT_DECLARED_HOSTS: int = 2
 
 
-# Plantilla que alimenta el artefacto de cada etapa (viven en `templates/`).
+# Template that feeds each stage's artifact (they live in `templates/`).
 TEMPLATE_FILES: dict[str, str] = {
     "intake": "brief.md",
     "explore": "note.md",
@@ -162,15 +208,15 @@ TEMPLATE_FILES: dict[str, str] = {
 
 
 def artifact_for(stage: str, schema_version: int = 1) -> ArtifactSpec:
-    """ArtifactSpec de una etapa."""
+    """ArtifactSpec of a stage."""
     try:
         spec = _ARTIFACTS[stage]
     except KeyError:
-        raise ValueError(f"etapa desconocida: {stage!r}") from None
+        raise ValueError(f"unknown stage: {stage!r}") from None
     if stage == "explore" and schema_version >= 2:
         return replace(
             spec,
-            required_sections=(*spec.required_sections, "Contra-evidencia"),
+            required_sections=(*spec.required_sections, SECTION_COUNTER_EVIDENCE),
             checks=(*spec.checks, "tier_plausibility", "claim_citation_coverage"),
         )
     if stage == "transfer" and schema_version < 2:
@@ -184,7 +230,7 @@ def artifact_for(stage: str, schema_version: int = 1) -> ArtifactSpec:
 
 
 def template_for(stage: str) -> str:
-    """Nombre del archivo de plantilla que alimenta la etapa."""
+    """Name of the template file that feeds the stage."""
     return TEMPLATE_FILES[stage]
 
 

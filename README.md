@@ -90,6 +90,12 @@ commit-producing transition.
 
 ## Install from source
 
+> **Breaking change since v0.2.0.** Artifact sections moved from Spanish names
+> (`Pregunta`, `Criterios de evaluación`) to English ones (`Question`,
+> `Evaluation criteria`). An investigation created with an earlier version
+> requires `sdr migrate` before it can advance. Migration rewrites only the
+> structural headings and leaves your own prose untouched.
+
 SDR requires Python 3.12 or newer. No package-index release exists: SDR is not
 published to PyPI and cannot be installed from a package index. The supported
 route installs the canonical repository at an explicit revision:

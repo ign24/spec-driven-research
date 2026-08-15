@@ -3,24 +3,24 @@ research: synthetic-full
 date: 2026-07-01
 stage: transfer
 ring: trial
-audience: equipo de capacitación
+audience: training team
 evidence_claim_ids: []
 ---
 
-## Recomendación
-En el contexto del ejercicio de etiquetas, decidimos probar la función local para lograr salidas estables en C1 y C2, porque el probe determinístico cumplió ambos criterios, aceptando el trade-off de que tres cadenas inventadas no representan producción.
+## Recommendation
+In the context of the label exercise, we decide to test the local function to achieve stable outputs for C1 and C2, because the deterministic probe met both criteria, accepting the trade-off that three invented strings do not represent production.
 
-## Alternativas evaluadas
-Función local y tabla fija.
+## Alternatives evaluated
+Local function and fixed lookup table.
 
-## Criterios de selección
-Coincidencia de las tres salidas y repetibilidad exacta.
+## Selection criteria
+Agreement of the three outputs and exact repeatability.
 
-## Riesgos y limitaciones
-No se evaluaron idiomas, volumen, entradas maliciosas ni integración externa.
+## Risks and limitations
+Languages, volume, malicious inputs and external integration were not evaluated.
 
-## Próximos pasos
-Conservar el probe como demostración portable y no extrapolar su resultado.
+## Next steps
+Keep the probe as a portable demonstration and do not extrapolate its result.
 
-## Audiencia
-Equipo ficticio de capacitación.
+## Audience
+Fictional training team.

@@ -1,4 +1,4 @@
-"""Anclaje textual exacto, determinista y recuperable sobre snapshots locales."""
+"""Exact, deterministic and recoverable textual anchoring over local snapshots."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ _PUNCTUATION_EQUIVALENTS = str.maketrans(
 
 @dataclass(frozen=True)
 class TextLocator:
-    """Rango inclusivo de líneas tocadas por una cita."""
+    """Inclusive range of lines touched by a quote."""
 
     line_start: int
     line_end: int
@@ -39,20 +39,20 @@ class TextLocator:
 
 @dataclass(frozen=True)
 class TextMatch:
-    """Cita literal recuperada y su ubicación estable en el snapshot."""
+    """Recovered literal quote and its stable location in the snapshot."""
 
     quote: str
     locator: TextLocator
 
 
 def normalize_text(text: str) -> str:
-    """Normaliza equivalencias de forma conservadora sin borrar contenido semántico."""
+    """Normalize equivalences conservatively without erasing semantic content."""
     normalized, _ = _normalize_with_offsets(text)
     return normalized
 
 
 def match_text(claim_text: str, snapshot_text: str) -> TextMatch | None:
-    """Devuelve la primera coincidencia normalizada exacta y su cita literal."""
+    """Return the first exact normalized match and its literal quote."""
     claim = normalize_text(claim_text)
     if not claim or not snapshot_text.strip():
         return None

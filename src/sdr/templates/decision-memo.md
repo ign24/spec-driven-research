@@ -2,37 +2,37 @@
 research: <slug>
 date: <YYYY-MM-DD>
 stage: transfer
-ring: assess        # adopt | trial | assess | hold (adopt/trial exigen probe aprobada)
-audience: <equipo|comercial|direccion>
-evidence_claim_ids: []  # IDs exactos claim-<sha256>; [] declara que no hay dependencias
+ring: assess        # adopt | trial | assess | hold (adopt/trial require an approved probe)
+audience: <team|commercial|leadership>
+evidence_claim_ids: []  # exact claim-<sha256> IDs; [] declares no dependencies
 ---
 
-## Recomendación
+## Recommendation
 
-<!-- Decisión explícita en formato Y-statement:
-     En el contexto de <X>, ante <preocupación Y>, decidimos <Z> para lograr <Q>,
-     aceptando <downside D>. -->
-En el contexto de <X>, ante <Y>, decidimos <Z> para lograr <Q>, aceptando <D>.
+<!-- An explicit decision in Y-statement form:
+     In the context of <X>, facing <concern Y>, we decide to <Z> to achieve <Q>,
+     accepting <downside D>. -->
+In the context of <X>, facing <Y>, we decide to <Z> to achieve <Q>, because <evidence E>, accepting <D>.
 
-## Alternativas evaluadas
+## Alternatives evaluated
 
-<!-- Alternativas consideradas y por qué se descartaron. -->
+<!-- Alternatives considered and why they were ruled out. -->
 
-## Criterios de selección
+## Selection criteria
 
-<!-- Los drivers de la decisión y su peso. -->
+<!-- The drivers of the decision and their weight. -->
 
-## Riesgos y limitaciones
+## Risks and limitations
 
-<!-- Qué puede salir mal y los límites de lo que se probó. -->
+<!-- What can go wrong and the limits of what was tested. -->
 
-## Próximos pasos
+## Next steps
 
-<!-- Acciones concretas derivadas de la recomendación. -->
+<!-- Concrete actions that follow from the recommendation. -->
 
-## Audiencia
+## Audience
 
-<!-- A quién va dirigida esta bajada y en qué registro. -->
+<!-- Who this is written for and in what register. -->
 
-<!-- La revisión de claims con `sdr resolve-claim` no aprueba este memo ni reemplaza
-     la aprobación humana independiente mediante `sdr approve`. -->
+<!-- Reviewing claims with `sdr resolve-claim` does not approve this memo and does not
+     replace independent human approval through `sdr approve`. -->

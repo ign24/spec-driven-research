@@ -1,6 +1,6 @@
 slug: failing-probe-argv
-title: Fixture de probe inválido
-question: ¿El probe declara cómo ejecutarse?
+title: Invalid probe fixture
+question: Does the probe declare how to run itself?
 mode: full
 stage: probe
 expected_check: benchmark_reproducible

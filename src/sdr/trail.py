@@ -1,10 +1,10 @@
-"""Rastro git de la investigación: un commit estructurado por transición.
+"""Git trail of the investigation: one structured commit per transition.
 
-SDR es a la investigación lo que SDD al vibecoding: el historial de git ES la
-trazabilidad. Cada transición de estado (new, avance de etapa, reopen, drop,
-archive) se registra como `research(<slug>): <transición>` sobre los archivos
-de la investigación. Sin repo git el rastro se degrada con advertencia, nunca
-bloquea el trabajo.
+SDR is to research what SDD is to vibecoding: the git history IS the
+traceability. Every state transition (new, stage advance, reopen, drop,
+archive) is recorded as `research(<slug>): <transition>` over the files of the
+investigation. Without a git repository the trail degrades with a warning; it
+never blocks the work.
 """
 
 from __future__ import annotations
@@ -48,7 +48,7 @@ def _relative_paths(paths: list[Path], within: Path, label: str) -> tuple[list[s
         try:
             relative.append(str(path.resolve().relative_to(within)))
         except ValueError:
-            return [], f"{label} fuera del repositorio: {path}"
+            return [], f"{label} outside the repository: {path}"
     return relative, ""
 
 
@@ -67,7 +67,7 @@ def _restore_index(path: Path, contents: bytes | None) -> str:
         else:
             path.write_bytes(contents)
     except OSError as exc:
-        return f"no se pudo restaurar el staging previo: {exc}"
+        return f"could not restore the previous staging: {exc}"
     return ""
 
 
@@ -94,9 +94,9 @@ def commit_transition(
     paths: list[Path] | None = None,
     extra_paths: list[Path] | None = None,
 ) -> TrailResult:
-    """Commitea los archivos de la investigación con mensaje estructurado.
+    """Commit the files of the investigation with a structured message.
 
-    `transition` describe el cambio de estado: "new", "intake -> explore",
+    `transition` describes the state change: "new", "intake -> explore",
     "reopen probe -> explore", "drop", "archive".
     """
     message = f"research({research.meta.slug}): {transition}"
@@ -105,7 +105,7 @@ def commit_transition(
         return TrailResult(
             committed=False,
             message=message,
-            warning="sin repositorio git: la transición no quedó registrada en el rastro",
+            warning="no git repository: the transition was not recorded in the trail",
         )
 
     research_root = research.root.resolve()
@@ -115,28 +115,28 @@ def commit_transition(
         return TrailResult(
             committed=False,
             message=message,
-            warning=f"la investigación está fuera del repositorio detectado: {research.root}",
+            warning=f"the investigation is outside the detected repository: {research.root}",
         )
 
     selected = paths if paths is not None else [research.root]
-    research_paths, warning = _relative_paths(selected, research_root, "path de investigación")
+    research_paths, warning = _relative_paths(selected, research_root, "investigation path")
     if warning:
         return TrailResult(committed=False, message=message, warning=warning)
     research_prefix = str(research_root.relative_to(root))
     rel_paths = [str(Path(research_prefix) / path) for path in research_paths]
-    extras, warning = _relative_paths(extra_paths or [], root, "path extra")
+    extras, warning = _relative_paths(extra_paths or [], root, "extra path")
     if warning:
         return TrailResult(committed=False, message=message, warning=warning)
     rel_paths = list(dict.fromkeys([*rel_paths, *extras]))
     if not rel_paths:
-        return TrailResult(committed=False, message=message, warning="sin paths que registrar")
+        return TrailResult(committed=False, message=message, warning="no paths to record")
 
     index_path = _index_path(root)
     if index_path is None:
         return TrailResult(
             committed=False,
             message=message,
-            warning="no se pudo localizar el índice git",
+            warning="could not locate the git index",
         )
     try:
         previous_index = index_path.read_bytes() if index_path.exists() else None
@@ -144,13 +144,13 @@ def commit_transition(
         return TrailResult(
             committed=False,
             message=message,
-            warning=f"no se pudo preservar el staging previo: {exc}",
+            warning=f"could not preserve the previous staging: {exc}",
         )
 
     add = _git(["add", "--", *rel_paths], cwd=root)
     if add.returncode != 0:
         restore_warning = _restore_index(index_path, previous_index)
-        warning = _warning(add, "git add falló")
+        warning = _warning(add, "git add failed")
         if restore_warning:
             warning = f"{warning}; {restore_warning}"
         return TrailResult(committed=False, message=message, warning=warning)
@@ -160,10 +160,10 @@ def commit_transition(
         restore_warning = _restore_index(index_path, previous_index)
         if restore_warning:
             return TrailResult(committed=False, message=message, warning=restore_warning)
-        return TrailResult(committed=False, message=message, warning="sin cambios que registrar")
+        return TrailResult(committed=False, message=message, warning="no changes to record")
     if staged.returncode != 1:
         restore_warning = _restore_index(index_path, previous_index)
-        warning = _warning(staged, "no se pudo inspeccionar el staging")
+        warning = _warning(staged, "could not inspect the staging")
         if restore_warning:
             warning = f"{warning}; {restore_warning}"
         return TrailResult(committed=False, message=message, warning=warning)
@@ -171,7 +171,7 @@ def commit_transition(
     commit = _git(["commit", "-m", message, "--", *rel_paths], cwd=root)
     if commit.returncode != 0:
         restore_warning = _restore_index(index_path, previous_index)
-        warning = _warning(commit, "git commit falló")
+        warning = _warning(commit, "git commit failed")
         if restore_warning:
             warning = f"{warning}; {restore_warning}"
         return TrailResult(committed=False, message=message, warning=warning)

@@ -17,7 +17,7 @@ from typing import Any, Final, TypeGuard
 
 from bench.harness.actor import ActorResult, CommandResult
 
-ADVANCE_BLOCKED_PREFIX: Final[str] = "avance bloqueado: "
+ADVANCE_BLOCKED_PREFIX: Final[str] = "advance blocked: "
 _GIT_TIMEOUT_SECONDS: Final[float] = 10.0
 _REOPEN_SUBJECT = re.compile(
     r"^research\((?P<slug>[^()\r\n]+)\): reopen "
@@ -234,16 +234,20 @@ class UnmappedFailure:
         return len(self.candidates) > 1
 
 
+# Every pattern matches the prose `sdr.lifecycle` produces, except `transfer gates`,
+# which matches the refusal `sdr approve` raises. `structural` and `evidential` stay
+# separate entries so that a reason naming both stays ambiguous instead of being
+# resolved into one control: the reason genuinely does not distinguish them.
 _PROSE_PATTERNS: Final[tuple[tuple[str, ControlType], ...]] = (
-    ("consistencia de hashes", ControlType.HASH_CONSISTENCY),
-    ("verificación anclada", ControlType.TEXTUAL_ANCHORING),
-    ("falta sdr verify-probe persistido", ControlType.EXECUTABLE),
-    ("verificación de probe no está vigente", ControlType.HASH_CONSISTENCY),
-    ("aprobación humana", ControlType.HUMAN_APPROVAL),
-    ("gates de transfer", ControlType.STRUCTURAL),
-    ("gates de transfer", ControlType.EVIDENTIAL),
-    ("estructurales", ControlType.STRUCTURAL),
-    ("evidenciales", ControlType.EVIDENTIAL),
+    ("hash consistency failed", ControlType.HASH_CONSISTENCY),
+    ("anchored verification failed", ControlType.TEXTUAL_ANCHORING),
+    ("missing a stored passing sdr verify-probe", ControlType.EXECUTABLE),
+    ("probe verification is stale", ControlType.HASH_CONSISTENCY),
+    ("missing human approval", ControlType.HUMAN_APPROVAL),
+    ("transfer gates", ControlType.STRUCTURAL),
+    ("transfer gates", ControlType.EVIDENTIAL),
+    ("structural", ControlType.STRUCTURAL),
+    ("evidential", ControlType.EVIDENTIAL),
 )
 
 

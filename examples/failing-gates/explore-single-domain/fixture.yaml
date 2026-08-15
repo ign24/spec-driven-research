@@ -1,6 +1,6 @@
 slug: failing-explore-domain
-title: Fixture de explore inválido
-question: ¿Las fuentes están trianguladas?
+title: Invalid explore fixture
+question: Are the sources triangulated?
 mode: light
 stage: explore
 expected_check: source_triangulation

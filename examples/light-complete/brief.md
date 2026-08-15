@@ -6,21 +6,21 @@ owner: Example Researcher
 timebox: 2
 ---
 
-## Pregunta
-¿Conviene evaluar un clasificador determinístico para ordenar tarjetas ficticias?
+## Question
+Is it worth evaluating a deterministic classifier to sort fictional cards?
 
-## Hipótesis
-El clasificador puede ordenar todos los casos sintéticos sin agregar operación compleja.
+## Hypothesis
+The classifier can sort every synthetic case without adding complex operational work.
 
-## Contexto
-Un equipo ficticio necesita una decisión reproducible para un ejercicio de capacitación.
+## Context
+A fictional team needs a reproducible decision for a training exercise.
 
-## Alcance
-Incluye reglas locales y datos inventados. No incluye datos personales, servicios externos ni producción.
+## Scope
+Covers local rules and invented data. Does not cover personal data, external services or production.
 
-## Criterios de evaluación
-- C1: documentar al menos dos alternativas con fuentes trazables.
-- C2: producir una recomendación limitada al anillo assess.
+## Evaluation criteria
+- C1: document at least two alternatives with traceable sources.
+- C2: produce a recommendation limited to the assess ring.
 
-## Riesgos de adopción
-Las entradas reales podrían no parecerse al conjunto sintético.
+## Adoption risks
+Real inputs might not resemble the synthetic set.

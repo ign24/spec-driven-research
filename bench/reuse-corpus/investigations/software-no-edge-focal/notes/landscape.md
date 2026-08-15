@@ -9,17 +9,17 @@ sources:
     date: 2026-08-03
 ---
 
-## Alternativas evaluadas
+## Alternatives evaluated
 The separate synthetic queue evaluates a thirteen-second retry interval [S8].
 
-## Madurez
+## Maturity
 The source is synthetic.
 
-## Costos
+## Costs
 No external service is used.
 
-## Riesgos
+## Risks
 The fixture is not representative.
 
-## Contra-evidencia
+## Counter-evidence
 No external evidence was consulted.

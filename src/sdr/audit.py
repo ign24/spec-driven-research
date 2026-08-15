@@ -1,4 +1,4 @@
-"""Estado de auditoría determinista visible en status e INDEX."""
+"""Deterministic audit state shown in status and INDEX."""
 
 from __future__ import annotations
 
@@ -34,12 +34,12 @@ def audit_markers(research: Research) -> list[str]:
 
 
 def claim_state_summary(research: Research) -> dict[str, int]:
-    """Cuenta estados frescos de claims activos sin modificar el ledger."""
+    """Count the current states of active claims without modifying the ledger."""
     return evaluate_claims(research).states
 
 
 def evaluate_claims(research: Research) -> ClaimAudit:
-    """Evalúa claims contra artefactos locales y compara el ledger persistido."""
+    """Evaluate claims against local artifacts and compare the stored ledger."""
     path = research.artifact_path("notes/sources/verification.yaml")
     ledger = load_ledger(path)
     report = verify_explore_claims(research, persist=False)
@@ -82,5 +82,5 @@ def _item_is_current(item: VerificationItem, persisted: object) -> bool:
 
 
 def claims_passed(states: dict[str, int]) -> bool:
-    """Indica si todos los claims persistidos tienen un estado aprobatorio."""
+    """Report whether every stored claim is in an approving state."""
     return bool(states) and all(state in {"verified", "human_reviewed"} for state in states)

@@ -54,8 +54,8 @@ def test_templates_document_source_freshness_and_tier_justifications():
 def test_note_template_documents_contextual_references_outside_claim_matching():
     text = (TEMPLATES_DIR / "note.md").read_text(encoding="utf-8")
     assert "[cf. S1]" in text
-    assert "contexto, síntesis o" in text
-    assert "queda fuera del matching textual" in text
+    assert "context, synthesis, or" in text
+    assert "stays out of textual matching" in text
 
 
 def test_decision_template_declares_structured_evidence_claim_ids():

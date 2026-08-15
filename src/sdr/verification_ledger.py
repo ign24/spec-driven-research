@@ -1,4 +1,4 @@
-"""Contrato de persistencia tolerante para verification.yaml schema v2."""
+"""Tolerant persistence contract for the verification.yaml schema v2."""
 
 from __future__ import annotations
 
@@ -55,11 +55,11 @@ _DEGRADATION_CAUSES = frozenset({"unreachable", "changed", "expired"})
 
 
 class LedgerValidationError(ValueError):
-    """Indica que verification.yaml no cumple una estructura segura y accionable."""
+    """Signals that verification.yaml does not hold a safe, actionable structure."""
 
 
 def empty_ledger() -> dict[str, Any]:
-    """Crea un ledger v2 vacío con sus colecciones separadas."""
+    """Create an empty v2 ledger with its collections kept separate."""
     return {
         "schema_version": SCHEMA_VERSION,
         "claims": [],
@@ -92,7 +92,7 @@ def make_claim_id(
     source_id: str,
     claim_hash: str,
 ) -> str:
-    """Deriva la identidad estable de un claim desde todos sus componentes contractuales."""
+    """Derive the stable identity of a claim from all of its contractual components."""
     canonical_path = _canonical_note_path(note_path)
     if not _valid_line_range(line_start, line_end):
         raise LedgerValidationError("claim locator must be an inclusive line range")
@@ -104,7 +104,7 @@ def make_claim_id(
 
 
 def load_ledger(path: Path) -> dict[str, Any]:
-    """Carga un ledger v2 o separa conservadoramente entradas semánticas antiguas."""
+    """Load a v2 ledger, conservatively separating out older semantic entries."""
     if not path.exists():
         return empty_ledger()
     raw = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -143,7 +143,7 @@ def load_ledger(path: Path) -> dict[str, Any]:
 
 
 def save_ledger(path: Path, ledger: dict[str, Any]) -> None:
-    """Guarda el ledger con serialización determinista sin descartar campos desconocidos."""
+    """Save the ledger with deterministic serialization, keeping unknown fields."""
     issues = validate_ledger(ledger)
     blocking = [issue for issue in issues if " has unknown active state: " not in issue]
     if blocking:
@@ -179,7 +179,7 @@ def ledger_directory_lock(path: Path) -> Iterator[None]:
 
 
 def validate_ledger(ledger: dict[str, Any]) -> list[str]:
-    """Reporta inconsistencias del contrato activo sin rechazar datos futuros o legacy."""
+    """Report inconsistencies of the active contract without rejecting future or legacy data."""
     issues: list[str] = []
     if ledger.get("schema_version") != SCHEMA_VERSION:
         issues.append(f"schema_version must be {SCHEMA_VERSION}")
@@ -333,7 +333,7 @@ def validate_ledger(ledger: dict[str, Any]) -> list[str]:
 
 
 def validate_claim_references(ledger: dict[str, Any], claim_ids: tuple[str, ...]) -> list[str]:
-    """Valida estructuralmente solo los claims declarados por una decisión."""
+    """Structurally validate only the claims declared by a decision."""
     referenced = set(claim_ids)
     claims = ledger.get("claims") if isinstance(ledger.get("claims"), list) else []
     scoped = empty_ledger()

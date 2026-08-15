@@ -13,17 +13,17 @@ sources:
     date: 2026-06-20
 ---
 
-## Alternativas evaluadas
-Se comparan reglas ordenadas y una tabla de decisión dentro del ejercicio [cf. S1].
+## Alternatives evaluated
+The exercise compares ordered rules against a decision table [cf. S1].
 
-## Madurez
-La nota sintética trata ambas alternativas como material de capacitación [cf. S1].
+## Maturity
+The synthetic note treats both alternatives as training material [cf. S1].
 
-## Costos
-La comparación ficticia considera solamente tiempo local de mantenimiento [cf. S2].
+## Costs
+The fictional comparison considers only local maintenance time [cf. S2].
 
-## Riesgos
-La simplificación del ejercicio puede ocultar excepciones de casos reales [cf. S2].
+## Risks
+Simplifying the exercise can hide exceptions found in real cases [cf. S2].
 
-## Contra-evidencia
-Se revisa la posibilidad de que ninguna alternativa generalice fuera del ejercicio [cf. S2].
+## Counter-evidence
+The possibility that neither alternative generalizes outside the exercise is reviewed [cf. S2].

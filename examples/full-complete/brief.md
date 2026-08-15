@@ -6,21 +6,21 @@ owner: Example Researcher
 timebox: 3
 ---
 
-## Pregunta
-¿Una función local puede normalizar un conjunto fijo de etiquetas inventadas?
+## Question
+Can a local function normalize a fixed set of invented labels?
 
-## Hipótesis
-Una transformación pequeña producirá salidas estables para todas las entradas del fixture.
+## Hypothesis
+A small transformation will produce stable outputs for every fixture input.
 
-## Contexto
-El ejercicio demuestra una prueba ejecutable sin datos externos ni dependencias adicionales.
+## Context
+The exercise demonstrates an executable test with no external data and no extra dependencies.
 
-## Alcance
-Incluye tres cadenas inventadas. No incluye archivos de usuario, red, rendimiento ni producción.
+## Scope
+Covers three invented strings. Does not cover user files, network, performance or production.
 
-## Criterios de evaluación
-- C1: las tres etiquetas producen la salida esperada.
-- C2: dos ejecuciones producen exactamente el mismo marcador.
+## Evaluation criteria
+- C1: the three labels produce the expected output.
+- C2: two runs produce exactly the same marker.
 
-## Riesgos de adopción
-El fixture pequeño no representa variedad lingüística real.
+## Adoption risks
+The small fixture does not represent real linguistic variety.
