@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "recorded_on": "2026-08-14",
+  "recorded_on": "2026-08-15",
   "artifact": {
     "package_version": "0.2.0",
     "wheel_filename": "spec_driven_research-0.2.0-py3-none-any.whl",
-    "sha256": "9ca36d37699ecbffd320cb79f81c0db8227c8dd6ea93dcad362f16037630311e"
+    "sha256": "a91a7d1f71a691de606c1e5d4cbc77ab5c0bf55421c12d3b1915a18421bd1305"
   },
   "environment": {
     "isolation": "env-i",

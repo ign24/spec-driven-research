@@ -16,7 +16,7 @@
 - [x] 3.1 Add a failing test asserting the packaged templates declare English section names
 - [x] 3.2 Translate the five templates, the section-name declaration, and `schema.required_sections` in one step, and retranslate the gate and schema tests that assert section names
 - [x] 3.3 Regenerate the maintained `examples/light-complete` and `examples/full-complete` fixtures and prove each completes its lifecycle end to end
-- [ ] 3.4 Run the full suite and confirm no intermediate state exists in which a freshly created artifact fails its own gate
+- [x] 3.4 Run the full suite and confirm no intermediate state exists in which a freshly created artifact fails its own gate
 
 ## 4. Migration for existing investigations
 
@@ -66,7 +66,7 @@
 ## 8. Release and final validation
 
 - [x] 8.1 Record the break, the migration requirement, and the English product-surface contract in `CHANGELOG.md`
-- [ ] 8.2 Run `uv run pytest`, `uv run ruff check .`, and `uv run ruff format --check .`
-- [ ] 8.3 Run strict OpenSpec, README parity, skill, integration, packaging, product-language, and public-tree validations with no skipped mandatory result
-- [ ] 8.4 Build the artifacts, re-run the discovery canaries against the new wheel, and record the wheel identity and digest
-- [ ] 8.5 Install the built artifact in a clean environment and confirm `--help`, `--version`, and a created `brief.md` are English
+- [x] 8.2 Run `uv run pytest`, `uv run ruff check .`, and `uv run ruff format --check .`
+- [x] 8.3 Run strict OpenSpec, README parity, skill, integration, packaging, product-language, and public-tree validations with no skipped mandatory result
+- [x] 8.4 Build the artifacts, re-run the discovery canaries against the new wheel, and record the wheel identity and digest
+- [x] 8.5 Install the built artifact in a clean environment and confirm `--help`, `--version`, and a created `brief.md` are English
