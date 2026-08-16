@@ -101,7 +101,7 @@ published to PyPI and cannot be installed from a package index. The supported
 route installs the canonical repository at an explicit revision:
 
 ```bash
-uv tool install "git+https://github.com/ign24/spec-driven-research@v0.2.0"
+uv tool install "git+https://github.com/ign24/spec-driven-research@v0.3.0"
 sdr --help
 ```
 
@@ -111,7 +111,7 @@ an install that cannot change under you, pin the full commit SHA the tag points
 at:
 
 ```bash
-REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.2.0 | cut -f1)
+REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.3.0 | cut -f1)
 uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
 ```
 

@@ -108,7 +108,7 @@ paquetes: SDR no se publica en PyPI y no se puede instalar desde un índice. La
 ruta admitida instala el repositorio canónico en una revisión explícita:
 
 ```bash
-uv tool install "git+https://github.com/ign24/spec-driven-research@v0.2.0"
+uv tool install "git+https://github.com/ign24/spec-driven-research@v0.3.0"
 sdr --help
 ```
 
@@ -118,7 +118,7 @@ moverse; para una instalación que no pueda cambiar sin aviso, fija el SHA
 completo al que apunta el tag:
 
 ```bash
-REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.2.0 | cut -f1)
+REVISION=$(git ls-remote https://github.com/ign24/spec-driven-research v0.3.0 | cut -f1)
 uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
 ```
 

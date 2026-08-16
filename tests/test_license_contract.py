@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from sdr import __version__
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MIT_LICENSE = """MIT License
 
@@ -104,8 +106,6 @@ def test_sdist_metadata_and_license_payload_are_mit(
     "relative_path",
     [
         "openspec/specs/public-repository-boundary/spec.md",
-        "openspec/changes/release-hardening-and-public-distribution/design.md",
-        "openspec/changes/release-hardening-and-public-distribution/specs/public-repository-boundary/spec.md",
         "openspec/changes/archive/2026-08-02-switch-license-to-mit/specs/public-repository-boundary/spec.md",
     ],
 )
@@ -126,13 +126,13 @@ def test_bilingual_readmes_identify_mit() -> None:
     assert "[Licencia MIT](LICENSE)" in spanish
 
 
-def test_unreleased_changelog_records_relicensing_without_revoking_historical_grants() -> None:
+def test_changelog_records_relicensing_without_revoking_historical_grants() -> None:
     changelog = (PROJECT_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = changelog.split("## [Unreleased]", 1)[1].split("## [0.1.0]", 1)[0]
+    since_relicensing = changelog.split(f"## [{__version__}]", 1)[1].split("## [0.1.0]", 1)[0]
 
-    assert "Current and future distributions are licensed under MIT" in unreleased
-    assert "historical Apache-2.0 grants are not revoked" in unreleased
-    assert "legal advice" not in unreleased.lower()
+    assert "Current and future distributions are licensed under MIT" in since_relicensing
+    assert "historical Apache-2.0 grants are not revoked" in since_relicensing
+    assert "legal advice" not in since_relicensing.lower()
 
 
 def test_current_public_license_claims_do_not_identify_apache() -> None:
@@ -142,8 +142,6 @@ def test_current_public_license_claims_do_not_identify_apache() -> None:
         "README.md",
         "README.es.md",
         "openspec/specs/public-repository-boundary/spec.md",
-        "openspec/changes/release-hardening-and-public-distribution/design.md",
-        "openspec/changes/release-hardening-and-public-distribution/specs/public-repository-boundary/spec.md",
     ]
     combined = "\n".join(
         (PROJECT_ROOT / path).read_text(encoding="utf-8") for path in current_claims
