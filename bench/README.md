@@ -86,9 +86,10 @@ Optional keys:
 At least one item must declare an empty `planted_defects` list. Clean items are what make false
 positives measurable.
 
-Note bodies use the section headings the artifact contract enforces today, including the Spanish
-headings in `src/sdr/schema.py`, `src/sdr/gates.py`, and the packaged templates. The corpus
-tracks the contract as it is, not as it might be translated later.
+Note bodies use the section headings the artifact contract enforces today: the English headings
+declared once in `src/sdr/schema.py`, which `src/sdr/gates.py` and the packaged templates both
+resolve from. The corpus tracks the contract as it is, so a change to that declaration is a
+corpus change.
 
 ### Closed planted-defect vocabulary
 
@@ -406,7 +407,7 @@ control vocabulary (`structural`, `evidential`, `textual-anchoring`, `executable
 `hash-consistency`, `human-approval`), claims closed through `resolve-claim` counted separately
 from claims that passed anchoring.
 
-**Unmapped gate failures.** `lifecycle.py` composes its blocked reason as free Spanish prose. The
+**Unmapped gate failures.** `lifecycle.py` composes its blocked reason as free English prose. The
 harness maps that prose to a control through an explicit table and routes anything unmatched, or
 anything matching more than one control, to `unmapped` rather than guessing. Every unmapped entry
 is printed in full with its item, arm, repetition, and exit code. **A growing unmapped bucket is
