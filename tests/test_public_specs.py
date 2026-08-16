@@ -9,6 +9,7 @@ CAPABILITIES = {
     "agent-integrations",
     "cross-investigation-reuse",
     "github-installation",
+    "product-language",
     "public-documentation",
     "release-quality-and-security",
     "research-evaluation-harness",

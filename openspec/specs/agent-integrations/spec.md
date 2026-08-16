@@ -95,3 +95,32 @@ declared validation status.
 #### Scenario: An adapter states its own routing conditions
 - **WHEN** an adapter guide states routing conditions that differ from the canonical block
 - **THEN** integration validation identifies the adapter and fails
+
+### Requirement: Version-identifiable public acquisition
+The canonical skill set and supported adapters MUST be obtainable from a public target identified by SDR release version and immutable source revision or artifact digest. The installed `sdr integrations install --destination PATH` console command MUST be the primary package-resource installation interface so tool-isolated installations do not depend on ambient Python resolution. The `python -m sdr.integration_validation install` command MUST remain available for compatibility. Guidance MUST NOT require private paths, unpublished artifacts, or only a mutable default branch.
+
+#### Scenario: Acquire integrations for a released CLI
+- **WHEN** an operator selects a released SDR version
+- **THEN** public acquisition provides all canonical skills and adapter metadata for that version
+- **THEN** the operator can verify correspondence with the installed CLI
+
+#### Scenario: Acquisition is not version-identifiable
+- **WHEN** guidance references only a mutable, private, or unpublished source
+- **THEN** validation reports the contract incomplete and it is not represented as reproducible
+
+#### Scenario: Install integrations from an isolated tool environment
+- **WHEN** a user installs SDR with `uv tool install .` and runs the installed `sdr integrations install --destination PATH` command outside the source checkout
+- **THEN** all seven canonical skills are installed from package resources without relying on an ambient `python` command
+- **THEN** conflicts remain all-or-nothing and installation does not read `SDR_ROOT` or write agent configuration
+
+### Requirement: Distinct framework and research roots
+The integration contract MUST reserve `SDR_ROOT` for CLI research storage. Framework checkout, package resource, or acquisition locations MUST be described and passed separately and MUST NOT be called `SDR_ROOT`.
+
+#### Scenario: Install skills with a custom research root
+- **WHEN** an operator configures `SDR_ROOT` and installs skills from a separate acquisition
+- **THEN** installation reads only from the explicit acquisition source
+- **THEN** lifecycle artifacts remain under the configured research root
+
+#### Scenario: Instructions conflate roots
+- **WHEN** integration instructions use `SDR_ROOT` as framework source
+- **THEN** validation rejects the ambiguous public installation contract

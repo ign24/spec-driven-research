@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "recorded_on": "2026-08-15",
+  "recorded_on": "2026-08-16",
   "artifact": {
-    "package_version": "0.2.0",
-    "wheel_filename": "spec_driven_research-0.2.0-py3-none-any.whl",
-    "sha256": "a91a7d1f71a691de606c1e5d4cbc77ab5c0bf55421c12d3b1915a18421bd1305"
+    "package_version": "0.3.0",
+    "wheel_filename": "spec_driven_research-0.3.0-py3-none-any.whl",
+    "sha256": "192f68aa9caa27843eefb7f9d50cddcec1969049c0c1a07c0e13c52359de7359"
   },
   "environment": {
     "isolation": "env-i",

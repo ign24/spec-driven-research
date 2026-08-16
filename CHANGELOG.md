@@ -6,7 +6,7 @@ Changelog, and releases use semantic versioning.
 This file records releases; it is not the package version source of truth. The
 single source of truth is `src/sdr/__init__.py`.
 
-## [Unreleased]
+## [0.3.0] - 2026-08-16
 
 ### Changed
 
@@ -55,6 +55,16 @@ single source of truth is `src/sdr/__init__.py`.
   states and assert against what the product actually returns.
 - `cross_investigation` matched a consistency issue by its Spanish prefix. The
   prefix is now derived from `lifecycle`, so it cannot silently stop matching.
+
+### Removed
+
+- The `release-hardening-and-public-distribution` change directory. 0.2.0
+  recorded it as withdrawn but left its files in `openspec/changes/`, where it
+  read as active work and its unstarted sections implied a package-index release
+  the project does not intend. Its only completed section specified the shipped
+  `sdr integrations install --destination PATH` command and the separation of
+  `SDR_ROOT` from framework source; those two requirements now live in the
+  `agent-integrations` specification instead of only inside a withdrawn change.
 
 ## [0.2.0] - 2026-08-14
 
