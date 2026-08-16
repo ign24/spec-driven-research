@@ -84,6 +84,20 @@ languages to document the same set of installation routes and to reference the
 same agent routing conditions, reporting the language that claims a route or
 states a condition its counterpart does not.
 
+`sdr.product_language` validates that the product surface is English. It scans the
+string literals of `src/sdr/**/*.py` and every file under `src/sdr/templates/`,
+which together are what a user reads from the installed tool, and reports each
+Spanish marker with its file and line. It keys on the Spanish-specific characters
+and on a closed list of Spanish function words that are not English words, so it
+is conservative by construction: it will not catch English-looking Spanish and it
+will not misread English prose. It is deterministic and never consults the
+network. Documentation translations are excluded by path, not by heuristic:
+`README.es.md`, `docs/*.es.md`, and anything under `openspec/changes/archive/`.
+`src/sdr/readme_parity.py` and `src/sdr/product_language.py` are excluded for the
+same reason, because both carry Spanish markers as validation data rather than as
+text addressed to a user. Spanish remains a documentation translation; the tool
+offers no runtime language selection.
+
 `sdr.integration_validation` compares every published copy of the canonical
 agent routing block with its package resource and reports a divergent adapter by
 name. It also rejects a block that states only selecting conditions without
@@ -105,6 +119,7 @@ Then run the broader documentation and repository checks:
 ```bash
 uv run python -m sdr.skill_validation .
 uv run python -m sdr.integration_validation validate .
+uv run python -m sdr.product_language .
 npm install --global @fission-ai/openspec@1.2.0
 openspec validate --specs --strict --no-interactive
 go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7

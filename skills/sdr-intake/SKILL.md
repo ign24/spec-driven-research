@@ -23,13 +23,13 @@ decision memo, or assets.
 
 Preserve the current template structure and its Spanish artifact headings:
 
-- `Pregunta`: a falsifiable research question.
-- `Hipótesis`: the tentative answer to test.
-- `Contexto`: why the investigation matters.
-- `Alcance`: explicit in-scope and out-of-scope boundaries.
-- `Criterios de evaluación`: at least two stable IDs (`C1`, `C2`, ...), each with
+- `Question`: a falsifiable research question.
+- `Hypothesis`: the tentative answer to test.
+- `Context`: why the investigation matters.
+- `Scope`: explicit in-scope and out-of-scope boundaries.
+- `Evaluation criteria`: at least two stable IDs (`C1`, `C2`, ...), each with
   a measurable threshold, unit, and verification method.
-- `Riesgos de adopción`: cost, maturity, lock-in, compliance, and team risks as
+- `Adoption risks`: cost, maturity, lock-in, compliance, and team risks as
   applicable.
 
 ## Reach a green gate

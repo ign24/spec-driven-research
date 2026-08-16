@@ -3,24 +3,24 @@ research: synthetic-light
 date: 2026-07-01
 stage: transfer
 ring: assess
-audience: equipo de capacitación
+audience: training team
 evidence_claim_ids: []
 ---
 
-## Recomendación
-En el contexto del ejercicio de tarjetas, decidimos evaluar primero las reglas ordenadas para lograr una comparación reproducible de C1 y C2, porque la exploración cubre las alternativas previstas, aceptando el trade-off de no extrapolar resultados sintéticos.
+## Recommendation
+In the context of the card exercise, we decide to evaluate the ordered rules first to achieve a reproducible comparison of C1 and C2, because the exploration covers the anticipated alternatives, accepting the trade-off of not extrapolating synthetic results.
 
-## Alternativas evaluadas
-Reglas ordenadas y tabla de decisión.
+## Alternatives evaluated
+Ordered rules and a decision table.
 
-## Criterios de selección
-C1 exige trazabilidad y C2 limita la recomendación a assess.
+## Selection criteria
+C1 demands traceability and C2 limits the recommendation to the assess ring.
 
-## Riesgos y limitaciones
-No se infiere comportamiento sobre datos reales ni sobre operación productiva.
+## Risks and limitations
+No behaviour is inferred about real data or about production operation.
 
-## Próximos pasos
-Repetir el ejercicio con un conjunto sintético adicional antes de considerar un probe.
+## Next steps
+Repeat the exercise with one additional synthetic set before considering a probe.
 
-## Audiencia
-Equipo ficticio de capacitación.
+## Audience
+Fictional training team.

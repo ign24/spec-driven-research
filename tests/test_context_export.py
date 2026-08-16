@@ -24,7 +24,7 @@ def _sample_graph() -> ContextGraph:
             GraphNode(
                 id="decision:recommendation",
                 type="decision",
-                title="Recomendación",
+                title="Recommendation",
                 source_files=("decision-memo.md",),
                 metadata={"ring": "trial"},
             ),
@@ -256,7 +256,7 @@ def test_export_rejects_context_symlink_escape(tmp_path):
     outside.mkdir()
     (root / "context").symlink_to(outside, target_is_directory=True)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         export_context_graph(_sample_graph(), root, "mermaid")
 
     assert not (outside / "context.mmd").exists()

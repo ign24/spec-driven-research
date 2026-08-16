@@ -1,4 +1,4 @@
-"""Ejecución reproducible y confinada de la etapa probe."""
+"""Reproducible, confined execution of the probe stage."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class ProbeVerifyResult:
 
     @property
     def command(self) -> str:
-        """Representación legible; la ejecución usa siempre ``argv``."""
+        """Readable representation; execution always uses ``argv``."""
         return shlex.join(self.argv)
 
     def to_dict(self) -> dict[str, object]:
@@ -65,14 +65,14 @@ class ProbeVerifyResult:
 
 
 def verify_probe(research: Research, *, timeout: float = 300) -> ProbeVerifyResult:
-    """Ejecuta una acción ``run`` sin shell, confinada al directorio probe/."""
+    """Run a ``run`` action without a shell, confined to the probe/ directory."""
     verify = _verify_config(research)
     argv = _argv(verify)
     expect = str(verify["expect"])
     environment = str(verify.get("environment") or "clean")
     cwd = research.artifact_path("probe").resolve()
     if timeout <= 0:
-        raise ValueError("verify-probe requiere un timeout mayor que cero")
+        raise ValueError("verify-probe requires a timeout greater than zero")
 
     process: subprocess.Popen[bytes] | None = None
     output = ""
@@ -107,7 +107,7 @@ def verify_probe(research: Research, *, timeout: float = 300) -> ProbeVerifyResu
         except subprocess.TimeoutExpired:
             timed_out = True
             error_code = "timeout"
-            error = f"el comando excedió el timeout de {timeout:g}s"
+            error = f"the command exceeded the timeout of {timeout:g}s"
             _terminate_process_tree(process)
             process.wait()
         reader.join()
@@ -119,15 +119,15 @@ def verify_probe(research: Research, *, timeout: float = 300) -> ProbeVerifyResu
             output += f"\ntimeout {timeout:g}s"
     except FileNotFoundError as exc:
         error_code = "command_not_found"
-        error = f"no se encontró el ejecutable: {argv[0]}"
+        error = f"executable not found: {argv[0]}"
         output = str(exc)
     except PermissionError as exc:
         error_code = "permission_denied"
-        error = f"no se puede ejecutar: {argv[0]}"
+        error = f"cannot execute: {argv[0]}"
         output = str(exc)
     except OSError as exc:
         error_code = "spawn_error"
-        error = f"no se pudo iniciar el comando: {exc}"
+        error = f"could not start the command: {exc}"
         output = str(exc)
 
     matches = False
@@ -136,7 +136,7 @@ def verify_probe(research: Research, *, timeout: float = 300) -> ProbeVerifyResu
             matches = expect in output or re.search(expect, output, flags=re.MULTILINE) is not None
         except re.error as exc:
             error_code = "invalid_expect"
-            error = f"verify.expect no es una expresión regular válida: {exc}"
+            error = f"verify.expect is not a valid regular expression: {exc}"
     passed = exit_code == 0 and matches and error_code is None
     probe_hash = hash_probe_dir(research)
     result = ProbeVerifyResult(
@@ -159,7 +159,7 @@ def verify_probe(research: Research, *, timeout: float = 300) -> ProbeVerifyResu
 
 
 def hash_probe_dir(research: Research) -> str:
-    """Hash estable del contenido versionable de probe/."""
+    """Stable hash of the versionable contents of probe/."""
     digest = hashlib.sha256()
     probe_dir = research.artifact_path("probe")
     for path in sorted(probe_dir.rglob("*")) if probe_dir.is_dir() else []:
@@ -172,19 +172,19 @@ def hash_probe_dir(research: Research) -> str:
 def _verify_config(research: Research) -> dict[str, Any]:
     path = research.artifact_path("probe/results.md")
     if not path.exists():
-        raise ValueError("falta probe/results.md")
+        raise ValueError("missing probe/results.md")
     verify = parse_artifact(path).frontmatter.get("verify") or {}
     if not isinstance(verify, dict):
-        raise ValueError("verify debe ser un objeto en probe/results.md")
+        raise ValueError("verify must be an object in probe/results.md")
     if verify.get("action") != "run":
-        raise ValueError("verify.action debe declarar explícitamente 'run'")
+        raise ValueError("verify.action must explicitly declare 'run'")
     if not verify.get("expect"):
-        raise ValueError("falta verify.expect en probe/results.md")
+        raise ValueError("missing verify.expect in probe/results.md")
     if bool(verify.get("argv")) == bool(verify.get("command")):
-        raise ValueError("verify debe declarar exactamente uno de argv o command")
+        raise ValueError("verify must declare exactly one of argv or command")
     environment = verify.get("environment") or "clean"
     if environment not in {"clean", "inherit"}:
-        raise ValueError("verify.environment debe ser 'clean' o 'inherit'")
+        raise ValueError("verify.environment must be 'clean' or 'inherit'")
     return verify
 
 
@@ -196,17 +196,17 @@ def _argv(verify: dict[str, Any]) -> list[str]:
             or not value
             or not all(isinstance(arg, str) for arg in value)
         ):
-            raise ValueError("verify.argv debe ser una lista no vacía de strings")
+            raise ValueError("verify.argv must be a non-empty list of strings")
         argv = list(value)
     else:
         try:
             argv = shlex.split(str(verify["command"]), posix=os.name != "nt")
         except ValueError as exc:
-            raise ValueError(f"verify.command legacy no se puede tokenizar: {exc}") from exc
+            raise ValueError(f"legacy verify.command cannot be tokenized: {exc}") from exc
         if not argv:
-            raise ValueError("verify.command legacy no puede estar vacío")
+            raise ValueError("legacy verify.command cannot be empty")
     if any("\0" in arg for arg in argv):
-        raise ValueError("verify argv no admite bytes NUL")
+        raise ValueError("verify argv does not accept NUL bytes")
     return argv
 
 
@@ -230,7 +230,7 @@ def _capture_output(stream: BinaryIO | None, captured: bytearray, state: dict[st
 
 
 def _terminate_process_tree(process: subprocess.Popen[bytes]) -> None:
-    """Termina el grupo creado para la acción y evita descendientes huérfanos."""
+    """Terminate the group created for the action and avoid orphaned descendants."""
     if os.name == "nt":
         subprocess.run(
             ["taskkill", "/PID", str(process.pid), "/T", "/F"],

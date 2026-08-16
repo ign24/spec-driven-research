@@ -87,23 +87,23 @@ artifacts:
     timebox: 2
     ---
 
-    ## Pregunta
+    ## Question
     ¿Un analizador de un solo recorrido mejora el tiempo de análisis de registros inventados?
 
-    ## Hipótesis
+    ## Hypothesis
     Un solo recorrido reducirá el tiempo de análisis frente a un analizador de dos pasadas.
 
-    ## Contexto
+    ## Context
     El escenario es inventado y no describe ningún producto ni ninguna medición real.
 
-    ## Alcance
+    ## Scope
     Incluye dos analizadores inventados. No incluye formatos reales, red ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: cada afirmación cuantitativa se apoya en una fuente citada.
     - C2: cada alternativa declara al menos una fuente de primera mano.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Una mejora cuantitativa sin respaldo en la fuente citada puede propagarse al memo.
   unanchored-claim-parser-metrics/notes/landscape.md: |
     ---
@@ -123,19 +123,19 @@ artifacts:
         alternative: analizador-de-registros
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Se comparan un analizador de un solo recorrido y uno de dos pasadas [cf. S1].
 
-    ## Madurez
+    ## Maturity
     El analizador reduce a la mitad el tiempo de análisis en cargas mixtas [S1].
 
-    ## Costos
+    ## Costs
     El analizador de dos pasadas separa la validación del cálculo [S2].
 
-    ## Riesgos
+    ## Risks
     Adoptar una cifra sin respaldo documental puede sesgar la comparación completa.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     La documentación consultada no publica tiempos por tipo de carga [cf. S1].
   unanchored-claim-parser-metrics/decision-memo.md: |
     ---
@@ -148,25 +148,25 @@ artifacts:
       - claim-93ab6a0a3d56dd00a7a40de056c8decdb79d5dcae3ed33d6b250607cfffe0f1f
     ---
 
-    ## Recomendación
-    En el contexto de los analizadores inventados, ante una cifra de mejora sin respaldo,
-    decidimos evaluar el analizador de un solo recorrido para lograr una comparación
-    honesta, porque la evidencia citada no sostiene la mejora declarada, aceptando el
-    trade-off de posponer cualquier afirmación cuantitativa.
+    ## Recommendation
+    In the context of the invented parsers, faced with an improvement figure that has no
+    backing, we decided to assess the single-pass parser to obtain an honest comparison,
+    because the cited evidence does not support the declared improvement, accepting the
+    trade-off of postponing any quantitative claim.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Analizador de un solo recorrido y analizador de dos pasadas.
 
-    ## Criterios de selección
+    ## Selection criteria
     Respaldo documental de cada cifra y disponibilidad de fuentes de primera mano.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     La cifra de mejora del cincuenta por ciento no aparece en ninguna fuente citada.
 
-    ## Próximos pasos
+    ## Next steps
     Medir el tiempo de análisis con un probe propio antes de repetir la cifra.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de plataforma interna.
   unanchored-claim-parser-metrics/assets/playbook.md: |
     ---

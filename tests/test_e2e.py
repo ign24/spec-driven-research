@@ -57,12 +57,12 @@ def test_full_cycle_reaches_done(tmp_path):
     _write(
         r.artifact_path("brief.md"),
         "---\nresearch: eval-rag\ndate: 2026-07-03\nstage: intake\nowner: nacho\ntimebox: 5\n---\n\n"
-        "## Pregunta\n¿RAG agentico mejora la resolucion de soporte?\n\n"
-        "## Hipótesis\nCreemos que sube la precision.\n\n"
-        "## Contexto\nSoporte con alto volumen.\n\n"
-        "## Alcance\nIncluye RAG. No incluye fine-tuning.\n\n"
-        "## Criterios de evaluación\n- C1: precision > 0.8\n- C2: latencia < 2s\n\n"
-        "## Riesgos de adopción\nCosto de indexado.\n",
+        "## Question\n¿RAG agentico mejora la resolucion de soporte?\n\n"
+        "## Hypothesis\nCreemos que sube la precision.\n\n"
+        "## Context\nSoporte con alto volumen.\n\n"
+        "## Scope\nIncluye RAG. No incluye fine-tuning.\n\n"
+        "## Evaluation criteria\n- C1: precision > 0.8\n- C2: latencia < 2s\n\n"
+        "## Adoption risks\nCosto de indexado.\n",
     )
     res = lifecycle.advance(r)
     assert res.ok and r.meta.stage == "explore", res.blocked_reason
@@ -77,9 +77,9 @@ def test_full_cycle_reaches_done(tmp_path):
         "  - id: S3\n    url: https://docs.search.dev/guide\n    tier: T1\n    date: 2026-01-01\n    alternative: rag-clasico\n"
         "  - id: S4\n    url: https://bench.other.example/rag\n    tier: T2\n    date: 2026-02-01\n    alternative: rag-clasico\n"
         "---\n\n"
-        "## Alternativas evaluadas\nRAG clasico vs agentico [S1].\n\n"
-        "## Madurez\nEstable [S3].\n\n## Costos\nModerado [S2].\n\n## Riesgos\nDrift de indice.\n\n"
-        "## Contra-evidencia\nSe buscaron benchmarks negativos y no aparecieron señales fuertes [S4].\n",
+        "## Alternatives evaluated\nRAG clasico vs agentico [S1].\n\n"
+        "## Maturity\nEstable [S3].\n\n## Costs\nModerado [S2].\n\n## Risks\nDrift de indice.\n\n"
+        "## Counter-evidence\nSe buscaron benchmarks negativos y no aparecieron señales fuertes [S4].\n",
     )
     snapshots = {
         "S1": "RAG clasico vs agentico.",
@@ -110,11 +110,11 @@ def test_full_cycle_reaches_done(tmp_path):
     _write(
         r.artifact_path("probe/results.md"),
         f"---\nresearch: eval-rag\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  argv: {json.dumps([sys.executable, 'bench.py'])}\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\n"
+        "## Results by criterion\n"
         "| criterio | resultado | evidencia |\n|---|---|---|\n"
         "| C1 | cumple, precision 0.86 | `probe/metrics.json` |\n"
         "| C2 | cumple, 1.4s | `probe/metrics.json` |\n\n"
-        "## Reproducción\n```bash\npython bench.py\n```\n",
+        "## Reproduction\n```bash\npython bench.py\n```\n",
     )
     verify = probe_verify.verify_probe(r, timeout=5)
     assert verify.passed
@@ -133,20 +133,20 @@ def test_full_cycle_reaches_done(tmp_path):
         "---\nresearch: eval-rag\ndate: 2026-07-03\nstage: transfer\nring: trial\naudience: equipo\n"
         f"evidence_claim_ids:\n{evidence_claim_ids}"
         "---\n\n"
-        "## Recomendación\nEn el contexto de soporte, ante el volumen, decidimos pilotar RAG "
-        "agentico para lograr mejor precision, porque la prueba cumplió C1 y C2, "
-        "aceptando mayor costo de indexado.\n\n"
-        "## Alternativas evaluadas\nRAG clasico, fine-tuning.\n\n"
-        "## Criterios de selección\nPrecision y latencia.\n\n"
-        "## Riesgos y limitaciones\nCosto, drift.\n\n"
-        "## Próximos pasos\nPiloto 2 semanas.\n\n"
-        "## Audiencia\nEquipo tecnico y direccion.\n",
+        "## Recommendation\nIn the context of support, facing the volume, we decide to pilot "
+        "agentic RAG to achieve better precision, because the probe met C1 and C2, "
+        "accepting a higher indexing cost.\n\n"
+        "## Alternatives evaluated\nClassic RAG, fine-tuning.\n\n"
+        "## Selection criteria\nPrecision and latency.\n\n"
+        "## Risks and limitations\nCosto, drift.\n\n"
+        "## Next steps\nPiloto 2 semanas.\n\n"
+        "## Audience\nEquipo tecnico y direccion.\n",
     )
-    # Sin aprobación: bloquea.
+    # Without approval: blocked.
     blocked = lifecycle.advance(r)
-    assert not blocked.ok and "aprob" in blocked.blocked_reason.lower()
+    assert not blocked.ok and "approval" in blocked.blocked_reason.lower()
 
-    # Con aprobación humana: avanza a reuse.
+    # With human approval: advances to reuse.
     r.meta.approval = Approval(by="nacho", date="2026-07-03")
     r.save()
     res = lifecycle.advance(r)

@@ -26,11 +26,11 @@ def test_judge_tombstone_is_actionable_and_does_not_echo_deprecated_values(run, 
     result = run("judge", "legacy-slug", "--stage", "explore", "--json")
 
     assert result.exit_code != 0
-    assert "retirado" in result.output.lower()
+    assert "retired" in result.output.lower()
     assert "verify-claims" in result.output
     assert "resolve-claim" in result.output
     assert secret not in result.output
-    assert "no existe la investigación" not in result.output
+    assert "does not exist" not in result.output
 
 
 def test_doctor_is_general_and_reports_only_deprecated_variable_names(run, monkeypatch):

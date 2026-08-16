@@ -1,4 +1,4 @@
-"""Extracción determinista de referencias y claims factuales en Markdown."""
+"""Deterministic extraction of references and factual claims from Markdown."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ _DEFAULT_NOTE_PATH = "notes/unknown.md"
 
 @dataclass(frozen=True)
 class Reference:
-    """Referencia factual o contextual encontrada en prosa Markdown."""
+    """Factual or contextual reference found in Markdown prose."""
 
     marker: str
     source_id: str
@@ -39,7 +39,7 @@ class Reference:
 
 @dataclass(frozen=True)
 class Claim:
-    """Claim fáctico citado contra una fuente."""
+    """Factual claim cited against a source."""
 
     id: str
     text: str
@@ -51,7 +51,7 @@ class Claim:
 
 
 def extract_references(markdown: str) -> list[Reference]:
-    """Clasifica referencias de la prosa, excluyendo frontmatter y código Markdown."""
+    """Classify references in the prose, excluding frontmatter and Markdown code."""
     prose = _mask_non_prose(markdown)
     matches = [
         (*match.span(), match.group(), False, match.group("number"))
@@ -76,10 +76,10 @@ def extract_references(markdown: str) -> list[Reference]:
 
 
 def extract_claims(markdown: str, note_path: str = _DEFAULT_NOTE_PATH) -> list[Claim]:
-    """Extrae un claim por oración con un único marcador factual `[S<n>]`.
+    """Extract one claim per sentence carrying a single factual `[S<n>]` marker.
 
-    Los consumidores que persistan identidad deben pasar el Markdown completo y
-    su `note_path`; así los rangos absolutos y los IDs coinciden entre etapas.
+    Consumers that persist identity must pass the complete Markdown and its
+    `note_path`, so that absolute ranges and IDs match across stages.
     """
     prose = _mask_non_prose(markdown)
     references = extract_references(markdown)
@@ -94,14 +94,12 @@ def extract_claims(markdown: str, note_path: str = _DEFAULT_NOTE_PATH) -> list[C
         if len(factual) > 1:
             markers = ", ".join(ref.marker for ref in factual)
             location = (
-                f"línea {line_start}"
-                if line_start == line_end
-                else f"líneas {line_start}-{line_end}"
+                f"line {line_start}" if line_start == line_end else f"lines {line_start}-{line_end}"
             )
             raise ValueError(
-                f"{note_path}: {location}: la oración contiene múltiples referencias "
-                f"factuales ({markers}); divida la oración para dejar una referencia factual "
-                "por oración"
+                f"{note_path}: {location}: the sentence contains multiple factual "
+                f"references ({markers}); split the sentence to leave one factual reference "
+                "per sentence"
             )
         text = _clean_claim_text(prose[start:end], sentence_references, start)
         source_id = factual[0].source_id
@@ -163,7 +161,7 @@ def _mask_non_prose(markdown: str) -> str:
         for match in pattern.finditer(current):
             start, end = match.span()
             if pattern is _LINK_DESTINATION_RE:
-                start += 1  # Conserva `]`, que pertenece al texto visible.
+                start += 1  # Keep `]`, which belongs to the visible text.
             _mask_span(chars, start, end)
     return "".join(chars)
 

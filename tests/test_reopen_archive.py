@@ -86,22 +86,22 @@ def _finished(tmp_path):
             audience: equipo
             ---
 
-            ## Recomendación
-            En el contexto de X decidimos pilotar Foo para lograr Y, aceptando Z.
+            ## Recommendation
+            In the context of X we decide to pilot Foo to achieve Y, because the evidence supports it, accepting Z.
 
-            ## Alternativas evaluadas
+            ## Alternatives evaluated
             Foo, Bar.
 
-            ## Criterios de selección
+            ## Selection criteria
             Costo.
 
-            ## Riesgos y limitaciones
+            ## Risks and limitations
             Lock-in.
 
-            ## Próximos pasos
+            ## Next steps
             Piloto.
 
-            ## Audiencia
+            ## Audience
             Equipo.
             """
         ).lstrip(),
@@ -109,7 +109,7 @@ def _finished(tmp_path):
     )
     r.artifact_path("probe/results.md").write_text(
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\n---\n\n"
-        "## Resultados por criterio\n- C1: cumple\n\n## Reproducción\n```bash\nx\n```\n",
+        "## Results by criterion\n- C1: cumple\n\n## Reproduction\n```bash\nx\n```\n",
         encoding="utf-8",
     )
     return r
@@ -121,7 +121,7 @@ def test_archive_writes_knowledge_synthesis(tmp_path):
     path = archive.archive_research(r, knowledge_dir)
     assert path == knowledge_dir / "eval-foo.md"
     text = path.read_text(encoding="utf-8")
-    assert "decidimos pilotar Foo" in text  # recomendación
+    assert "we decide to pilot Foo" in text  # recommendation
     assert "trial" in text  # ring
     assert "C1" in text  # resultados por criterio
     assert "research/eval-foo" in text  # enlace a evidencia
@@ -142,7 +142,7 @@ def test_archive_rejects_output_symlink_escape(tmp_path):
     outside.write_text("keep", encoding="utf-8")
     (knowledge_dir / "eval-foo.md").symlink_to(outside)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         archive.archive_research(research, knowledge_dir)
 
     assert outside.read_text(encoding="utf-8") == "keep"
@@ -220,7 +220,7 @@ def test_archive_reports_deterministic_claim_states(tmp_path):
     path = archive.archive_research(r, tmp_path / "knowledge")
     text = path.read_text(encoding="utf-8")
 
-    assert "## Estado de claims" in text
+    assert "## Claim states" in text
     assert "verified: 1" in text
     assert "human_reviewed: 1" in text
 
@@ -264,7 +264,7 @@ def test_archive_rejects_stale_claim_ledger_after_snapshot_changes(tmp_path):
     verification.verify_explore_claims(r)
     source.joinpath("content.md").write_text("Contenido reemplazado.", encoding="utf-8")
 
-    with pytest.raises(ValueError, match="ledger.*obsoleto"):
+    with pytest.raises(ValueError, match="ledger.*stale"):
         archive.archive_research(r, tmp_path / "knowledge")
 
 
@@ -283,7 +283,7 @@ def test_archive_rejects_empty_ledger_when_active_claims_exist(tmp_path):
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="ledger.*pendiente"):
+    with pytest.raises(ValueError, match="ledger.*pending"):
         archive.archive_research(r, tmp_path / "knowledge")
 
 
@@ -297,7 +297,7 @@ def test_archive_rejects_current_ledger_with_pending_claim(tmp_path):
     )
     verification.verify_explore_claims(r)
 
-    with pytest.raises(ValueError, match="ledger.*pendiente"):
+    with pytest.raises(ValueError, match="ledger.*pending"):
         archive.archive_research(r, tmp_path / "knowledge")
 
 

@@ -310,7 +310,7 @@ def test_deterministic_match_reports_only_local_textual_anchoring(tmp_path, monk
     assert structured.exit_code == 0
     assert human.exit_code == 0
     assert {item["confidence_scope"] for item in payload["items"]} == {"local_textual_anchoring"}
-    assert "anclaje textual local" in human.output.lower()
+    assert "local textual anchoring" in human.output.lower()
     for overclaim in (
         "publisher_identity",
         "authenticated_publisher",
@@ -364,10 +364,10 @@ def test_human_reviewed_cli_reports_scoped_review_without_claiming_textual_match
     result = CliRunner().invoke(main, ["verify-claims", "eval-foo"], catch_exceptions=False)
 
     assert result.exit_code == 0
-    assert "[OK] verificación de claims" in result.output
-    assert "revisión humana acotada" in result.output
-    assert "[OK] anclaje textual local" not in result.output
-    assert "anclaje textual local" not in result.output
+    assert "[OK] claim verification" in result.output
+    assert "bounded human review" in result.output
+    assert "[OK] local textual anchoring" not in result.output
+    assert "local textual anchoring" not in result.output
 
 
 def test_unverifiable_cli_does_not_label_the_report_as_textual_anchoring(tmp_path, monkeypatch):
@@ -378,9 +378,9 @@ def test_unverifiable_cli_does_not_label_the_report_as_textual_anchoring(tmp_pat
     result = CliRunner().invoke(main, ["verify-claims", "eval-foo"], catch_exceptions=False)
 
     assert result.exit_code == 1
-    assert "[FALLA] verificación de claims" in result.output
-    assert "evidencia no verificable" in result.output
-    assert "[OK] anclaje textual local" not in result.output
+    assert "[FAIL] claim verification" in result.output
+    assert "unverifiable evidence" in result.output
+    assert "[OK] local textual anchoring" not in result.output
 
 
 def test_verify_claims_cli_exits_nonzero_for_unverifiable(tmp_path, monkeypatch):
@@ -896,8 +896,8 @@ def test_resolve_claim_rejects_unknown_id_and_blank_actor_or_reason_without_chan
     path = research.artifact_path("notes/sources/verification.yaml")
 
     for candidate_id, reason, actor, message in (
-        ("claim-does-not-exist", "revisado", "nacho", "no existe"),
-        (claim_id, "   ", "nacho", "motivo"),
+        ("claim-does-not-exist", "revisado", "nacho", "does not exist"),
+        (claim_id, "   ", "nacho", "reason"),
         (claim_id, "revisado", "   ", "actor"),
     ):
         before = path.read_bytes()
@@ -992,7 +992,7 @@ def test_resolve_rejects_claim_removed_since_last_verification_without_changing_
     ledger_path = research.artifact_path("notes/sources/verification.yaml")
     before = ledger_path.read_bytes()
 
-    with pytest.raises(ValueError, match="no existe|vigente"):
+    with pytest.raises(ValueError, match="does not exist|current"):
         verification.resolve_claim(research, claim_id, reason="revisado", by="nacho")
 
     assert ledger_path.read_bytes() == before
@@ -1074,7 +1074,7 @@ def test_resolve_rejects_duplicate_active_resolutions_without_changing_bytes(tmp
     path.write_text(yaml.safe_dump(ledger, sort_keys=False), encoding="utf-8")
     before = path.read_bytes()
 
-    with pytest.raises(ValueError, match="duplicad"):
+    with pytest.raises(ValueError, match="duplicate active resolutions"):
         verification.resolve_claim(research, item.claim_id, reason="tercera", by="tres")
 
     assert path.read_bytes() == before
@@ -1102,7 +1102,7 @@ def test_verify_rejects_duplicate_active_resolutions_without_last_wins_or_write(
     path.write_text(yaml.safe_dump(ledger, sort_keys=False), encoding="utf-8")
     before = path.read_bytes()
 
-    with pytest.raises(ValueError, match="duplicad"):
+    with pytest.raises(ValueError, match="duplicate active resolutions"):
         verification.verify_explore_claims(research)
 
     assert path.read_bytes() == before

@@ -5,21 +5,21 @@ stage: intake
 timebox: 1
 ---
 
-## Pregunta
-¿El brief declara todos sus metadatos?
+## Question
+Does the brief declare all of its metadata?
 
-## Hipótesis
-El gate detectará el campo omitido.
+## Hypothesis
+The gate will detect the omitted field.
 
-## Contexto
-Fixture sintético de onboarding.
+## Context
+Synthetic onboarding fixture.
 
-## Alcance
-Incluye solo estructura. No incluye una investigación real.
+## Scope
+Covers structure only. Does not cover a real investigation.
 
-## Criterios de evaluación
-- C1: detectar owner ausente.
-- C2: mantener las secciones completas.
+## Evaluation criteria
+- C1: detect the missing owner.
+- C2: keep the sections complete.
 
-## Riesgos de adopción
-Ninguno; el caso es deliberadamente inválido.
+## Adoption risks
+None; the case is deliberately invalid.

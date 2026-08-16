@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -48,6 +49,27 @@ def _tree_state(root: Path) -> dict[str, tuple[int, bytes | None]]:
     }
 
 
+def test_version_reports_the_single_declared_version_source(run):
+    import sdr
+
+    pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    result = run("--version")
+
+    assert result.exit_code == 0
+    assert result.output == f"sdr, version {sdr.__version__}\n"
+    # `sdr.__version__` is the only declaration: the distribution metadata is
+    # derived from that same file rather than restating the number.
+    assert 'dynamic = ["version"]' in pyproject
+    assert '[tool.hatch.version]\npath = "src/sdr/__init__.py"' in pyproject
+
+
+def test_version_is_not_declared_a_second_time_in_the_cli(run):
+    source = (Path(__file__).parents[1] / "src" / "sdr" / "cli.py").read_text(encoding="utf-8")
+
+    assert "__version__" in source
+    assert not re.search(r"version\s*=\s*[\"']\d", source)
+
+
 def test_new_creates_structure_and_copies_brief(run):
     result = _new(run)
     assert result.exit_code == 0
@@ -89,14 +111,14 @@ def test_commands_reject_path_like_slugs_before_loading(run, tmp_path, slug):
     result = run("status", slug)
 
     assert result.exit_code != 0
-    assert "slug inválido" in result.output
+    assert "invalid slug" in result.output
     assert "secreta" not in result.output
 
 
 def _break_brief(run, slug="eval-foo"):
     # Un brief sin la sección de criterios: falla estructura y min criterios.
     (run.base / slug / "brief.md").write_text(
-        "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: intake\nowner: nacho\ntimebox: 3\n---\n\n## Pregunta\n¿Q?\n",
+        "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: intake\nowner: nacho\ntimebox: 3\n---\n\n## Question\n¿Q?\n",
         encoding="utf-8",
     )
 
@@ -124,9 +146,9 @@ def test_check_json_reports_offline_link_as_skipped_neutral_result(run):
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: explore\nsources:\n"
         "  - id: S1\n    url: https://docs.foo.dev/guide\n    tier: T1\n    date: 2026-07-03\n"
         "  - id: S2\n    url: https://bench.example.org/foo\n    tier: T2\n    date: 2026-07-03\n"
-        "---\n\n## Alternativas evaluadas\nFoo existe [S1].\n\n"
-        "## Madurez\nFoo es estable [S1].\n\n## Costos\nEl costo es bajo [S2].\n\n"
-        "## Riesgos\nLock-in [S2].\n\n## Contra-evidencia\nNinguna.\n",
+        "---\n\n## Alternatives evaluated\nFoo existe [S1].\n\n"
+        "## Maturity\nFoo es estable [S1].\n\n## Costs\nEl costo es bajo [S2].\n\n"
+        "## Risks\nLock-in [S2].\n\n## Counter-evidence\nNinguna.\n",
         encoding="utf-8",
     )
 
@@ -159,7 +181,7 @@ def test_snapshot_json_captures_declared_sources(run, monkeypatch):
         "sources:\n"
         "  - url: https://docs.foo.dev/guide\n    tier: T1\n    date: 2026-01-01\n"
         "---\n\n"
-        "## Alternativas evaluadas\nFoo [S1].\n",
+        "## Alternatives evaluated\nFoo [S1].\n",
         encoding="utf-8",
     )
 
@@ -195,7 +217,7 @@ def test_snapshot_human_output_shows_distinct_locations_and_ordered_redirects(ru
     note.write_text(
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: explore\nsources:\n"
         f"  - url: {declared_url}\n    tier: T1\n    date: 2026-01-01\n"
-        "---\n\n## Alternativas evaluadas\nFoo [S1].\n",
+        "---\n\n## Alternatives evaluated\nFoo [S1].\n",
         encoding="utf-8",
     )
     from sdr import snapshot
@@ -221,7 +243,7 @@ def test_snapshot_human_output_shows_distinct_locations_and_ordered_redirects(ru
     result = run("snapshot", "eval-foo")
 
     assert result.exit_code == 0
-    assert f"declarada: {declared_url}" in result.output
+    assert f"declared: {declared_url}" in result.output
     assert f"final: {final_url}" in result.output
     assert f"1. 302 {declared_url} -> {intermediate_url}" in result.output
     assert f"2. 301 {intermediate_url} -> {final_url}" in result.output
@@ -591,9 +613,9 @@ def test_representative_existing_verbs_preserve_output_exit_and_mutation_contrac
     assert _tree_state(run.base) != after_read_only_verbs
     assert (run.base / "INDEX.md").is_file()
     assert missing.exit_code == 1
-    assert "no existe la investigación" in missing.output
+    assert "does not exist" in missing.output
     assert index.exit_code == 0
-    assert index.output == f"índice regenerado: {run.base / 'INDEX.md'}\n"
+    assert index.output == f"index regenerated: {run.base / 'INDEX.md'}\n"
 
 
 def test_status_and_index_show_audit_markers(run):
@@ -609,14 +631,14 @@ def test_status_and_index_show_audit_markers(run):
     assert "override" in status.output
     assert "self-approved" in status.output
     assert index.exit_code == 0
-    assert "Auditoría" in (run.base / "INDEX.md").read_text(encoding="utf-8")
+    assert "Audit" in (run.base / "INDEX.md").read_text(encoding="utf-8")
 
 
 def test_judge_is_a_non_operational_migration_tombstone(run, monkeypatch):
     monkeypatch.setenv("SDR_JUDGE_PROVIDER", "must-not-be-resolved")
     result = run("judge", "eval-foo")
     assert result.exit_code == 1
-    assert "retirado" in result.output.lower()
+    assert "retired" in result.output.lower()
     assert "verify-claims" in result.output
     assert "resolve-claim" in result.output
     assert "must-not-be-resolved" not in result.output
@@ -628,12 +650,12 @@ def test_advance_ignores_invalid_judge_config_and_moves_stage(run, monkeypatch):
     monkeypatch.setenv("SDR_JUDGE_PROVIDER", "bogus")
     result = run("advance", "eval-foo", "--offline")
     assert result.exit_code == 0
-    assert "advertencia" not in result.output
-    assert "juez" not in result.output.lower()
+    assert "warning" not in result.output
+    assert "judge" not in result.output.lower()
     assert "traceback" not in result.output.lower()
 
     status = run("status", "eval-foo")
-    assert "etapa: explore" in status.output
+    assert "stage: explore" in status.output
 
 
 def test_advance_help_does_not_advertise_removed_override_flags(run):
@@ -735,10 +757,10 @@ def test_context_help_describes_an_auxiliary_derived_graph(run):
 
     assert result.exit_code == 0
     normalized = result.output.lower()
-    assert "auxiliar" in normalized
-    assert "no bloqueante" in normalized
-    assert "criterios, resultados y decisión" in normalized
-    assert "inventario global de fuentes" in normalized
+    assert "auxiliary" in normalized
+    assert "non-blocking" in normalized
+    assert "criteria, results and decision" in normalized
+    assert "global source inventory" in normalized
 
 
 def test_context_build_fails_for_missing_slug(run):
@@ -753,7 +775,7 @@ def test_context_inspect_reports_json_coverage_and_warnings(run):
     _new(run)
     (run.base / "eval-foo" / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: tiene resultado
 - C2: queda pendiente
@@ -762,7 +784,7 @@ def test_context_inspect_reports_json_coverage_and_warnings(run):
     )
     (run.base / "eval-foo" / "probe" / "results.md").write_text(
         """
-## Resultados por criterio
+## Results by criterion
 
 - C1: cumple - evidencia reproducible
 """.lstrip(),
@@ -798,7 +820,7 @@ def test_context_trace_criterion_reports_lineage_json(run):
     _new(run)
     (run.base / "eval-foo" / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: tiene resultado
 """.lstrip(),
@@ -806,7 +828,7 @@ def test_context_trace_criterion_reports_lineage_json(run):
     )
     (run.base / "eval-foo" / "probe" / "results.md").write_text(
         """
-## Resultados por criterio
+## Results by criterion
 
 - C1: cumple - evidencia reproducible
 """.lstrip(),
@@ -838,7 +860,7 @@ def test_context_check_warns_by_default_but_exits_zero(run):
     _new(run)
     (run.base / "eval-foo" / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: sin resultado todavía
 """.lstrip(),
@@ -858,7 +880,7 @@ def test_context_check_strict_fails_on_warnings(run):
     _new(run)
     (run.base / "eval-foo" / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: sin resultado todavía
 """.lstrip(),
@@ -902,13 +924,13 @@ def test_context_export_fails_without_context_json(run):
 def test_context_query_why_ring_and_lineage_report_json(run):
     _new(run)
     (run.base / "eval-foo" / "brief.md").write_text(
-        "## Criterios de evaluación\n\n- C1: métrica local\n", encoding="utf-8"
+        "## Evaluation criteria\n\n- C1: métrica local\n", encoding="utf-8"
     )
     (run.base / "eval-foo" / "probe" / "results.md").write_text(
-        "## Resultados por criterio\n\n- C1: no cumple - sin métricas locales\n", encoding="utf-8"
+        "## Results by criterion\n\n- C1: no cumple - sin métricas locales\n", encoding="utf-8"
     )
     (run.base / "eval-foo" / "decision-memo.md").write_text(
-        "---\nring: hold\n---\n\n## Recomendación\n\nNo avanzar.\n\n## Criterios\n\nC1 bloquea.\n",
+        "---\nring: hold\n---\n\n## Recommendation\n\nNo avanzar.\n\n## Criterios\n\nC1 bloquea.\n",
         encoding="utf-8",
     )
     assert run("context", "build", "eval-foo").exit_code == 0
@@ -946,7 +968,7 @@ def test_migrate_sets_schema_v2_and_reports_gaps(run, monkeypatch):
     note.write_text(
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: explore\nsources:\n"
         "  - url: https://docs.foo.dev/guide\n    tier: T1\n    date: 2026-01-01\n"
-        "---\n\n## Alternativas evaluadas\nFoo.\n",
+        "---\n\n## Alternatives evaluated\nFoo.\n",
         encoding="utf-8",
     )
     meta = run.base / "eval-foo" / "sdr.yaml"
@@ -978,8 +1000,8 @@ def test_migrate_sets_schema_v2_and_reports_gaps(run, monkeypatch):
 
     assert result.exit_code == 0
     assert "schema_version: 2" in meta.read_text(encoding="utf-8")
-    assert "Contra-evidencia" in result.output
-    assert f"declarada: {declared_url}" in result.output
+    assert "Counter-evidence" in result.output
+    assert f"declared: {declared_url}" in result.output
     assert f"final: {final_url}" in result.output
     assert f"1. 302 {declared_url} -> {final_url}" in result.output
     assert "independ" not in result.output.lower()
@@ -1001,5 +1023,5 @@ def test_resolve_claim_cli_reports_actionable_domain_error(run):
 
     assert result.exit_code != 0
     assert "claim-does-not-exist" in result.output
-    assert "no existe" in result.output
+    assert "does not exist" in result.output
     assert "traceback" not in result.output.lower()

@@ -6,7 +6,7 @@ type: template
 audience: internal
 ---
 
-# Lista de verificación sintética
+# Synthetic verification checklist
 
-- Confirmar que cada entrada es inventada.
-- Mantener la recomendación en assess sin evidencia ejecutable.
+- Confirm that every entry is invented.
+- Keep the recommendation in the assess ring without executable evidence.

@@ -458,7 +458,7 @@ Friction, scripted: no reopens in any arm. The light arm attributed 3 gate failu
 textual-anchoring and 10 claims passed anchoring; the full arm attributed 3 to executable and 6
 claims passed. No claim was closed through `resolve-claim`. Two blocked reasons landed in the
 `unmapped` bucket, both the same `approve` stage-guard message
-(`approve solo aplica en etapa transfer; ...`), which is a stage guard rather than a control
+(`approve only applies in the transfer stage; ...`), which is a stage guard rather than a control
 failure and has no control to attribute.
 
 Cost, scripted: baseline 0.014 s over 8 runs, light 14.207 s over 5 runs (mean 2.841 s), full
@@ -480,7 +480,7 @@ framework claims:
    control emits one. This is the one uncaught defect the documentation implies should be caught.
 2. **`unreachable-source`** (`unreachable-source-cache-warmer`, light). Not a control gap: the
    `links_resolve` check exists and is the right control, but offline it is skipped, never passed
-   (`omitido (--offline)` in the run record's `skipped_checks`). This is now scored
+   (`skipped (--offline)` in the run record's `skipped_checks`). This is now scored
    `not-exercised` rather than `missed`.
 3. **`inaccurate-source`** (`uncaught-inaccurate-source-throughput`, light) and
    **`unrepresentative-benchmark`** (`uncaught-unrepresentative-benchmark-queue`, full). Expected

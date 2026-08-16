@@ -22,8 +22,8 @@ Modify only files under `research/<slug>/probe/`; this includes test code, data,
 outputs, and `research/<slug>/probe/results.md`. Do not modify earlier or later
 stage artifacts or `sdr.yaml`.
 
-In `results.md`, preserve the Spanish headings `Resultados por criterio` and
-`Reproducción`. Report every criterion as `cumple`, `no cumple`, or `parcial`
+In `results.md`, preserve the Spanish headings `Results by criterion` and
+`Reproduction`. Report every criterion as `cumple`, `no cumple`, or `parcial`
 with evidence. Referenced probe artifacts must exist, and benchmark tables need
 an adjacent reproducible command. Declare current `verify.command` and
 `verify.expect` metadata.

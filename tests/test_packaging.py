@@ -155,4 +155,4 @@ def test_wheel_install_sdr_new_creates_brief(tmp_path):
 
     brief = research_root / "wheel-smoke-test" / "brief.md"
     assert brief.is_file()
-    assert "## Pregunta" in brief.read_text(encoding="utf-8")
+    assert "## Question" in brief.read_text(encoding="utf-8")

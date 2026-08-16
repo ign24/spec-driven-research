@@ -56,7 +56,7 @@ def test_fetch_http_rejects_hostname_resolving_to_private_address_before_request
     calls = []
     transport = httpx.MockTransport(lambda request: calls.append(request) or httpx.Response(200))
 
-    with pytest.raises(NetworkPolicyError, match="no pública"):
+    with pytest.raises(NetworkPolicyError, match="non-public"):
         fetch_http(
             "https://public.example/resource",
             mock_transport=transport,
@@ -75,7 +75,7 @@ def test_fetch_http_revalidates_redirect_target_and_blocks_private_destination()
 
     transport = httpx.MockTransport(handler)
 
-    with pytest.raises(NetworkPolicyError, match="no pública"):
+    with pytest.raises(NetworkPolicyError, match="non-public"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -98,7 +98,7 @@ def test_fetch_http_revalidates_redirect_target_and_blocks_private_destination()
     ],
 )
 def test_fetch_http_blocks_non_public_and_cloud_metadata_addresses(address):
-    with pytest.raises(NetworkPolicyError, match="no pública|metadata"):
+    with pytest.raises(NetworkPolicyError, match="non-public|metadata"):
         fetch_http(f"http://{address}/", resolver=_resolver({}))
 
 
@@ -223,7 +223,7 @@ def test_fetch_http_keeps_size_bound_for_non_2xx_terminal_response():
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="tamaño máximo"):
+    with pytest.raises(NetworkPolicyError, match="maximum size"):
         fetch_http(
             "https://public.example/unavailable",
             mock_transport=transport,
@@ -407,7 +407,7 @@ def test_fetch_http_preserves_ineligible_2xx_provenance(content_type):
 def test_fetch_http_rejects_unbounded_response_metadata(headers):
     transport = httpx.MockTransport(lambda request: httpx.Response(302, headers=headers))
 
-    with pytest.raises(NetworkPolicyError, match="metadatos HTTP"):
+    with pytest.raises(NetworkPolicyError, match="HTTP metadata"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -423,7 +423,7 @@ def test_fetch_http_bounds_duplicate_header_after_coalescing():
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="metadatos HTTP"):
+    with pytest.raises(NetworkPolicyError, match="HTTP metadata"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -442,7 +442,7 @@ def test_fetch_http_counts_duplicate_header_separators_in_aggregate_bound(monkey
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="metadatos HTTP"):
+    with pytest.raises(NetworkPolicyError, match="HTTP metadata"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -458,7 +458,7 @@ def test_fetch_http_rejects_ambiguous_duplicate_location_headers():
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="Location duplicado"):
+    with pytest.raises(NetworkPolicyError, match="duplicate and ambiguous Location header"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -482,7 +482,7 @@ def test_fetch_http_rejects_ambiguous_duplicate_content_type_headers(values):
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="Content-Type duplicado"):
+    with pytest.raises(NetworkPolicyError, match="duplicate and ambiguous Content-Type header"):
         fetch_http(
             "https://public.example/start",
             mock_transport=transport,
@@ -507,7 +507,7 @@ def test_fetch_http_enforces_overall_deadline_across_redirects(monkeypatch):
 
     monkeypatch.setattr(network_policy, "monotonic", monotonic)
 
-    with pytest.raises(NetworkPolicyError, match="tiempo total"):
+    with pytest.raises(NetworkPolicyError, match="total retrieval time"):
         fetch_http(
             "https://public.example/start",
             mock_transport=httpx.MockTransport(handler),
@@ -536,7 +536,7 @@ def test_fetch_http_enforces_overall_deadline_when_stream_ends_without_a_chunk(m
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="tiempo total"):
+    with pytest.raises(NetworkPolicyError, match="total retrieval time"):
         fetch_http(
             "https://public.example/stream",
             mock_transport=transport,
@@ -558,7 +558,7 @@ def test_fetch_http_deadline_is_observable_while_dns_resolution_is_blocked():
 
     before = time.monotonic()
     try:
-        with pytest.raises(NetworkPolicyError, match="tiempo total"):
+        with pytest.raises(NetworkPolicyError, match="total retrieval time"):
             fetch_http(
                 "https://public.example/start",
                 mock_transport=httpx.MockTransport(lambda request: httpx.Response(200)),
@@ -586,7 +586,7 @@ def test_fetch_http_bounds_timed_out_blocking_workers_globally():
         return [PUBLIC_IP]
 
     def fetch():
-        with pytest.raises(NetworkPolicyError, match="tiempo total"):
+        with pytest.raises(NetworkPolicyError, match="total retrieval time"):
             fetch_http(
                 "https://public.example/start",
                 mock_transport=httpx.MockTransport(lambda request: httpx.Response(200)),
@@ -626,7 +626,7 @@ def test_fetch_http_returns_blocking_worker_slots_after_workers_exit():
         return [PUBLIC_IP]
 
     def fetch():
-        with pytest.raises(NetworkPolicyError, match="tiempo total"):
+        with pytest.raises(NetworkPolicyError, match="total retrieval time"):
             fetch_http(
                 "https://public.example/start",
                 mock_transport=httpx.MockTransport(lambda request: httpx.Response(200)),
@@ -680,7 +680,7 @@ def test_fetch_http_deadline_is_observable_during_slow_empty_stream_and_cleans_u
     )
 
     before = time.monotonic()
-    with pytest.raises(NetworkPolicyError, match="tiempo total"):
+    with pytest.raises(NetworkPolicyError, match="total retrieval time"):
         fetch_http(
             "https://public.example/stream",
             mock_transport=transport,

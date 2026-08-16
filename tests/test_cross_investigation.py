@@ -234,7 +234,7 @@ def _write_decision(
         "audience: equipo\n"
         f"{lineage}"
         "---\n\n"
-        "## Recomendación\n\n"
+        "## Recommendation\n\n"
         f"{prose}\n",
         encoding="utf-8",
     )

@@ -14,15 +14,15 @@ seeds:
     source: investigations/garden-seed
     artifacts:
       - path: sdr.yaml
-        sha256: aafd5a135307af9f0343336bda89b95511ef355c28473e4742bda43eee7b978e
+        sha256: 1f8feecd81c13331cf4c0948a141c505c7bd4619ad85396ef9633d2a970f3175
       - path: notes/landscape.md
-        sha256: fb562c04b660caf91838e75ab581a1fbd7329cc29ed8c0a51329469a558a73a8
+        sha256: c45715166de21d5611687b85f1dffbc22afcd671d3675623f4210d547d9ee840
       - path: notes/sources/S1/content.md
         sha256: 93a63efa7ff3524413226fe94e7816d36fe459ac776c0d0e3bdbf8726c845ce0
       - path: notes/sources/S1/meta.yaml
         sha256: ef58dda3d797fea973a9fb4ddc0aa6feeaf304bf068c19a14366544776092a54
       - path: decision-memo.md
-        sha256: 3200fc20baa776194cb25bcfe8fdb30c85fdb80985dd70984329b8be579ce026
+        sha256: 473a83ddd1c03f41690d9aec27cc66a8ea1e21c2b4f3a57c8bdcb9075ac01fb5
 focal:
   id: garden-focal
   role: focal
@@ -34,7 +34,7 @@ focal:
     - path: sdr.yaml
       sha256: 9f4ada467871db9570c26ad3b0e68728f5aca2ef4b4c1b58d7c244bfa97b9890
     - path: notes/landscape.md
-      sha256: 06bb2655d8a6342e6679f751a20d80965bdf08bb6ba941406679e9795e7f5be5
+      sha256: 29e520acbdd78b1df16d6d3b95fafae27c529bb640d440b9c1d986bd422c393e
     - path: notes/sources/S4/content.md
       sha256: 93a63efa7ff3524413226fe94e7816d36fe459ac776c0d0e3bdbf8726c845ce0
     - path: notes/sources/S4/meta.yaml

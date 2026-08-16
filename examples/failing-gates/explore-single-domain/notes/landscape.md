@@ -13,17 +13,17 @@ sources:
     date: 2026-06-20
 ---
 
-## Alternativas evaluadas
-El fixture describe dos opciones inventadas [cf. S1].
+## Alternatives evaluated
+The fixture describes two invented options [cf. S1].
 
-## Madurez
-La madurez se presenta solo como contexto sintético [cf. S1].
+## Maturity
+Maturity is presented only as synthetic context [cf. S1].
 
-## Costos
-El costo ficticio se atribuye a la segunda fuente [cf. S2].
+## Costs
+The fictional cost is attributed to the second source [cf. S2].
 
-## Riesgos
-Una sola organización no aporta independencia [cf. S2].
+## Risks
+A single organization provides no independence [cf. S2].
 
-## Contra-evidencia
-La búsqueda ficticia también depende del mismo dominio [cf. S2].
+## Counter-evidence
+The fictional search also depends on the same domain [cf. S2].

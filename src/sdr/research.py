@@ -1,4 +1,4 @@
-"""Modelo de una investigación y su estado persistido en `sdr.yaml`."""
+"""Model of an investigation and the state it persists in `sdr.yaml`."""
 
 from __future__ import annotations
 
@@ -26,12 +26,12 @@ _STAGE_DIRS = ("notes", "probe", "assets")
 
 
 def is_valid_slug(slug: str) -> bool:
-    """True si `slug` es kebab-case válido."""
+    """True if `slug` is valid kebab-case."""
     return bool(_SLUG_RE.match(slug))
 
 
 class Approval(BaseModel):
-    """Aprobación humana del decision memo (etapa transfer)."""
+    """Human approval of the decision memo (transfer stage)."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -40,7 +40,7 @@ class Approval(BaseModel):
 
 
 class Reopen(BaseModel):
-    """Registro de un retroceso de etapa (backtracking explícito)."""
+    """Record of a stage rollback (explicit backtracking)."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -51,7 +51,7 @@ class Reopen(BaseModel):
 
 
 class ResearchMeta(BaseModel):
-    """Metadata de una investigación (contenido de `sdr.yaml`)."""
+    """Metadata of an investigation (the contents of `sdr.yaml`)."""
 
     model_config = ConfigDict(extra="allow")
 
@@ -62,13 +62,13 @@ class ResearchMeta(BaseModel):
     stage: str = "intake"
     status: str = "active"  # active | done | dropped
     owner: str = ""
-    timebox: int = 0  # estimación en días
+    timebox: int = 0  # estimate in days
     created: str = Field(default_factory=lambda: date.today().isoformat())
     updated: str = Field(default_factory=lambda: date.today().isoformat())
     tags: list[str] = Field(default_factory=list)
     schema_version: int = 1
     dropped_reason: str = ""
-    validation: dict[str, str] = Field(default_factory=dict)  # stage -> hash del gate
+    validation: dict[str, str] = Field(default_factory=dict)  # stage -> gate hash
     judge: dict[str, Any] = Field(default_factory=dict)
     verify_probe: dict[str, Any] = Field(default_factory=dict)
     overrides: list[dict[str, Any]] = Field(default_factory=list)
@@ -77,12 +77,12 @@ class ResearchMeta(BaseModel):
     archived: bool = False
 
     def following_stage(self) -> str | None:
-        """Etapa que sigue a la actual según el modo, o None si es la última."""
+        """Stage after the current one for this mode, or None if it is the last."""
         return schema.next_stage(self.stage, self.mode)
 
 
 class Research:
-    """Investigación en disco: raíz + metadata."""
+    """Investigation on disk: root plus metadata."""
 
     def __init__(self, root: Path, meta: ResearchMeta) -> None:
         self.root = resolve_root(root)
@@ -100,15 +100,15 @@ class Research:
         timebox: int = 0,
         tags: list[str] | None = None,
     ) -> Research:
-        """Crea la estructura de `research/<slug>/` con `sdr.yaml` inicializado."""
+        """Create the `research/<slug>/` structure with an initialized `sdr.yaml`."""
         if not is_valid_slug(slug):
-            raise ValueError(f"slug inválido (debe ser kebab-case): {slug!r}")
+            raise ValueError(f"invalid slug (must be kebab-case): {slug!r}")
         if mode not in schema.MODES:
-            raise ValueError(f"modo desconocido: {mode!r}")
+            raise ValueError(f"unknown mode: {mode!r}")
         base = resolve_root(base)
         root = resolve_segment(base, slug)
         if root.exists():
-            raise FileExistsError(f"la investigación {slug!r} ya existe")
+            raise FileExistsError(f"investigation {slug!r} already exists")
         root.mkdir(parents=True)
         for sub in _STAGE_DIRS:
             (root / sub).mkdir()
@@ -128,7 +128,7 @@ class Research:
 
     @classmethod
     def load(cls, root: str | Path, *, within: str | Path | None = None) -> Research:
-        """Carga una investigación desde su directorio."""
+        """Load an investigation from its directory."""
         root = resolve_root(root)
         if within is not None:
             root = ensure_within(within, root)
@@ -136,11 +136,11 @@ class Research:
         raw = yaml.safe_load(meta_path.read_text(encoding="utf-8"))
         meta = ResearchMeta.model_validate(raw)
         if not is_valid_slug(meta.slug):
-            raise ValueError(f"slug inválido en {META_FILE}: {meta.slug!r}")
+            raise ValueError(f"invalid slug in {META_FILE}: {meta.slug!r}")
         return cls(root, meta)
 
     def save(self) -> None:
-        """Persiste la metadata en `sdr.yaml`."""
+        """Persist the metadata to `sdr.yaml`."""
         self.meta.updated = date.today().isoformat()
         data = self.meta.model_dump(mode="json", exclude_none=True)
         self.artifact_path(META_FILE).write_text(
@@ -149,10 +149,10 @@ class Research:
         )
 
     def advance_stage(self) -> None:
-        """Avanza a la siguiente etapa o marca la investigación como done.
+        """Advance to the next stage or mark the investigation as done.
 
-        No ejecuta gates; solo muta el estado. La verificación de gates ocurre
-        en la capa de CLI antes de invocar este método.
+        Runs no gates; it only mutates state. Gate verification happens in the
+        CLI layer before this method is called.
         """
         nxt = self.meta.following_stage()
         if nxt is None:
@@ -162,7 +162,7 @@ class Research:
         self.save()
 
     def artifact_path(self, relative: str) -> Path:
-        """Ruta absoluta a un artefacto relativo dentro de la investigación."""
+        """Absolute path to an artifact relative to the investigation root."""
         path = resolve_child(self.root, relative)
         if path.is_dir():
             ensure_tree_within(self.root, path)

@@ -6,8 +6,8 @@ type: playbook
 audience: internal
 ---
 
-# Probe portable
+# Portable probe
 
-1. Usar únicamente datos inventados y embebidos.
-2. Declarar una acción explícita y un vector de argumentos.
-3. Esperar un marcador determinístico.
+1. Use only invented, embedded data.
+2. Declare an explicit action and an argument vector.
+3. Expect a deterministic marker.

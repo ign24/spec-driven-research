@@ -14,15 +14,15 @@ seeds:
     source: investigations/software-seed
     artifacts:
       - path: sdr.yaml
-        sha256: 0d32abca5d21600f86c1ddc5c2eeddfd8ed7a09f1f5ce40e30f4efd9f027382a
+        sha256: ddcce92cf6c66ae57b15d7af16347dcee052c18d1a64d0fc3a4a66273c920abc
       - path: notes/landscape.md
-        sha256: b651dc4eb4d49b543d3ce55709af992d46f7598c2f83d913791c5631a8def833
+        sha256: 51a45e41060b9cb97a26eccbb5b3f57d4c7a0459f2dc39d11887ed36003e82e4
       - path: notes/sources/S1/content.md
         sha256: 7b6fefa3e4d9b3d441692062321f8e25a36196414a05c193da8633f7a527d0b4
       - path: notes/sources/S1/meta.yaml
         sha256: 2197e09157e98f9201d265c1a721a7deeec710f9dd5a59e3c9777d7bb02f4c3c
       - path: decision-memo.md
-        sha256: 07aebe5f1979a542eb97003f0f274cd3c67dc7075390fcf4dde65f47ab2f3cfd
+        sha256: 308e527e2e5b019a80e668b53b791af8a3b9a94bfee3561f2ee36b853ca600d6
 focal:
   id: software-no-edge-focal
   role: focal
@@ -34,7 +34,7 @@ focal:
     - path: sdr.yaml
       sha256: 97f2c839a350bc618308f8b053857b27bc8a653e6ccdc950418c8a0e717c6117
     - path: notes/landscape.md
-      sha256: d6eaa02dd6dbaef24cc69397054e4f24b2119a584ed9364aba229940cb623a67
+      sha256: bf9589ad6dced2d3e73cdde7bd8e419e37f979de832b2a75b3053dd44180e18c
     - path: notes/sources/S8/content.md
       sha256: a9734d00872123155a23049ff0b1b0b8bf651149272be98c032cd06ce7d214d1
     - path: notes/sources/S8/meta.yaml

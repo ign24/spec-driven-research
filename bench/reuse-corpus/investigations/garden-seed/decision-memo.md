@@ -8,20 +8,20 @@ evidence_claim_ids:
   - claim-82b08e5c335203033a6371dfc8959e3dc2f5bb5f84e2523f953de19a0fec7d77
 ---
 
-## Recomendación
+## Recommendation
 Use the invented watering interval only inside this synthetic exercise.
 
-## Alternativas evaluadas
+## Alternatives evaluated
 Two invented watering intervals.
 
-## Criterios de selección
+## Selection criteria
 Deterministic fixture behavior.
 
-## Riesgos y limitaciones
+## Risks and limitations
 This is not horticultural guidance.
 
-## Próximos pasos
+## Next steps
 Retain only as a benchmark seed.
 
-## Audiencia
+## Audience
 Synthetic internal team.

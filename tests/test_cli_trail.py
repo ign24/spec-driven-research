@@ -82,7 +82,7 @@ def _completed_expired_decision(base: Path, slug: str = "completed") -> tuple[Re
         "ring: assess\n"
         "audience: team\n"
         f"evidence_claim_ids:\n  - {claim_id}\n"
-        "---\n\n## Recomendación\n\nProceed.\n",
+        "---\n\n## Recommendation\n\nProceed.\n",
         encoding="utf-8",
     )
     research.meta.validation["transfer"] = lifecycle.stage_hash(research, "transfer")
@@ -128,7 +128,7 @@ def _completed_expired_fanout_decision(base: Path) -> tuple[Research, str]:
         "audience: team\n"
         "evidence_claim_ids:\n"
         + "".join(f"  - {claim_id}\n" for claim_id in claim_ids)
-        + "---\n\n## Recomendación\n\nProceed.\n",
+        + "---\n\n## Recommendation\n\nProceed.\n",
         encoding="utf-8",
     )
     research.meta.validation["transfer"] = lifecycle.stage_hash(research, "transfer")
@@ -418,7 +418,7 @@ def test_acknowledge_degradation_without_git_repo_warns_after_writing(tmp_path, 
     )
 
     assert result.exit_code == 0
-    assert "sin repositorio git" in result.output
+    assert "no git repository" in result.output
     assert (
         research.artifact_path("notes/sources/verification.yaml")
         .read_text(encoding="utf-8")

@@ -1,4 +1,4 @@
-"""Política de red segura para requests HTTP salientes."""
+"""Safe network policy for outbound HTTP requests."""
 
 from __future__ import annotations
 
@@ -55,12 +55,12 @@ _BLOCKING_WORKER_SLOTS = threading.BoundedSemaphore(MAX_BLOCKING_WORKERS)
 
 
 class NetworkPolicyError(ValueError):
-    """La URL o respuesta viola la política de red saliente."""
+    """The URL or response violates the outbound network policy."""
 
 
 @dataclass(frozen=True)
 class RedirectRecord:
-    """Salto HTTP seguido después de validar su destino."""
+    """HTTP hop followed after its target was validated."""
 
     url: str
     status_code: int
@@ -70,7 +70,7 @@ class RedirectRecord:
 
 @dataclass(frozen=True)
 class HttpResult:
-    """Respuesta HTTP terminal acotada con procedencia completa."""
+    """Bounded terminal HTTP response with full provenance."""
 
     declared_url: str
     final_url: str
@@ -97,16 +97,16 @@ class HttpResult:
 
 
 def resolve_host(host: str) -> list[str]:
-    """Resuelve todas las direcciones candidatas de un hostname."""
+    """Resolve every candidate address of a hostname."""
     try:
         records = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
     except socket.gaierror as exc:
-        raise NetworkPolicyError(f"no se pudo resolver el hostname {host!r}") from exc
+        raise NetworkPolicyError(f"could not resolve hostname {host!r}") from exc
     return sorted({str(record[4][0]) for record in records})
 
 
 def validate_http_url(url: str, *, resolver: Resolver | None = None) -> None:
-    """Valida esquema y todas las IP resultantes antes de conectar."""
+    """Validate the scheme and every resulting IP before connecting."""
     _validated_url_and_addresses(url, resolver=resolver)
 
 
@@ -121,19 +121,19 @@ def _parse_http_url_structure(url: str) -> ParseResult:
         host = parsed.hostname
         port = parsed.port
     except (TypeError, ValueError):
-        raise NetworkPolicyError("URL HTTP/HTTPS inválida") from None
+        raise NetworkPolicyError("invalid HTTP/HTTPS URL") from None
     if parsed.scheme.lower() not in {"http", "https"} or not host:
-        raise NetworkPolicyError("solo se permiten URLs HTTP/HTTPS absolutas")
+        raise NetworkPolicyError("only absolute HTTP/HTTPS URLs are allowed")
     if parsed.username is not None or parsed.password is not None:
-        raise NetworkPolicyError("no se permiten credenciales en URLs HTTP/HTTPS")
+        raise NetworkPolicyError("credentials are not allowed in HTTP/HTTPS URLs")
     if port is not None and not 1 <= port <= 65535:
-        raise NetworkPolicyError("puerto inválido en URL HTTP/HTTPS")
+        raise NetworkPolicyError("invalid port in HTTP/HTTPS URL")
 
     normalized_host = host.rstrip(".").lower()
     if normalized_host in _METADATA_HOSTS or any(
         normalized_host.endswith(f".{metadata_host}") for metadata_host in _METADATA_HOSTS
     ):
-        raise NetworkPolicyError(f"hostname de metadata cloud bloqueado: {host}")
+        raise NetworkPolicyError(f"blocked cloud metadata hostname: {host}")
 
     try:
         literal_address = ipaddress.ip_address(normalized_host)
@@ -141,7 +141,7 @@ def _parse_http_url_structure(url: str) -> ParseResult:
         try:
             ascii_host = normalized_host.encode("idna").decode("ascii")
         except UnicodeError:
-            raise NetworkPolicyError("hostname inválido en URL HTTP/HTTPS") from None
+            raise NetworkPolicyError("invalid hostname in HTTP/HTTPS URL") from None
         labels = ascii_host.split(".")
         if (
             not ascii_host
@@ -155,7 +155,7 @@ def _parse_http_url_structure(url: str) -> ParseResult:
                 for label in labels
             )
         ):
-            raise NetworkPolicyError("hostname inválido en URL HTTP/HTTPS") from None
+            raise NetworkPolicyError("invalid hostname in HTTP/HTTPS URL") from None
     else:
         _validate_public_address(literal_address, host)
     return parsed
@@ -174,7 +174,7 @@ def _validated_url_and_addresses(
     except ValueError:
         addresses = list((resolver or resolve_host)(normalized_host))
         if not addresses:
-            raise NetworkPolicyError(f"el hostname {host!r} no resolvió direcciones") from None
+            raise NetworkPolicyError(f"hostname {host!r} resolved no addresses") from None
     else:
         addresses = [str(literal_address)]
 
@@ -184,7 +184,7 @@ def _validated_url_and_addresses(
             address = ipaddress.ip_address(raw_address)
         except ValueError as exc:
             raise NetworkPolicyError(
-                f"resolución DNS inválida para {host!r}: {raw_address!r}"
+                f"invalid DNS resolution for {host!r}: {raw_address!r}"
             ) from exc
         _validate_public_address(address, host)
         validated_addresses.append(address)
@@ -196,7 +196,7 @@ def _validate_public_address(
     address: ipaddress.IPv4Address | ipaddress.IPv6Address, host: str
 ) -> None:
     if address in _METADATA_ADDRESSES:
-        raise NetworkPolicyError(f"dirección de metadata cloud bloqueada: {address}")
+        raise NetworkPolicyError(f"blocked cloud metadata address: {address}")
     if any(
         (
             address.is_loopback,
@@ -208,7 +208,7 @@ def _validate_public_address(
             not address.is_global,
         )
     ):
-        raise NetworkPolicyError(f"dirección no pública bloqueada para {host!r}: {address}")
+        raise NetworkPolicyError(f"blocked non-public address for {host!r}: {address}")
 
 
 def fetch_http(
@@ -222,11 +222,11 @@ def fetch_http(
     require_text_content: bool = False,
     total_timeout: float = TOTAL_TIMEOUT,
 ) -> HttpResult:
-    """Ejecuta un request validando cada salto y leyendo el cuerpo de forma acotada."""
+    """Run a request, validating every hop and reading the body in a bounded way."""
     if mock_transport is not None and not isinstance(mock_transport, httpx.MockTransport):
         raise TypeError("mock_transport must be an httpx.MockTransport")
     if total_timeout <= 0:
-        raise NetworkPolicyError("se excedió el tiempo total de recuperación")
+        raise NetworkPolicyError("the total retrieval time was exceeded")
     deadline = monotonic() + total_timeout
     cancelled = threading.Event()
     results: list[HttpResult] = []
@@ -254,7 +254,7 @@ def fetch_http(
 
     remaining = deadline - monotonic()
     if remaining <= 0 or not _BLOCKING_WORKER_SLOTS.acquire(timeout=remaining):
-        raise NetworkPolicyError("se excedió el tiempo total de recuperación")
+        raise NetworkPolicyError("the total retrieval time was exceeded")
     worker = threading.Thread(target=retrieve, name="sdr-http-fetch", daemon=True)
     try:
         worker.start()
@@ -264,7 +264,7 @@ def fetch_http(
     worker.join(max(0.0, deadline - monotonic()))
     if worker.is_alive():
         cancelled.set()
-        raise NetworkPolicyError("se excedió el tiempo total de recuperación")
+        raise NetworkPolicyError("the total retrieval time was exceeded")
     if errors:
         raise errors[0]
     return results[0]
@@ -319,7 +319,7 @@ def _fetch_http(
                             ):
                                 if len(redirects) >= max_redirects:
                                     raise NetworkPolicyError(
-                                        f"se excedió el límite de {max_redirects} redirects"
+                                        f"the limit of {max_redirects} redirects was exceeded"
                                     )
                                 response_url = current_url
                                 location = headers["location"]
@@ -354,7 +354,7 @@ def _fetch_http(
                                         size += len(chunk)
                                         if size > max_response_bytes:
                                             raise NetworkPolicyError(
-                                                "la respuesta excede el tamaño máximo de "
+                                                "the response exceeds the maximum size of "
                                                 f"{max_response_bytes} bytes"
                                             )
                                         chunks.append(chunk)
@@ -374,9 +374,9 @@ def _fetch_http(
                     continue
             if followed_redirect:
                 continue
-            raise NetworkPolicyError("falló la solicitud HTTP para el destino validado")
+            raise NetworkPolicyError("the HTTP request to the validated target failed")
     except httpx.HTTPError:
-        raise NetworkPolicyError("falló la solicitud HTTP para el destino validado") from None
+        raise NetworkPolicyError("the HTTP request to the validated target failed") from None
 
 
 def is_supported_text_content_type(content_type: str) -> bool:
@@ -403,7 +403,7 @@ def _validate_content_length(headers: dict[str, str], maximum: int) -> None:
     except ValueError:
         return
     if length > maximum:
-        raise NetworkPolicyError(f"la respuesta excede el tamaño máximo de {maximum} bytes")
+        raise NetworkPolicyError(f"the response exceeds the maximum size of {maximum} bytes")
 
 
 def _content_type(headers: dict[str, str]) -> str:
@@ -418,10 +418,10 @@ def _bounded_headers(response: httpx.Response) -> dict[str, str]:
         name_size = len(name.encode("utf-8"))
         value_size = len(value.encode("utf-8"))
         if value_size > MAX_HEADER_VALUE_BYTES:
-            raise NetworkPolicyError("los metadatos HTTP exceden el límite permitido")
+            raise NetworkPolicyError("the HTTP metadata exceeds the allowed limit")
         if normalized_name in {"location", "content-type"} and normalized_name in retained:
             display_name = "Location" if normalized_name == "location" else "Content-Type"
-            raise NetworkPolicyError(f"header {display_name} duplicado y ambiguo")
+            raise NetworkPolicyError(f"duplicate and ambiguous {display_name} header")
         if normalized_name in retained:
             combined = f"{retained[normalized_name]}, {value}"
             total += 2 + value_size
@@ -429,9 +429,9 @@ def _bounded_headers(response: httpx.Response) -> dict[str, str]:
             combined = value
             total += name_size + value_size
         if len(combined.encode("utf-8")) > MAX_HEADER_VALUE_BYTES:
-            raise NetworkPolicyError("los metadatos HTTP exceden el límite permitido")
+            raise NetworkPolicyError("the HTTP metadata exceeds the allowed limit")
         if total > MAX_HEADER_BYTES:
-            raise NetworkPolicyError("los metadatos HTTP exceden el límite permitido")
+            raise NetworkPolicyError("the HTTP metadata exceeds the allowed limit")
         retained[normalized_name] = combined
     return retained
 
@@ -439,7 +439,7 @@ def _bounded_headers(response: httpx.Response) -> dict[str, str]:
 def _operation_timeout(deadline: float, cancelled: threading.Event | None = None) -> httpx.Timeout:
     remaining = deadline - monotonic()
     if remaining <= 0 or (cancelled is not None and cancelled.is_set()):
-        raise NetworkPolicyError("se excedió el tiempo total de recuperación")
+        raise NetworkPolicyError("the total retrieval time was exceeded")
     return httpx.Timeout(
         min(READ_TIMEOUT, remaining),
         connect=min(CONNECT_TIMEOUT, remaining),

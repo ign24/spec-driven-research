@@ -1696,7 +1696,7 @@ def _decision_lineage(research: Research) -> tuple[DecisionLineage, ...]:
         (
             issue
             for issue in lifecycle.check_consistency(research)
-            if issue.startswith("etapa 'transfer':")
+            if issue.startswith(lifecycle.consistency_issue_prefix("transfer"))
         ),
         None,
     )

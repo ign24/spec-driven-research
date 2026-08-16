@@ -9,13 +9,13 @@ verify:
   environment: clean
 ---
 
-## Resultados por criterio
-| criterio | resultado | evidencia |
+## Results by criterion
+| criterion | result | evidence |
 |---|---|---|
-| C1 | cumple: tres salidas coinciden | `probe/check.py` |
-| C2 | cumple: dos evaluaciones coinciden | `probe/check.py` |
+| C1 | meets: the three outputs match | `probe/check.py` |
+| C2 | meets: two evaluations match | `probe/check.py` |
 
-## Reproducción
+## Reproduction
 ```bash
 python check.py
 ```

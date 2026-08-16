@@ -1,4 +1,4 @@
-"""Resolución centralizada de rutas confinadas a una raíz explícita."""
+"""Centralized resolution of paths confined to an explicit root."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ from pathlib import Path, PureWindowsPath
 
 
 def resolve_root(root: str | Path) -> Path:
-    """Normaliza una raíz configurable, absoluta o relativa."""
+    """Normalize a configurable root, absolute or relative."""
     return Path(root).expanduser().resolve(strict=False)
 
 
 def resolve_child(root: str | Path, relative: str | Path) -> Path:
-    """Resuelve una ruta relativa y exige que permanezca dentro de ``root``."""
+    """Resolve a relative path and require it to stay inside ``root``."""
     root_path = resolve_root(root)
     raw = os.fspath(relative)
     relative_path = Path(raw)
@@ -22,22 +22,22 @@ def resolve_child(root: str | Path, relative: str | Path) -> Path:
         or "\\" in raw
         or ".." in relative_path.parts
     ):
-        raise ValueError(f"ruta relativa inválida: {raw!r}")
+        raise ValueError(f"invalid relative path: {raw!r}")
 
     return ensure_within(root_path, root_path / relative_path)
 
 
 def ensure_within(root: str | Path, path: str | Path) -> Path:
-    """Normaliza ``path`` y exige que quede confinado a ``root``."""
+    """Normalize ``path`` and require it to stay confined to ``root``."""
     root_path = resolve_root(root)
     candidate = Path(path).resolve(strict=False)
     if not candidate.is_relative_to(root_path):
-        raise ValueError(f"ruta fuera de la raíz permitida {root_path}: {path!r}")
+        raise ValueError(f"path outside the allowed root {root_path}: {path!r}")
     return candidate
 
 
 def ensure_tree_within(root: str | Path, directory: str | Path) -> Path:
-    """Valida symlinks de un árbol sin seguir directorios enlazados."""
+    """Validate the symlinks of a tree without following linked directories."""
     root_path = resolve_root(root)
     directory_path = ensure_within(root_path, directory)
     for current, directories, files in directory_path.walk(follow_symlinks=False):
@@ -47,7 +47,7 @@ def ensure_tree_within(root: str | Path, directory: str | Path) -> Path:
 
 
 def resolve_segment(root: str | Path, segment: str) -> Path:
-    """Resuelve un único nombre, rechazando cualquier separador de ruta."""
+    """Resolve a single name, rejecting any path separator."""
     if not segment or "/" in segment or "\\" in segment:
-        raise ValueError(f"segmento inválido: {segment!r}")
+        raise ValueError(f"invalid segment: {segment!r}")
     return resolve_child(root, segment)

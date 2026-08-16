@@ -1,14 +1,14 @@
-"""CLI `sdr`: crear investigaciones, validar gates, avanzar etapas y reportar.
+"""CLI `sdr`: create investigations, validate gates, advance stages and report.
 
-La base de investigaciones es `research/` (configurable con la variable de
-entorno SDR_ROOT). La salida de cada comando admite `--json` para consumo por
-agentes.
+The investigation base is `research/` (configurable with the SDR_ROOT environment
+variable). Every command accepts `--json` for consumption by agents.
 """
 
 from __future__ import annotations
 
 import json as jsonlib
 import os
+import re
 import sys
 from datetime import date, datetime
 from importlib import resources
@@ -17,12 +17,12 @@ from pathlib import Path
 import click
 import yaml
 
+from sdr import __version__, lifecycle, schema, trail
 from sdr import archive as archive_mod
 from sdr import audit as audit_mod
 from sdr import cross_investigation as cross_mod
 from sdr import index as index_mod
 from sdr import integration_validation as integration_validation_mod
-from sdr import lifecycle, schema, trail
 from sdr import probe_verify as probe_verify_mod
 from sdr import snapshot as snapshot_mod
 from sdr import verification as verification_mod
@@ -37,6 +37,7 @@ from sdr.context_graph import (
 )
 from sdr.context_query import map_query_text_to_intent, query_context_graph
 from sdr.gates import check_stage
+from sdr.legacy_sections import LEGACY_SECTION_NAMES
 from sdr.paths import resolve_child, resolve_root, resolve_segment
 from sdr.public_tree_audit import redact_sensitive_values
 from sdr.research import META_FILE, Approval, Research
@@ -61,14 +62,14 @@ def _knowledge_dir() -> Path:
 
 
 def _record(research: Research, transition: str, no_commit: bool, paths=None, extra=None) -> None:
-    """Registra la transición en el rastro git, degradando con advertencia."""
+    """Record the transition in the git trail, degrading with a warning."""
     if no_commit:
         return
     result = trail.commit_transition(research, transition, paths=paths, extra_paths=extra)
     if result.committed:
-        click.echo(f"rastro: {result.message}")
+        click.echo(f"trail: {result.message}")
     elif result.warning:
-        click.echo(f"rastro: {result.warning}", err=True)
+        click.echo(f"trail: {result.warning}", err=True)
 
 
 def _cross_observations(online: bool, observed_at: datetime | None = None):
@@ -87,7 +88,7 @@ def _as_of_date(value: str | None) -> date | None:
     try:
         return date.fromisoformat(value)
     except ValueError as exc:
-        raise click.ClickException("--as-of debe usar el formato YYYY-MM-DD") from exc
+        raise click.ClickException("--as-of must use the YYYY-MM-DD format") from exc
 
 
 def _observation_time(value: str | None) -> datetime | None:
@@ -116,9 +117,9 @@ def _load(slug: str) -> Research:
     try:
         root = resolve_segment(base, slug)
     except ValueError as exc:
-        raise click.ClickException(f"slug inválido: {slug!r}") from exc
+        raise click.ClickException(f"invalid slug: {slug!r}") from exc
     if not resolve_child(root, META_FILE).exists():
-        raise click.ClickException(f"no existe la investigación {slug!r} en {base}/")
+        raise click.ClickException(f"investigation {slug!r} does not exist in {base}/")
     try:
         return Research.load(root, within=base)
     except ValueError as exc:
@@ -138,7 +139,7 @@ def _all_research() -> list[Research]:
 
 
 def _status_metadata(research: Research) -> dict:
-    """Serializa metadata operativa sin exponer el bloque judge histórico."""
+    """Serialize operational metadata without exposing the historical judge block."""
     claim_audit = audit_mod.evaluate_claims(research)
     return {
         **{key: value for key, value in research.to_dict().items() if key != "judge"},
@@ -150,30 +151,31 @@ def _status_metadata(research: Research) -> dict:
 
 
 class _AdvanceCommand(click.Command):
-    """Conserva un error de migración para flags retirados sin registrarlos."""
+    """Keep a migration error for retired flags without registering them."""
 
     def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
         if "--override" in args or "--reason" in args:
             raise click.UsageError(
-                "--override y --reason fueron retirados de sdr advance; "
-                "use sdr resolve-claim para registrar una revisión humana"
+                "--override and --reason were retired from sdr advance; "
+                "use sdr resolve-claim to record a human review"
             )
         return super().parse_args(ctx, args)
 
 
 @click.group()
+@click.version_option(version=__version__, prog_name="sdr")
 def main() -> None:
-    """Spec-Driven Research: harness de I+D aplicada trazable."""
+    """Spec-Driven Research: a traceable applied R&D harness."""
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--title", required=True, help="Título de la investigación.")
-@click.option("--question", required=True, help="Pregunta de investigación.")
+@click.option("--title", required=True, help="Investigation title.")
+@click.option("--question", required=True, help="Research question.")
 @click.option("--mode", type=click.Choice(schema.MODES), default="full", show_default=True)
-@click.option("--owner", default="", help="Responsable de la investigación.")
-@click.option("--timebox", type=int, default=0, help="Estimación en días.")
-@click.option("--no-commit", is_flag=True, help="No registrar la transición en git.")
+@click.option("--owner", default="", help="Investigation owner.")
+@click.option("--timebox", type=int, default=0, help="Estimate in days.")
+@click.option("--no-commit", is_flag=True, help="Do not record the transition in git.")
 @click.option("--json", "as_json", is_flag=True)
 def new(
     slug: str,
@@ -185,7 +187,7 @@ def new(
     no_commit: bool,
     as_json: bool,
 ) -> None:
-    """Crea una investigación nueva e inicializa su brief."""
+    """Create a new investigation and initialize its brief."""
     try:
         research = Research.create(
             base=_base(),
@@ -210,24 +212,24 @@ def new(
     if as_json:
         click.echo(_json_dumps(research.to_dict()))
     else:
-        click.echo(f"creada investigación {slug!r} en {research.root} (etapa intake)")
+        click.echo(f"created investigation {slug!r} in {research.root} (stage intake)")
 
 
 @main.command()
 @click.argument("slug", required=False)
-@click.option("--stage", default=None, help="Validar una etapa específica.")
-@click.option("--all", "check_all", is_flag=True, help="Validar todas las investigaciones activas.")
-@click.option("--offline", is_flag=True, help="Omitir verificación de enlaces.")
+@click.option("--stage", default=None, help="Validate a specific stage.")
+@click.option("--all", "check_all", is_flag=True, help="Validate every active investigation.")
+@click.option("--offline", is_flag=True, help="Skip link verification.")
 @click.option("--json", "as_json", is_flag=True)
 def check(
     slug: str | None, stage: str | None, check_all: bool, offline: bool, as_json: bool
 ) -> None:
-    """Ejecuta el gate de la etapa (capas estructural y evidencial)."""
+    """Run the stage gate (structural and evidential layers)."""
     if check_all:
         targets = [r for r in _all_research() if r.meta.status == "active"]
     else:
         if not slug:
-            raise click.ClickException("indique un <slug> o use --all")
+            raise click.ClickException("specify a <slug> or use --all")
         targets = [_load(slug)]
 
     reports = []
@@ -256,7 +258,7 @@ def check(
 @click.argument("slug")
 @click.option("--json", "as_json", is_flag=True)
 def snapshot(slug: str, as_json: bool) -> None:
-    """Captura snapshots textuales de las fuentes declaradas en notes/."""
+    """Capture textual snapshots of the sources declared in notes/."""
     research = _load(slug)
     results = snapshot_mod.capture_declared_sources(research)
     payload = {
@@ -266,7 +268,7 @@ def snapshot(slug: str, as_json: bool) -> None:
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo(f"{slug}: {len(results)} fuentes capturadas")
+        click.echo(f"{slug}: {len(results)} sources captured")
         _print_snapshot_results(results)
 
 
@@ -274,7 +276,7 @@ def snapshot(slug: str, as_json: bool) -> None:
 @click.argument("slug")
 @click.option("--json", "as_json", is_flag=True)
 def verify_claims(slug: str, as_json: bool) -> None:
-    """Ejecuta la verificación anclada claim-vs-fuente sin avanzar etapa."""
+    """Run anchored claim-versus-source verification without advancing the stage."""
     research = _load(slug)
     report = verification_mod.verify_explore_claims(research)
     payload = {
@@ -287,14 +289,14 @@ def verify_claims(slug: str, as_json: bool) -> None:
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        mark = "OK" if report.passed else "FALLA"
-        click.echo(f"[{mark}] verificación de claims de {slug}")
+        mark = "OK" if report.passed else "FAIL"
+        click.echo(f"[{mark}] claim verification for {slug}")
         state_labels = {
-            "verified": "anclaje textual local",
-            "human_reviewed": "revisión humana acotada",
-            "not_anchored": "sin coincidencia textual determinista",
-            "unverifiable": "evidencia no verificable",
-            "stale": "verificación obsoleta",
+            "verified": "local textual anchoring",
+            "human_reviewed": "bounded human review",
+            "not_anchored": "no deterministic textual match",
+            "unverifiable": "unverifiable evidence",
+            "stale": "stale verification",
         }
         for item in report.items:
             click.echo(
@@ -308,10 +310,10 @@ def verify_claims(slug: str, as_json: bool) -> None:
 @main.command("resolve-claim")
 @click.argument("slug")
 @click.argument("claim_id")
-@click.option("--reason", required=True, help="Motivo de la resolución humana.")
-@click.option("--by", default=None, help="Autor de la resolución.")
+@click.option("--reason", required=True, help="Reason for the human resolution.")
+@click.option("--by", default=None, help="Author of the resolution.")
 def resolve_claim(slug: str, claim_id: str, reason: str, by: str | None) -> None:
-    """Registra resolución humana para un claim no verificable."""
+    """Record a human resolution for an unverifiable claim."""
     research = _load(slug)
     try:
         verification_mod.resolve_claim(
@@ -319,7 +321,7 @@ def resolve_claim(slug: str, claim_id: str, reason: str, by: str | None) -> None
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
-    click.echo(f"{slug}: claim {claim_id} resuelto")
+    click.echo(f"{slug}: claim {claim_id} resolved")
 
 
 @main.command("verify-probe")
@@ -327,7 +329,7 @@ def resolve_claim(slug: str, claim_id: str, reason: str, by: str | None) -> None
 @click.option("--timeout", type=int, default=300, show_default=True)
 @click.option("--json", "as_json", is_flag=True)
 def verify_probe(slug: str, timeout: int, as_json: bool) -> None:
-    """Ejecuta el comando verify declarado en probe/results.md."""
+    """Run the verify command declared in probe/results.md."""
     research = _load(slug)
     try:
         result = probe_verify_mod.verify_probe(research, timeout=timeout)
@@ -337,37 +339,37 @@ def verify_probe(slug: str, timeout: int, as_json: bool) -> None:
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo(f"comando: {result.command}")
-        click.echo(f"resultado: {result.result}")
+        click.echo(f"command: {result.command}")
+        click.echo(f"result: {result.result}")
         if not result.passed:
-            click.echo(f"esperado: {result.expect}")
+            click.echo(f"expected: {result.expect}")
             click.echo(result.output)
     sys.exit(0 if result.passed else 1)
 
 
 def _print_report(research, report, issues):
-    mark = "OK" if report.passed and not issues else "FALLA"
-    click.echo(f"[{mark}] {research.meta.slug} (etapa {report.stage})")
+    mark = "OK" if report.passed and not issues else "FAIL"
+    click.echo(f"[{mark}] {research.meta.slug} (stage {report.stage})")
     for r in report.results:
         if r.skipped:
-            click.echo(f"  - {r.check}: omitido ({r.detail})")
+            click.echo(f"  - {r.check}: skipped ({r.detail})")
         elif not r.passed:
             click.echo(f"  x {r.check}: {r.detail}")
     for issue in issues:
-        click.echo(f"  x consistencia: {issue}")
+        click.echo(f"  x consistency: {issue}")
 
 
 @main.command(cls=_AdvanceCommand)
 @click.argument("slug")
-@click.option("--offline", is_flag=True, help="Omitir verificación de enlaces.")
-@click.option("--no-commit", is_flag=True, help="No registrar la transición en git.")
+@click.option("--offline", is_flag=True, help="Skip link verification.")
+@click.option("--no-commit", is_flag=True, help="Do not record the transition in git.")
 def advance(slug: str, offline: bool, no_commit: bool) -> None:
-    """Valida la etapa actual y avanza solo si todas las capas pasan."""
+    """Validate the current stage and advance only if every layer passes."""
     research = _load(slug)
     from_stage = research.meta.stage
     result = lifecycle.advance(research, offline=offline)
     if not result.ok:
-        click.echo(f"avance bloqueado: {result.blocked_reason}")
+        click.echo(f"advance blocked: {result.blocked_reason}")
         if result.gate_report:
             _print_report(research, result.gate_report, [])
         sys.exit(1)
@@ -378,78 +380,78 @@ def advance(slug: str, offline: bool, no_commit: bool) -> None:
         no_commit,
         paths=[research.artifact_path(META_FILE)],
     )
-    click.echo(f"{slug}: avanzó a etapa {research.meta.stage} (estado {research.meta.status})")
+    click.echo(f"{slug}: advanced to stage {research.meta.stage} (status {research.meta.status})")
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--stage", default=None, help="Juzgar una etapa específica.")
+@click.option("--stage", default=None, help="Judge a specific stage.")
 @click.option("--json", "as_json", is_flag=True)
 def judge(slug: str, stage: str | None, as_json: bool) -> None:
-    """Tombstone temporal del juez semántico retirado."""
+    """Temporary tombstone for the retired semantic judge."""
     raise click.ClickException(
-        "sdr judge fue retirado; use sdr verify-claims para el anclaje textual "
-        "y sdr resolve-claim para registrar una revisión humana"
+        "sdr judge was retired; use sdr verify-claims for textual anchoring "
+        "and sdr resolve-claim to record a human review"
     )
 
 
 @main.command()
 @click.option("--json", "as_json", is_flag=True)
 def doctor(as_json: bool) -> None:
-    """Diagnostica la instalación vigente sin inicializar servicios externos."""
+    """Diagnose the current installation without initializing external services."""
     deprecated = sorted(name for name in os.environ if name.startswith("SDR_JUDGE_"))
     payload = {"ready": True, "deprecated_environment": deprecated}
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo("[OK] instalación SDR")
+        click.echo("[OK] SDR installation")
         for name in deprecated:
-            click.echo(f"  deprecada: {name}")
+            click.echo(f"  deprecated: {name}")
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--by", default=None, help="Autor de la aprobación.")
+@click.option("--by", default=None, help="Author of the approval.")
 @click.option("--offline", is_flag=True)
 def approve(slug: str, by: str | None, offline: bool) -> None:
-    """Registra la aprobación humana del decision memo (etapa transfer)."""
+    """Record the human approval of the decision memo (transfer stage)."""
     research = _load(slug)
     if research.meta.stage != "transfer":
         raise click.ClickException(
-            f"approve solo aplica en etapa transfer; {slug} está en {research.meta.stage}"
+            f"approve only applies in the transfer stage; {slug} is in {research.meta.stage}"
         )
     report = check_stage(research, stage="transfer", offline=offline)
     if not report.passed:
         _print_report(research, report, [])
-        raise click.ClickException("los gates de transfer deben pasar antes de aprobar")
+        raise click.ClickException("the transfer gates must pass before approving")
     research.meta.approval = Approval(
-        by=by or os.environ.get("USER", "desconocido"), date=date.today().isoformat()
+        by=by or os.environ.get("USER", "unknown"), date=date.today().isoformat()
     )
     research.save()
-    click.echo(f"{slug}: aprobado por {research.meta.approval.by}")
+    click.echo(f"{slug}: approved by {research.meta.approval.by}")
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--reason", required=True, help="Motivo del descarte.")
-@click.option("--no-commit", is_flag=True, help="No registrar la transición en git.")
+@click.option("--reason", required=True, help="Reason for dropping.")
+@click.option("--no-commit", is_flag=True, help="Do not record the transition in git.")
 def drop(slug: str, reason: str, no_commit: bool) -> None:
-    """Marca una investigación como descartada conservando su evidencia."""
+    """Mark an investigation as dropped while preserving its evidence."""
     research = _load(slug)
     research.meta.status = "dropped"
     research.meta.dropped_reason = reason
     research.save()
     _record(research, "drop", no_commit, paths=[research.artifact_path(META_FILE)])
-    click.echo(f"{slug}: descartada ({reason})")
+    click.echo(f"{slug}: dropped ({reason})")
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--to", "to_stage", required=True, help="Etapa anterior a la que volver.")
-@click.option("--reason", required=True, help="Motivo del retroceso.")
-@click.option("--no-commit", is_flag=True, help="No registrar la transición en git.")
+@click.option("--to", "to_stage", required=True, help="Earlier stage to return to.")
+@click.option("--reason", required=True, help="Reason for the backtrack.")
+@click.option("--no-commit", is_flag=True, help="Do not record the transition in git.")
 def reopen(slug: str, to_stage: str, reason: str, no_commit: bool) -> None:
-    """Retrocede a una etapa anterior registrando el motivo (backtracking)."""
+    """Move back to an earlier stage, recording the reason (backtracking)."""
     research = _load(slug)
     from_stage = research.meta.stage
     try:
@@ -462,18 +464,25 @@ def reopen(slug: str, to_stage: str, reason: str, no_commit: bool) -> None:
         no_commit,
         paths=[research.artifact_path(META_FILE)],
     )
-    click.echo(f"{slug}: reabierta en etapa {to_stage} ({reason})")
+    click.echo(f"{slug}: reopened at stage {to_stage} ({reason})")
 
 
 @main.command()
 @click.argument("slug")
 @click.option("--json", "as_json", is_flag=True)
 def migrate(slug: str, as_json: bool) -> None:
-    """Migra una investigación v1 a schema_version 2 sin cambiar etapa."""
+    """Migrate a v1 investigation to schema_version 2 without changing its stage.
+
+    Also rewrites the structural section headings of the previous artifact
+    contract to the declared ones, leaving user-authored prose untouched.
+    """
     research = _load(slug)
     before = research.meta.schema_version
     assigned = snapshot_mod.assign_source_ids(research)
     captured = snapshot_mod.capture_declared_sources(research)
+    heading_changes = _migrate_headings(research)
+    if heading_changes:
+        _rerecord_validated_hashes(research)
     research.meta.schema_version = 2
     research.save()
     gaps = _migration_gaps(research)
@@ -483,25 +492,87 @@ def migrate(slug: str, as_json: bool) -> None:
         "to_schema_version": 2,
         "assigned_source_ids": assigned,
         "captured": [item.to_dict() for item in captured],
+        "heading_changes": heading_changes,
         "gaps": gaps,
     }
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo(f"{slug}: migrada a schema_version 2")
+        click.echo(f"{slug}: migrated to schema_version 2")
         _print_snapshot_results(captured)
+        if heading_changes:
+            for change in heading_changes:
+                click.echo(f"  - heading: {change}")
+        else:
+            click.echo("  headings: no change required")
         for gap in gaps:
             click.echo(f"  - {gap}")
+
+
+# A structural heading is an ATX heading whose entire title is a declared section
+# name. Anything else on the line, including prose, is left byte-identical.
+_HEADING_RE = re.compile(r"^(?P<level>#{1,6})(?P<indent>[ \t]+)(?P<title>.+?)(?P<trailing>[ \t]*)$")
+
+
+def _artifact_markdown_paths(research: Research) -> list[Path]:
+    """List the markdown artifacts a stage contract owns, in a stable order."""
+    paths: list[Path] = []
+    for relative in ("brief.md", "decision-memo.md", "probe/results.md"):
+        path = research.artifact_path(relative)
+        if path.is_file():
+            paths.append(path)
+    for directory in ("notes", "assets"):
+        target = research.artifact_path(directory)
+        if target.is_dir():
+            paths.extend(sorted(target.glob("*.md")))
+    return paths
+
+
+def _migrate_headings(research: Research) -> list[str]:
+    """Rewrite the previous contract's section headings, reporting each change."""
+    changes: list[str] = []
+    for path in _artifact_markdown_paths(research):
+        lines = path.read_text(encoding="utf-8").split("\n")
+        rewritten = False
+        for index, line in enumerate(lines):
+            match = _HEADING_RE.match(line)
+            if match is None:
+                continue
+            declared = LEGACY_SECTION_NAMES.get(match.group("title"))
+            if declared is None:
+                continue
+            lines[index] = (
+                f"{match.group('level')}{match.group('indent')}{declared}{match.group('trailing')}"
+            )
+            rewritten = True
+            relative = path.relative_to(research.root).as_posix()
+            changes.append(f"{relative}: {match.group('title')} -> {declared}")
+        if rewritten:
+            path.write_text("\n".join(lines), encoding="utf-8")
+    return changes
+
+
+def _rerecord_validated_hashes(research: Research) -> None:
+    """Re-record the stored stage hashes after a structural heading rewrite.
+
+    Migration changes artifact bytes, so every hash recorded under the previous
+    contract stops matching and `check_consistency` blocks the investigation. The
+    evidence itself is unchanged: only headings the product owns were rewritten,
+    and the rewrite is reported. Re-recording keeps the stored hash a statement
+    about the validated content rather than about a heading the tool renamed.
+    """
+    for stage in list(research.meta.validation):
+        research.meta.validation[stage] = lifecycle.stage_hash(research, stage)
 
 
 def _print_snapshot_results(results) -> None:
     for result in results:
         click.echo(f"  - {result.source_id}: {result.status} {result.url}")
         if result.declared_url != result.final_url:
-            click.echo(f"    declarada: {result.declared_url}")
+            click.echo(f"    declared: {result.declared_url}")
             click.echo(f"    final: {result.final_url}")
         if result.redirects:
-            click.echo("    redirecciones (orden de recuperación):")
+            click.echo("    redirects (retrieval order):")
             for index, redirect in enumerate(result.redirects, start=1):
                 click.echo(
                     f"      {index}. {redirect.status_code} {redirect.url} -> {redirect.target_url}"
@@ -514,17 +585,17 @@ def _migration_gaps(research: Research) -> list[str]:
     for path in sorted(notes_dir.glob("*.md")) if notes_dir.is_dir() else []:
         text = path.read_text(encoding="utf-8")
         if "[S" not in text:
-            gaps.append(f"{path.name}: faltan citas inline [S<n>]")
-        if "## Contra-evidencia" not in text:
-            gaps.append(f"{path.name}: falta sección Contra-evidencia")
+            gaps.append(f"{path.name}: missing inline citations [S<n>]")
+        if f"## {schema.SECTION_COUNTER_EVIDENCE}" not in text:
+            gaps.append(f"{path.name}: missing section {schema.SECTION_COUNTER_EVIDENCE}")
     return gaps
 
 
 @main.command()
 @click.argument("slug")
-@click.option("--no-commit", is_flag=True, help="No registrar la transición en git.")
+@click.option("--no-commit", is_flag=True, help="Do not record the transition in git.")
 def archive(slug: str, no_commit: bool) -> None:
-    """Consolida una investigación cerrada en knowledge/<slug>.md."""
+    """Consolidate a closed investigation into knowledge/<slug>.md."""
     research = _load(slug)
     try:
         path = archive_mod.archive_research(research, _knowledge_dir())
@@ -537,26 +608,26 @@ def archive(slug: str, no_commit: bool) -> None:
         paths=[research.artifact_path(META_FILE)],
         extra=[path],
     )
-    click.echo(f"{slug}: archivada en {path}")
+    click.echo(f"{slug}: archived in {path}")
 
 
 @main.group()
 def context() -> None:
-    """Grafo auxiliar no bloqueante de criterios, resultados y decisión.
+    """Auxiliary non-blocking graph of criteria, results and decision.
 
-    Incluye un inventario global de fuentes; no representa lineage completo.
+    Includes a global source inventory; it does not represent full lineage.
     """
 
 
 @main.group()
 def cross() -> None:
-    """Consultas derivadas, determinísticas y no bloqueantes entre investigaciones."""
+    """Derived, deterministic and non-blocking queries across investigations."""
 
 
 @cross.command("derive")
 @click.option("--json", "as_json", is_flag=True)
 def cross_derive(as_json: bool) -> None:
-    """Deriva en memoria las relaciones entre todas las investigaciones."""
+    """Derive the relations across every investigation in memory."""
     try:
         payload = cross_mod.derive_cross_investigation_layer(_base()).to_dict()
     except (ValueError, OSError, yaml.YAMLError) as exc:
@@ -565,7 +636,7 @@ def cross_derive(as_json: bool) -> None:
         click.echo(_json_dumps_redacted(payload))
     else:
         click.echo(
-            f"cross-investigation: {len(payload['investigations'])} investigaciones, "
+            f"cross-investigation: {len(payload['investigations'])} investigations, "
             f"{payload['join_count']} joins"
         )
 
@@ -574,7 +645,7 @@ def cross_derive(as_json: bool) -> None:
 @click.argument("source_identity")
 @click.option("--json", "as_json", is_flag=True)
 def cross_source(source_identity: str, as_json: bool) -> None:
-    """Consulta citas y dependencias explícitas de una identidad de fuente."""
+    """Query the citations and explicit dependencies of a source identity."""
     try:
         layer = cross_mod.derive_cross_investigation_layer(_base())
         payload = cross_mod.query_source_dependencies(layer, source_identity).to_dict()
@@ -590,9 +661,9 @@ def cross_source(source_identity: str, as_json: bool) -> None:
 
 
 @cross.command("degraded")
-@click.option("--online", is_flag=True, help="Comprobar fuentes mediante red explícitamente.")
+@click.option("--online", is_flag=True, help="Check sources over the network explicitly.")
 @click.option("--observed-at", default=None, metavar="ISO-8601")
-@click.option("--include-expiry", is_flag=True, help="Incluir degradación por expiración.")
+@click.option("--include-expiry", is_flag=True, help="Include degradation by expiry.")
 @click.option("--as-of", default=None, metavar="YYYY-MM-DD")
 @click.option("--json", "as_json", is_flag=True)
 def cross_degraded(
@@ -602,7 +673,7 @@ def cross_degraded(
     as_of: str | None,
     as_json: bool,
 ) -> None:
-    """Reporta hechos mecánicos de soporte degradado sin bloquear ni escribir."""
+    """Report the mechanical facts of degraded support without blocking or writing."""
     try:
         report = cross_mod.report_degraded_support(
             _base(),
@@ -616,7 +687,7 @@ def cross_degraded(
     if as_json:
         click.echo(_json_dumps_redacted(payload))
     else:
-        click.echo(f"degraded support: {len(report.items)} dependencias afectadas")
+        click.echo(f"degraded support: {len(report.items)} affected dependencies")
         for item in report.items:
             click.echo(
                 f"  - {item.source_investigation}:{item.source_id} {item.cause} "
@@ -632,14 +703,14 @@ def cross_degraded(
     required=True,
     type=click.Choice(["unreachable", "changed", "expired"]),
 )
-@click.option("--observation-id", required=True, help="ID exacto del reporte actual.")
-@click.option("--reason", required=True, help="Motivo de la revisión humana.")
-@click.option("--by", required=True, help="Autor de la revisión humana.")
-@click.option("--online", is_flag=True, help="Recomprobar fuentes mediante red explícitamente.")
+@click.option("--observation-id", required=True, help="Exact ID from the current report.")
+@click.option("--reason", required=True, help="Reason for the human review.")
+@click.option("--by", required=True, help="Author of the human review.")
+@click.option("--online", is_flag=True, help="Re-check sources over the network explicitly.")
 @click.option("--observed-at", default=None, metavar="ISO-8601")
-@click.option("--include-expiry", is_flag=True, help="Incluir degradación por expiración.")
+@click.option("--include-expiry", is_flag=True, help="Include degradation by expiry.")
 @click.option("--as-of", default=None, metavar="YYYY-MM-DD")
-@click.option("--no-commit", is_flag=True, help="No registrar la revisión en git.")
+@click.option("--no-commit", is_flag=True, help="Do not record the review in git.")
 @click.option("--json", "as_json", is_flag=True)
 def acknowledge_degradation(
     slug: str,
@@ -655,7 +726,7 @@ def acknowledge_degradation(
     no_commit: bool,
     as_json: bool,
 ) -> None:
-    """Registra una revisión exacta del soporte degradado actual."""
+    """Record an exact review of the current degraded support."""
     trail_result = None
     try:
         research = _load(slug)
@@ -730,11 +801,11 @@ def acknowledge_degradation(
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo(f"{slug}: degradación {source_id} {cause} reconocida")
+        click.echo(f"{slug}: degradation {source_id} {cause} acknowledged")
         if trail_result and trail_result.committed:
-            click.echo(f"rastro: {trail_result.message}")
+            click.echo(f"trail: {trail_result.message}")
         elif trail_result and trail_result.warning:
-            click.echo(f"rastro: {trail_result.warning}", err=True)
+            click.echo(f"trail: {trail_result.warning}", err=True)
 
 
 @main.group()
@@ -772,7 +843,7 @@ def integrations_install(destination: Path, as_json: bool) -> None:
 @click.argument("slug")
 @click.option("--json", "as_json", is_flag=True)
 def context_build(slug: str, as_json: bool) -> None:
-    """Construye `research/<slug>/context/context.json`."""
+    """Build `research/<slug>/context/context.json`."""
     research = _load(slug)
     graph = build_sdr_context_graph(research)
     path = write_context_graph(graph, research.root)
@@ -786,7 +857,7 @@ def context_build(slug: str, as_json: bool) -> None:
         click.echo(_json_dumps(payload))
     else:
         click.echo(
-            f"{slug}: context graph escrito en {path} "
+            f"{slug}: context graph written to {path} "
             f"({payload['nodes']} nodes, {payload['edges']} edges)"
         )
 
@@ -795,7 +866,7 @@ def context_build(slug: str, as_json: bool) -> None:
 @click.argument("slug")
 @click.option("--json", "as_json", is_flag=True)
 def context_inspect(slug: str, as_json: bool) -> None:
-    """Inspecciona métricas y warnings de `context/context.json`."""
+    """Inspect the metrics and warnings of `context/context.json`."""
     research = _load(slug)
     try:
         graph = read_context_graph(research.root)
@@ -818,12 +889,12 @@ def context_inspect(slug: str, as_json: bool) -> None:
 
 @context.command("trace")
 @click.argument("slug")
-@click.option("--criterion", default="", help="ID de criterio a trazar, por ejemplo C1.")
+@click.option("--criterion", default="", help="Criterion ID to trace, for example C1.")
 @click.option("--json", "as_json", is_flag=True)
 def context_trace(slug: str, criterion: str, as_json: bool) -> None:
-    """Muestra relaciones entrantes y salientes para un nodo del grafo."""
+    """Show the incoming and outgoing relations of a graph node."""
     if not criterion:
-        raise click.ClickException("indique --criterion <ID>")
+        raise click.ClickException("specify --criterion <ID>")
     research = _load(slug)
     try:
         graph = read_context_graph(research.root)
@@ -844,10 +915,10 @@ def context_trace(slug: str, criterion: str, as_json: bool) -> None:
 
 @context.command("check")
 @click.argument("slug")
-@click.option("--strict", is_flag=True, help="Tratar warnings como fallas.")
+@click.option("--strict", is_flag=True, help="Treat warnings as failures.")
 @click.option("--json", "as_json", is_flag=True)
 def context_check(slug: str, strict: bool, as_json: bool) -> None:
-    """Diagnostica estructura y gaps del grafo auxiliar."""
+    """Diagnose the structure and gaps of the auxiliary graph."""
     research = _load(slug)
     try:
         graph = read_context_graph(research.root)
@@ -862,7 +933,7 @@ def context_check(slug: str, strict: bool, as_json: bool) -> None:
         if as_json:
             click.echo(_json_dumps(payload))
         else:
-            click.echo(f"[FALLA] context graph de {slug}")
+            click.echo(f"[FAIL] context graph for {slug}")
             click.echo(f"  x {exc}")
         sys.exit(1)
 
@@ -878,7 +949,7 @@ def context_check(slug: str, strict: bool, as_json: bool) -> None:
     if as_json:
         click.echo(_json_dumps(payload))
     else:
-        click.echo(f"[{'OK' if passed else 'FALLA'}] context graph de {slug}")
+        click.echo(f"[{'OK' if passed else 'FAIL'}] context graph for {slug}")
         for warning in warnings:
             click.echo(f"  warning: {warning}")
     sys.exit(0 if passed else 1)
@@ -895,7 +966,7 @@ def context_check(slug: str, strict: bool, as_json: bool) -> None:
 )
 @click.option("--json", "as_json", is_flag=True)
 def context_export(slug: str, export_format: str, as_json: bool) -> None:
-    """Exporta `context.json` a una vista derivada."""
+    """Export `context.json` to a derived view."""
     research = _load(slug)
     try:
         graph = read_context_graph(research.root)
@@ -916,10 +987,10 @@ def context_export(slug: str, export_format: str, as_json: bool) -> None:
 @context.command("query")
 @click.argument("slug")
 @click.argument("intent")
-@click.option("--criterion", default="", help="ID de criterio, por ejemplo C1.")
+@click.option("--criterion", default="", help="Criterion ID, for example C1.")
 @click.option("--json", "as_json", is_flag=True)
 def context_query(slug: str, intent: str, criterion: str, as_json: bool) -> None:
-    """Consulta `context.json` con intents determinísticos."""
+    """Query `context.json` with deterministic intents."""
     research = _load(slug)
     try:
         graph = read_context_graph(research.root)
@@ -956,7 +1027,7 @@ def context_query(slug: str, intent: str, criterion: str, as_json: bool) -> None
 @click.argument("slug", required=False)
 @click.option("--json", "as_json", is_flag=True)
 def status(slug: str | None, as_json: bool) -> None:
-    """Muestra el estado de una investigación o el resumen global."""
+    """Show the status of one investigation or the global summary."""
     if slug:
         research = _load(slug)
         report = check_stage(research, offline=True)
@@ -970,13 +1041,13 @@ def status(slug: str | None, as_json: bool) -> None:
             click.echo(_json_dumps(info))
         else:
             click.echo(f"{research.meta.slug} — {research.meta.title}")
-            click.echo(f"  etapa: {research.meta.stage} | estado: {research.meta.status}")
-            click.echo(f"  gate actual: {'OK' if report.passed else 'FALLA'}")
+            click.echo(f"  stage: {research.meta.stage} | status: {research.meta.status}")
+            click.echo(f"  current gate: {'OK' if report.passed else 'FAIL'}")
             markers = audit_mod.audit_markers(research)
             if markers:
-                click.echo(f"  auditoría: {', '.join(markers)}")
+                click.echo(f"  audit: {', '.join(markers)}")
             if _timebox_overdue(research):
-                click.echo("  aviso: timebox vencido")
+                click.echo("  warning: timebox overdue")
         return
 
     items = _all_research()
@@ -984,11 +1055,11 @@ def status(slug: str | None, as_json: bool) -> None:
         click.echo(_json_dumps([_status_metadata(r) for r in items]))
         return
     if not items:
-        click.echo("no hay investigaciones")
+        click.echo("no investigations")
         return
     for r in items:
         m = r.meta
-        overdue = " [timebox vencido]" if _timebox_overdue(r) else ""
+        overdue = " [timebox overdue]" if _timebox_overdue(r) else ""
         markers = audit_mod.audit_markers(r)
         audit = f" [{' ; '.join(markers)}]" if markers else ""
         click.echo(f"{m.slug:24} {m.stage:9} {m.status:8} {m.title}{overdue}{audit}")
@@ -1003,9 +1074,9 @@ def _timebox_overdue(research: Research) -> bool:
 
 @main.command()
 def index() -> None:
-    """Regenera research/INDEX.md."""
+    """Regenerate research/INDEX.md."""
     path = index_mod.write_index(_base())
-    click.echo(f"índice regenerado: {path}")
+    click.echo(f"index regenerated: {path}")
 
 
 if __name__ == "__main__":

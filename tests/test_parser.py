@@ -20,11 +20,11 @@ def test_parses_frontmatter_and_sections(tmp_path):
         stage: intake
         ---
 
-        ## Pregunta
+        ## Question
 
         ¿Sirve foo para X?
 
-        ## Hipótesis
+        ## Hypothesis
 
         Creemos que sí.
         """,
@@ -32,49 +32,49 @@ def test_parses_frontmatter_and_sections(tmp_path):
     art = parser.parse_artifact(path)
     assert art.frontmatter["research"] == "eval-foo"
     assert art.frontmatter["stage"] == "intake"
-    assert "¿Sirve foo para X?" in art.section("Pregunta")
-    assert "Creemos que sí." in art.section("Hipótesis")
+    assert "¿Sirve foo para X?" in art.section("Question")
+    assert "Creemos que sí." in art.section("Hypothesis")
 
 
 def test_section_missing_returns_none(tmp_path):
-    path = _write(tmp_path, "## Pregunta\n\ntexto\n")
+    path = _write(tmp_path, "## Question\n\ntexto\n")
     art = parser.parse_artifact(path)
-    assert art.section("Alcance") is None
+    assert art.section("Scope") is None
 
 
 def test_empty_section_reports_no_content(tmp_path):
     path = _write(
         tmp_path,
         """
-        ## Pregunta
+        ## Question
 
-        ## Hipótesis
+        ## Hypothesis
 
         algo
         """,
     )
     art = parser.parse_artifact(path)
-    assert not art.has_content("Pregunta")
-    assert art.has_content("Hipótesis")
+    assert not art.has_content("Question")
+    assert art.has_content("Hypothesis")
 
 
 def test_section_match_allows_trailing_annotation(tmp_path):
     path = _write(
         tmp_path,
         """
-        ## Criterios de evaluación (aceptación)
+        ## Evaluation criteria (aceptación)
 
         - C1: latencia < 200ms
         """,
     )
     art = parser.parse_artifact(path)
-    assert art.has_content("Criterios de evaluación")
+    assert art.has_content("Evaluation criteria")
 
 
 def test_section_match_is_whitespace_and_case_insensitive(tmp_path):
-    path = _write(tmp_path, "##   riesgos DE adopción\n\ntexto\n")
+    path = _write(tmp_path, "##   adoption RISKS\n\ntexto\n")
     art = parser.parse_artifact(path)
-    assert art.has_content("Riesgos de adopción")
+    assert art.has_content("Adoption risks")
 
 
 def test_duplicate_top_level_evidence_claim_ids_is_rejected_deterministically(tmp_path):

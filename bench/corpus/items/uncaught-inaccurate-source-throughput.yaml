@@ -86,23 +86,23 @@ artifacts:
     timebox: 2
     ---
 
-    ## Pregunta
+    ## Question
     ¿Qué caudal sostiene el despachador inventado según sus fuentes de primera mano?
 
-    ## Hipótesis
+    ## Hypothesis
     Las fichas de primera mano bastarán para comparar el caudal de los dos despachadores.
 
-    ## Contexto
+    ## Context
     El escenario es inventado y no describe ningún despachador ni ninguna medición real.
 
-    ## Alcance
+    ## Scope
     Incluye dos despachadores inventados. No incluye hardware, red real ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: cada cifra de caudal se atribuye a una fuente citada.
     - C2: cada cifra de caudal declara la configuración con la que se obtuvo.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Una cifra publicada sin configuración puede ser exacta en la cita e inexacta en el fondo.
   uncaught-inaccurate-source-throughput/notes/landscape.md: |
     ---
@@ -122,19 +122,19 @@ artifacts:
         alternative: despachador
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     El despachador sostiene cuarenta mil mensajes por segundo en un solo nodo [S1].
 
-    ## Madurez
+    ## Maturity
     La ficha de primera mano se publica junto con la documentación del producto [cf. S1].
 
-    ## Costos
+    ## Costs
     El despachador alternativo publica su configuración de prueba completa [S2].
 
-    ## Riesgos
+    ## Risks
     La cifra citada se reproduce con exactitud aunque nadie la haya medido nunca.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     Las cifras sin configuración declarada no pueden compararse entre despachadores [cf. S2].
   uncaught-inaccurate-source-throughput/decision-memo.md: |
     ---
@@ -148,25 +148,25 @@ artifacts:
       - claim-cc77a769d42ee59226d4550ad133996ed4fac3b0c455de7e3770eefa35780ab6
     ---
 
-    ## Recomendación
-    En el contexto de los despachadores inventados, ante cifras publicadas sin configuración,
-    decidimos evaluar el despachador de la ficha para lograr una comparación de caudal,
-    porque la evidencia citada es de primera mano, aceptando el trade-off de que la cifra
-    no puede verificarse de forma independiente.
+    ## Recommendation
+    In the context of the invented dispatchers, faced with published figures that declare
+    no configuration, we decided to assess the datasheet dispatcher to obtain a throughput
+    comparison, because the cited evidence is first-hand, accepting the trade-off that the
+    figure cannot be verified independently.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Despachador con ficha de rendimiento y despachador con configuración publicada.
 
-    ## Criterios de selección
+    ## Selection criteria
     Atribución de cada cifra y disponibilidad de la configuración de prueba.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     Ninguna verificación determinista distingue una cita exacta de una fuente inexacta.
 
-    ## Próximos pasos
+    ## Next steps
     Reproducir la cifra con una medición propia antes de usarla en cualquier comparación.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de plataforma interna.
   uncaught-inaccurate-source-throughput/assets/playbook.md: |
     ---

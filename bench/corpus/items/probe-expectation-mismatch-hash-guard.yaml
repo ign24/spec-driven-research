@@ -84,23 +84,23 @@ artifacts:
     timebox: 3
     ---
 
-    ## Pregunta
+    ## Question
     ¿Una guarda local puede detectar cambios en tres cadenas inventadas de forma repetible?
 
-    ## Hipótesis
+    ## Hypothesis
     Una guarda pequeña detectará cualquier cambio en las cadenas inventadas del fixture.
 
-    ## Contexto
+    ## Context
     El ejercicio es sintético y solo usa cadenas inventadas embebidas en el propio artefacto.
 
-    ## Alcance
+    ## Scope
     Incluye tres cadenas inventadas. No incluye archivos de usuario, red ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: la guarda detecta el cambio de una de las tres cadenas.
     - C2: la guarda imprime el marcador declarado al terminar sin diferencias.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Una expectativa mal declarada puede dar por válida una verificación que nunca coincidió.
   probe-expectation-mismatch-hash-guard/notes/landscape.md: |
     ---
@@ -120,20 +120,20 @@ artifacts:
         alternative: guarda-local
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Se comparan una guarda local y una guarda externa inventada [cf. S2].
     La guarda imprime un marcador único al terminar sin diferencias [S1].
 
-    ## Madurez
+    ## Maturity
     Ambas guardas alcanzan para una demostración de capacitación [cf. S1].
 
-    ## Costos
+    ## Costs
     La guarda externa requiere un servicio adicional en ejecución [S2].
 
-    ## Riesgos
+    ## Risks
     Un marcador declarado con otro nombre invalida la lectura del resultado del probe.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     No se encontró evidencia en contra dentro de las dos fuentes inventadas declaradas.
   probe-expectation-mismatch-hash-guard/probe/check.py: |
     def digest(value: str) -> int:
@@ -157,13 +157,13 @@ artifacts:
       environment: clean
     ---
 
-    ## Resultados por criterio
+    ## Results by criterion
     | criterio | resultado | evidencia |
     |---|---|---|
     | C1 | cumple: el cambio de una cadena altera la suma | `probe/check.py` |
     | C2 | cumple: la guarda imprime su marcador final | `probe/check.py` |
 
-    ## Reproducción
+    ## Reproduction
     ```bash
     python check.py
     ```
@@ -179,24 +179,24 @@ artifacts:
       - claim-c72e975fe77f1203fc9edcaafd64a990d054e0197d16e264693c70e5dcb3161e
     ---
 
-    ## Recomendación
-    En el contexto de la guarda inventada, ante la necesidad de evidencia ejecutable,
-    decidimos probar la guarda local para lograr detección repetible de cambios, porque
-    el probe declarado cubre C1 y C2, aceptando el trade-off de que el fixture es diminuto.
+    ## Recommendation
+    In the context of the invented guard, faced with the need for executable evidence,
+    we decided to trial the local guard to obtain repeatable change detection, because
+    the declared probe covers C1 and C2, accepting the trade-off that the fixture is tiny.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Guarda local sobre la biblioteca estándar y guarda externa con servicio adicional.
 
-    ## Criterios de selección
+    ## Selection criteria
     Detección de cambios y ausencia de servicios adicionales en ejecución.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     El marcador declarado en el probe no es el que imprime el comando declarado.
 
-    ## Próximos pasos
+    ## Next steps
     Alinear la expectativa del probe con la salida real antes de repetir la verificación.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de capacitación interna.
   probe-expectation-mismatch-hash-guard/assets/playbook.md: |
     ---

@@ -85,23 +85,23 @@ artifacts:
     timebox: 3
     ---
 
-    ## Pregunta
+    ## Question
     ¿La cola inventada mantiene el orden de los mensajes bajo carga concurrente?
 
-    ## Hipótesis
+    ## Hypothesis
     La cola preservará el orden de llegada incluso con varios productores simultáneos.
 
-    ## Contexto
+    ## Context
     El escenario es inventado y no describe ninguna cola ni ninguna medición real.
 
-    ## Alcance
+    ## Scope
     Incluye una cola inventada en memoria. No incluye red, persistencia ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: los mensajes salen en el mismo orden en que entraron.
     - C2: el resultado se repite de forma idéntica en dos ejecuciones.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Una prueba de un solo productor puede pasar sin decir nada sobre carga concurrente.
   uncaught-unrepresentative-benchmark-queue/notes/landscape.md: |
     ---
@@ -121,19 +121,19 @@ artifacts:
         alternative: cola-en-memoria
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     La cola preserva el orden de llegada dentro de un mismo productor [S1].
 
-    ## Madurez
+    ## Maturity
     La documentación inventada cubre el caso de un solo productor [cf. S1].
 
-    ## Costos
+    ## Costs
     Las pruebas de un solo productor no observan condiciones de carrera [S2].
 
-    ## Riesgos
+    ## Risks
     El probe disponible mide un escenario más simple que el de la pregunta del brief.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     La medición concurrente exige varios productores y repeticiones [cf. S2].
   uncaught-unrepresentative-benchmark-queue/probe/check.py: |
     from collections import deque
@@ -162,13 +162,13 @@ artifacts:
       environment: clean
     ---
 
-    ## Resultados por criterio
+    ## Results by criterion
     | criterio | resultado | evidencia |
     |---|---|---|
     | C1 | cumple: los tres mensajes salen en orden de entrada | `probe/check.py` |
     | C2 | cumple: dos ejecuciones devuelven la misma secuencia | `probe/check.py` |
 
-    ## Reproducción
+    ## Reproduction
     ```bash
     python check.py
     ```
@@ -184,25 +184,25 @@ artifacts:
       - claim-58d98835f8a21df465702710078c12cac3d84f1e7042300068186f475d2464b7
     ---
 
-    ## Recomendación
-    En el contexto de la cola inventada, ante la necesidad de evidencia ejecutable,
-    decidimos probar la cola en memoria para lograr un orden previsible, porque el probe
-    determinista cumplió C1 y C2, aceptando el trade-off de que la prueba usa un único
-    productor y no representa la carga concurrente de la pregunta.
+    ## Recommendation
+    In the context of the invented queue, faced with the need for executable evidence,
+    we decided to trial the in-memory queue to obtain predictable ordering, because the
+    deterministic probe met C1 and C2, accepting the trade-off that the test uses a single
+    producer and does not represent the concurrent load of the question.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Cola en memoria de un proceso y cola con varios productores simultáneos.
 
-    ## Criterios de selección
+    ## Selection criteria
     Orden de salida observado y repetibilidad exacta de la ejecución.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     El probe no ejerce concurrencia, así que no responde la pregunta del brief.
 
-    ## Próximos pasos
+    ## Next steps
     Escribir una medición con varios productores antes de sostener cualquier garantía.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de plataforma interna.
   uncaught-unrepresentative-benchmark-queue/assets/playbook.md: |
     ---

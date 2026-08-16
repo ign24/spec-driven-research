@@ -11,7 +11,7 @@ def extract_references(markdown):
 
 def test_extract_claims_from_paragraphs_and_bullets():
     text = """
-## Alternativas evaluadas
+## Alternatives evaluated
 
 Foo soporta modo offline [S1]. También ofrece cache local [S2].
 
@@ -44,7 +44,7 @@ def test_contextual_references_do_not_create_claims():
 
 
 def test_markdown_headings_extract_factual_claims_without_atx_prefix():
-    markdown = "## Foo alcanza madurez [S1]\n\n### Contexto histórico [cf.S2]\n"
+    markdown = "## Foo alcanza madurez [S1]\n\n### Context histórico [cf.S2]\n"
 
     references = extract_references(markdown)
     claims = extract_claims(markdown, note_path="notes/foo.md")
@@ -95,9 +95,9 @@ def test_multiple_factual_references_in_one_sentence_are_rejected_actionably():
 
     message = str(exc_info.value)
     assert "notes/foo.md" in message
-    assert "línea 1" in message
+    assert "line 1" in message
     assert "[S1]" in message and "[S2]" in message
-    assert "divida la oración" in message
+    assert "split the sentence" in message
 
 
 def test_multiline_sentence_uses_absolute_inclusive_lines_and_excludes_frontmatter():
@@ -117,9 +117,9 @@ def test_multiple_factual_references_across_lines_in_one_sentence_are_rejected()
         extract_claims(markdown, note_path="notes/foo.md")
 
     message = str(exc_info.value)
-    assert "líneas 1-2" in message
+    assert "lines 1-2" in message
     assert "[S1]" in message and "[S2]" in message
-    assert "divida la oración" in message
+    assert "split the sentence" in message
 
 
 @pytest.mark.parametrize(

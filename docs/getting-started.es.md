@@ -8,6 +8,11 @@ los nombres, fuentes y resultados son inventados. Los comandos funcionan sin
 red, no ejecuta probes, la aprobación es explícita y reuse es
 obligatorio.
 
+La salida de la herramienta y las secciones de los artefactos están en inglés
+(`Question`, `Evaluation criteria`, ...), aunque esta guía esté en español. Si ya
+tenías una investigación con secciones en español, corré `sdr migrate` antes de
+avanzarla.
+
 El ciclo es `intake -> explore -> transfer -> reuse -> done`.
 
 ## Antes de empezar
@@ -26,8 +31,8 @@ del fixture no cambian.
 
 ```bash
 uv run sdr new synthetic-light \
-  --title "Evaluación sintética de un clasificador de reglas" \
-  --question "¿Conviene evaluar un clasificador determinístico para ordenar tarjetas ficticias?" \
+  --title "Synthetic evaluation of a rule-based classifier" \
+  --question "Is it worth evaluating a deterministic classifier to sort fictional cards?" \
   --mode light \
   --owner "Example Researcher" \
   --timebox 2 \

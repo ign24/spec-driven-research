@@ -1,6 +1,6 @@
 slug: synthetic-full
-title: Evaluación sintética de normalización de etiquetas
-question: ¿Una función local puede normalizar un conjunto fijo de etiquetas inventadas?
+title: Synthetic evaluation of label normalization
+question: Can a local function normalize a fixed set of invented labels?
 mode: full
 owner: Example Researcher
 timebox: 3

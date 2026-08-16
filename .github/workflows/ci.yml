@@ -41,6 +41,10 @@ jobs:
       - name: Validate workflow syntax
         # v1.7.7, tag commit 03d0035246f3e81f36aed592ffb4bebf33a03106.
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Validate the language of the product surface
+        # Runs last so a language finding never pre-empts an existing gate. The
+        # check is deterministic and offline; it reads no network resource.
+        run: uv run python -m sdr.product_language .
 
   installation:
     name: Install the revision under test from the canonical repository

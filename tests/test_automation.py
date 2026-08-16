@@ -41,11 +41,29 @@ def test_ci_uses_read_only_permissions_linux_python_matrix_and_required_gates() 
         "sdr.readme_parity",
         "sdr.skill_validation",
         "sdr.integration_validation",
+        "sdr.product_language",
         "openspec validate --specs --strict --no-interactive",
         "twine check dist/*",
         "sdr.artifact_audit dist/*",
     ):
         assert command in text
+
+
+def test_product_language_validation_runs_after_the_existing_quality_gates() -> None:
+    """A new gate must not pre-empt the gates that already guard the branch."""
+    _, workflow = _workflow("ci.yml")
+    runs = [str(step.get("run", "")) for step in workflow["jobs"]["quality"]["steps"]]
+
+    product_language = next(index for index, run in enumerate(runs) if "product_language" in run)
+    for existing in ("ruff check", "pytest", "readme_parity", "skill_validation", "actionlint"):
+        assert next(index for index, run in enumerate(runs) if existing in run) < product_language
+
+
+def test_documented_validation_commands_cover_product_language() -> None:
+    docs = (ROOT / "docs" / "validation.md").read_text(encoding="utf-8")
+
+    assert "uv run python -m sdr.product_language ." in docs
+    assert "sdr.product_language" in docs
 
 
 def test_ci_runs_the_installation_verification_with_network_access_declared() -> None:

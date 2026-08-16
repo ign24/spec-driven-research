@@ -31,7 +31,7 @@ def test_context_graph_validates_node_and_edge_contract():
             GraphNode(
                 id=canonical_node_id("decision", "recommendation"),
                 type="decision",
-                title="Recomendación",
+                title="Recommendation",
                 source_files=("decision-memo.md",),
             ),
         ],
@@ -131,7 +131,7 @@ def test_write_context_graph_rejects_context_symlink_escape(tmp_path):
     (root / "context").symlink_to(outside, target_is_directory=True)
     graph = ContextGraph(nodes=[], edges=[])
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         write_context_graph(graph, root)
 
     assert not (outside / "context.json").exists()
@@ -155,16 +155,16 @@ research: eval-context
 stage: intake
 ---
 
-## Pregunta
+## Question
 
 ¿El grafo mejora la trazabilidad?
 
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: conecta criterios con decisiones
 - C2: detecta tareas sin evidencia
 
-## Riesgos de adopción
+## Adoption risks
 
 - Ruido visual en Obsidian
 - Dependencia prematura de CodeGraph
@@ -199,7 +199,7 @@ def test_build_sdr_context_graph_extracts_sources_probe_results_and_decision(tmp
     )
     (research.root / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: conecta criterios con decisiones
 """.lstrip(),
@@ -217,7 +217,7 @@ sources:
     alternative: speclab-context-graph
 ---
 
-## Alternativas evaluadas
+## Alternatives evaluated
 
 SpecLab Context Graph.
 """.lstrip(),
@@ -225,7 +225,7 @@ SpecLab Context Graph.
     )
     (research.root / "probe" / "results.md").write_text(
         """
-## Resultados por criterio
+## Results by criterion
 
 - C1: cumple - El prototipo enlaza criterio y decisión.
 """.lstrip(),
@@ -240,11 +240,11 @@ ring: trial
 audience: equipo
 ---
 
-## Recomendación
+## Recommendation
 
-En el contexto de SpecLab, ante trazabilidad limitada, decidimos trial del Context Graph para mejorar decisiones, aceptando ruido visual.
+In the context of SpecLab, facing limited traceability, we decide to trial the Context Graph to improve decisions, because the evidence supports it, accepting visual noise.
 
-## Criterios de selección
+## Selection criteria
 
 C1 fue el criterio principal.
 """.lstrip(),
@@ -277,7 +277,7 @@ def test_build_sdr_context_graph_links_optional_openspec_change_tasks_and_specs(
     )
     (research.root / "brief.md").write_text(
         """
-## Criterios de evaluación
+## Evaluation criteria
 
 - C1: conecta criterios con tareas OpenSpec
 """.lstrip(),
@@ -599,7 +599,7 @@ def test_built_context_graph_records_memo_without_recommendation_as_gap(tmp_path
         question="¿El grafo ayuda?",
     )
     research.artifact_path("decision-memo.md").write_text(
-        "---\nring: assess\n---\n\n## Recomendación\n\n",
+        "---\nring: assess\n---\n\n## Recommendation\n\n",
         encoding="utf-8",
     )
 

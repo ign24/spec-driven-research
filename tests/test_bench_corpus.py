@@ -187,7 +187,7 @@ ring: assess
 audience: equipo
 ---
 
-## Recomendación
+## Recommendation
 Conservar el resultado sintético.
 """
     item = {
@@ -220,7 +220,7 @@ evidence_claim_ids:
   - {claim_id}
 ---
 
-## Recomendación
+## Recommendation
 Conservar el resultado sintético.
 """
     return {

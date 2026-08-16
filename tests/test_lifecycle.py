@@ -28,23 +28,23 @@ def _valid_intake(tmp_path, mode="full"):
             timebox: 3
             ---
 
-            ## Pregunta
+            ## Question
             ¿Sirve Foo?
 
-            ## Hipótesis
+            ## Hypothesis
             Sí.
 
-            ## Contexto
+            ## Context
             X.
 
-            ## Alcance
+            ## Scope
             A, no B.
 
-            ## Criterios de evaluación
+            ## Evaluation criteria
             - C1: latencia < 200ms
             - C2: costo < 10 USD
 
-            ## Riesgos de adopción
+            ## Adoption risks
             Lock-in.
             """
         ).lstrip(),
@@ -117,19 +117,19 @@ sources:
     alternative: foo
 ---
 
-## Alternativas evaluadas
+## Alternatives evaluated
 Foo existe [S1].
 
-## Madurez
+## Maturity
 Foo tiene soporte [S1].
 
-## Costos
+## Costs
 Foo es barato [S2].
 
-## Riesgos
+## Risks
 Foo tiene riesgos [S2].
 
-## Contra-evidencia
+## Counter-evidence
 No se encontró contra-evidencia.
 """.lstrip(),
         encoding="utf-8",
@@ -161,7 +161,7 @@ def test_advance_blocks_when_validated_artifact_changed(tmp_path):
     assert not result.ok
     assert r.meta.stage == "explore"
     assert "intake" in result.blocked_reason
-    assert "cambió" in result.blocked_reason
+    assert "changed" in result.blocked_reason
 
 
 def test_context_graph_artifacts_do_not_change_stage_hash_or_consistency(tmp_path):
@@ -194,7 +194,7 @@ def test_context_exports_and_queries_do_not_change_stage_hash_or_consistency(tmp
 def test_context_graph_build_inspect_trace_then_normal_lifecycle(tmp_path):
     r = _valid_intake(tmp_path)
     r.artifact_path("probe/results.md").write_text(
-        "## Resultados por criterio\n\n- C1: cumple - evidencia\n- C2: cumple - evidencia\n",
+        "## Results by criterion\n\n- C1: cumple - evidencia\n- C2: cumple - evidencia\n",
         encoding="utf-8",
     )
 
@@ -227,22 +227,22 @@ def test_transfer_requires_human_approval(tmp_path):
             evidence_claim_ids: []
             ---
 
-            ## Recomendación
-            Decidimos evaluar Foo para soporte, porque la evidencia de C1 y C2 es parcial, aceptando el trade-off de no adoptarlo todavía.
+            ## Recommendation
+            We decide to evaluate Foo for support, because the C1 and C2 evidence is partial, accepting the trade-off of not adopting it yet.
 
-            ## Alternativas evaluadas
+            ## Alternatives evaluated
             Foo, Bar.
 
-            ## Criterios de selección
+            ## Selection criteria
             Costo.
 
-            ## Riesgos y limitaciones
+            ## Risks and limitations
             Lock-in.
 
-            ## Próximos pasos
+            ## Next steps
             Piloto.
 
-            ## Audiencia
+            ## Audience
             Equipo.
             """
         ).lstrip(),
@@ -251,7 +251,7 @@ def test_transfer_requires_human_approval(tmp_path):
     r.save()
     blocked = lifecycle.advance(r)
     assert not blocked.ok
-    assert "aprob" in (blocked.blocked_reason or "").lower()
+    assert "approval" in (blocked.blocked_reason or "").lower()
 
     r.meta.approval = Approval(by="nacho", date="2026-07-03")
     r.save()
@@ -276,22 +276,22 @@ def test_reopened_schema_v1_transfer_memo_without_lineage_advances_deterministic
             audience: equipo
             ---
 
-            ## Recomendación
-            Decidimos evaluar Foo para soporte, porque la evidencia es parcial, aceptando el trade-off de no adoptarlo todavía.
+            ## Recommendation
+            We decide to evaluate Foo for support, because the evidence is partial, accepting the trade-off of not adopting it yet.
 
-            ## Alternativas evaluadas
+            ## Alternatives evaluated
             Foo, Bar.
 
-            ## Criterios de selección
+            ## Selection criteria
             Costo.
 
-            ## Riesgos y limitaciones
+            ## Risks and limitations
             Lock-in.
 
-            ## Próximos pasos
+            ## Next steps
             Piloto.
 
-            ## Audiencia
+            ## Audience
             Equipo.
             """
         ).lstrip(),
@@ -309,7 +309,7 @@ def _valid_probe(tmp_path):
     r = Research.create(base=tmp_path, slug="eval-probe", title="t", question="q")
     r.meta.stage = "probe"
     r.artifact_path("brief.md").write_text(
-        "## Criterios de evaluación\n\n- C1: salida OK\n- C2: costo bajo\n",
+        "## Evaluation criteria\n\n- C1: salida OK\n- C2: costo bajo\n",
         encoding="utf-8",
     )
     r.artifact_path("probe/results.md").write_text(
@@ -325,11 +325,11 @@ def _valid_probe(tmp_path):
               expect: OK
             ---
 
-            ## Resultados por criterio
+            ## Results by criterion
             - C1: cumple - salida OK
             - C2: cumple - costo bajo
 
-            ## Reproducción
+            ## Reproduction
             ```bash
             python check.py
             ```
@@ -367,7 +367,7 @@ def test_advance_probe_requires_persisted_green_current_verification(tmp_path, m
     r.save()
     stale = lifecycle.advance(r, offline=True)
     assert not stale.ok
-    assert "vigente" in stale.blocked_reason
+    assert "stale" in stale.blocked_reason
 
     r.meta.verify_probe = {
         "result": "pass",

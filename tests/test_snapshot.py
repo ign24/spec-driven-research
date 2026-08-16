@@ -98,7 +98,7 @@ def test_fetch_url_rejects_response_larger_than_limit_without_buffering_it():
         )
     )
 
-    with pytest.raises(NetworkPolicyError, match="tamaño máximo"):
+    with pytest.raises(NetworkPolicyError, match="maximum size"):
         fetch_url(
             "https://public.example/large",
             mock_transport=transport,
@@ -140,7 +140,7 @@ def test_assign_source_ids_preserves_declaration_order(tmp_path):
         "  - url: https://a.example.com\n    tier: T1\n    date: 2026-01-01\n"
         "  - url: https://b.example.com\n    tier: T2\n    date: 2026-01-02\n"
         "---\n\n"
-        "## Alternativas evaluadas\nFoo.\n",
+        "## Alternatives evaluated\nFoo.\n",
         encoding="utf-8",
     )
 
@@ -163,7 +163,7 @@ def test_assign_source_ids_keeps_existing_ids_and_fills_gaps(tmp_path):
         "  - id: S7\n    url: https://a.example.com\n    tier: T1\n    date: 2026-01-01\n"
         "  - url: https://b.example.com\n    tier: T2\n    date: 2026-01-02\n"
         "---\n\n"
-        "## Alternativas evaluadas\nFoo.\n",
+        "## Alternatives evaluated\nFoo.\n",
         encoding="utf-8",
     )
 
@@ -188,7 +188,7 @@ def test_capture_declared_sources_generates_orgs_yaml(tmp_path):
         "  - url: https://docs.foo.dev/guide\n    tier: T1\n    date: 2026-01-01\n"
         "  - url: https://github.com/bar/repo\n    tier: T1\n    date: 2026-01-01\n"
         "---\n\n"
-        "## Alternativas evaluadas\nFoo.\n",
+        "## Alternatives evaluated\nFoo.\n",
         encoding="utf-8",
     )
 
@@ -217,7 +217,7 @@ def test_capture_declared_sources_uses_existing_snapshot_cache(tmp_path):
         "sources:\n"
         "  - url: https://docs.foo.dev/guide\n    tier: T1\n    date: 2026-01-01\n"
         "---\n\n"
-        "## Alternativas evaluadas\nFoo.\n",
+        "## Alternatives evaluated\nFoo.\n",
         encoding="utf-8",
     )
     calls = 0

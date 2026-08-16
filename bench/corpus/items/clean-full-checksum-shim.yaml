@@ -79,23 +79,23 @@ artifacts:
     timebox: 3
     ---
 
-    ## Pregunta
+    ## Question
     ¿Un adaptador local puede verificar sumas de tres cadenas inventadas de forma repetible?
 
-    ## Hipótesis
+    ## Hypothesis
     Una función pequeña producirá la misma suma para las mismas entradas inventadas.
 
-    ## Contexto
+    ## Context
     El ejercicio demuestra una prueba ejecutable sin red ni dependencias adicionales.
 
-    ## Alcance
+    ## Scope
     Incluye tres cadenas inventadas. No incluye archivos de usuario, red ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: las tres cadenas producen la suma esperada.
     - C2: dos ejecuciones consecutivas producen exactamente el mismo marcador.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Tres cadenas inventadas no representan el volumen ni la variedad de un sistema real.
   clean-full-checksum-shim/notes/landscape.md: |
     ---
@@ -115,20 +115,20 @@ artifacts:
         alternative: adaptador-local
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     El ejercicio compara un adaptador local con una biblioteca externa inventada [cf. S2].
     El adaptador recorre las cadenas en orden y devuelve una suma estable [S1].
 
-    ## Madurez
+    ## Maturity
     Ambas alternativas alcanzan para una demostración de capacitación [cf. S1].
 
-    ## Costos
+    ## Costs
     La biblioteca externa agrega una dependencia de compilación por plataforma [S2].
 
-    ## Riesgos
+    ## Risks
     El conjunto fijo de entradas puede ocultar diferencias de rendimiento entre alternativas.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     No se encontró evidencia en contra dentro de las dos fuentes inventadas declaradas.
   clean-full-checksum-shim/probe/check.py: |
     def checksum(value: str) -> int:
@@ -153,13 +153,13 @@ artifacts:
       environment: clean
     ---
 
-    ## Resultados por criterio
+    ## Results by criterion
     | criterio | resultado | evidencia |
     |---|---|---|
     | C1 | cumple: las tres sumas coinciden con lo esperado | `probe/check.py` |
     | C2 | cumple: dos ejecuciones producen el mismo marcador | `probe/check.py` |
 
-    ## Reproducción
+    ## Reproduction
     ```bash
     python check.py
     ```
@@ -175,25 +175,25 @@ artifacts:
       - claim-3f83a75e16e40346a3551eacb22e505f4a0f4999158375f58ec3afab9fc347d6
     ---
 
-    ## Recomendación
-    En el contexto del ejercicio de sumas inventadas, ante la necesidad de evidencia
-    ejecutable, decidimos probar el adaptador local para lograr verificaciones repetibles,
-    porque el probe determinista cumplió C1 y C2, aceptando el trade-off de que tres
-    cadenas inventadas no representan producción.
+    ## Recommendation
+    In the context of the invented checksum exercise, faced with the need for executable
+    evidence, we decided to trial the local adapter to obtain repeatable verifications,
+    because the deterministic probe met C1 and C2, accepting the trade-off that three
+    invented strings do not represent production.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Adaptador local sobre la biblioteca estándar y biblioteca externa inventada.
 
-    ## Criterios de selección
+    ## Selection criteria
     Repetibilidad exacta del marcador y ausencia de dependencias de compilación.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     No se midieron volúmenes grandes, entradas hostiles ni integración con otros sistemas.
 
-    ## Próximos pasos
+    ## Next steps
     Conservar el probe como demostración portable y no extrapolar su resultado.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de capacitación interna.
   clean-full-checksum-shim/assets/playbook.md: |
     ---

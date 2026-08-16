@@ -2,37 +2,37 @@
 research: <slug>
 date: <YYYY-MM-DD>
 stage: intake
-owner: <responsable>
-timebox: <dias-estimados>
-# source_max_age:  # opcional; defaults schema: T1 730, T2 365, T3 180 días
+owner: <owner>
+timebox: <estimated-days>
+# source_max_age:  # optional; schema defaults: T1 730, T2 365, T3 180 days
 #   T1: 730
 #   T2: 365
 #   T3: 180
 ---
 
-## Pregunta
+## Question
 
-<!-- Una pregunta concreta y falsable. Qué queremos poder responder al cerrar. -->
+<!-- One concrete, falsifiable question. What you want to be able to answer at the end. -->
 
-## Hipótesis
+## Hypothesis
 
-<!-- Qué creemos que es verdad y esperamos validar o refutar. -->
+<!-- What you believe is true and expect to confirm or refute. -->
 
-## Contexto
+## Context
 
-<!-- Por qué conviene investigar esto ahora. Motivación y trasfondo. -->
+<!-- Why this is worth investigating now. Motivation and background. -->
 
-## Alcance
+## Scope
 
-<!-- Qué entra en la investigación y, explícitamente, qué NO entra (no-alcance). -->
+<!-- What the investigation covers and, explicitly, what it does not. -->
 
-## Criterios de evaluación
+## Evaluation criteria
 
-<!-- Al menos 2 criterios medibles y verificables, cada uno con ID (C1, C2, ...).
-     No aspiracionales: la etapa probe debe poder contrastarlos con evidencia. -->
-- C1: <criterio medible>
-- C2: <criterio medible>
+<!-- At least 2 measurable, verifiable criteria, each with an ID (C1, C2, ...).
+     Not aspirational: the probe stage must be able to test them against evidence. -->
+- C1: <measurable criterion>
+- C2: <measurable criterion>
 
-## Riesgos de adopción
+## Adoption risks
 
-<!-- Riesgos conocidos de adoptar esta tecnología: lock-in, costos, madurez, seguridad. -->
+<!-- Known risks of adopting this technology: lock-in, cost, maturity, security. -->

@@ -10,6 +10,13 @@ from typing import Any
 from sdr import parser
 from sdr.paths import resolve_child
 from sdr.research import Research
+from sdr.schema import (
+    SECTION_ADOPTION_RISKS,
+    SECTION_CRITERIA_RESULTS,
+    SECTION_EVALUATION_CRITERIA,
+    SECTION_RECOMMENDATION,
+    SECTION_SELECTION_CRITERIA,
+)
 
 ALLOWED_PROVENANCE = {"explicit", "inferred", "provider", "judge", "hitl"}
 _SAFE_ID_RE = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -337,7 +344,7 @@ def build_sdr_context_graph(
     brief_path = research.artifact_path("brief.md")
     if brief_path.exists():
         brief = parser.parse_artifact(brief_path)
-        for criterion_id, text in _extract_criteria(brief.section("Criterios de evaluación")):
+        for criterion_id, text in _extract_criteria(brief.section(SECTION_EVALUATION_CRITERIA)):
             node_id = canonical_node_id("criterion", criterion_id)
             nodes.append(
                 GraphNode(
@@ -358,7 +365,7 @@ def build_sdr_context_graph(
                 )
             )
 
-        risk_bullets = _extract_bullets(brief.section("Riesgos de adopción"))
+        risk_bullets = _extract_bullets(brief.section(SECTION_ADOPTION_RISKS))
         for index, text in enumerate(risk_bullets, start=1):
             node_id = canonical_node_id("risk", f"R{index}")
             nodes.append(
@@ -450,7 +457,7 @@ def _add_probe_results(
     if not results_path.exists():
         return result_ids
     artifact = parser.parse_artifact(results_path)
-    result_entries = _extract_results(artifact.section("Resultados por criterio"))
+    result_entries = _extract_results(artifact.section(SECTION_CRITERIA_RESULTS))
     for criterion_id, status, evidence in result_entries:
         result_id = canonical_node_id("result", criterion_id)
         criterion_node_id = canonical_node_id("criterion", criterion_id)
@@ -488,7 +495,7 @@ def _add_decision(
     if not memo_path.exists():
         return
     memo = parser.parse_artifact(memo_path)
-    recommendation = memo.section("Recomendación") or ""
+    recommendation = memo.section(SECTION_RECOMMENDATION) or ""
     if not recommendation.strip():
         return
     decision_id = canonical_node_id("decision", "recommendation")
@@ -497,7 +504,7 @@ def _add_decision(
         GraphNode(
             id=decision_id,
             type="decision",
-            title=_first_non_empty_line(recommendation) or "Recomendación",
+            title=_first_non_empty_line(recommendation) or SECTION_RECOMMENDATION,
             source_files=("decision-memo.md",),
             metadata={
                 "audience": memo.frontmatter.get("audience", ""),
@@ -507,7 +514,7 @@ def _add_decision(
         ),
     )
 
-    criteria_text = memo.section("Criterios de selección") or ""
+    criteria_text = memo.section(SECTION_SELECTION_CRITERIA) or ""
     for result_id in sorted(result_ids):
         criterion_label = result_id.split(":", 1)[1]
         if criterion_label in criteria_text:

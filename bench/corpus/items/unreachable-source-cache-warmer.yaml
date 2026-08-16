@@ -64,23 +64,23 @@ artifacts:
     timebox: 2
     ---
 
-    ## Pregunta
+    ## Question
     ¿Conviene precalentar una caché inventada al iniciar el proceso o al primer pedido?
 
-    ## Hipótesis
+    ## Hypothesis
     El precalentado en el arranque reducirá la latencia percibida del primer pedido.
 
-    ## Contexto
+    ## Context
     El escenario es inventado y no describe ningún sistema real ni ninguna organización real.
 
-    ## Alcance
+    ## Scope
     Incluye dos estrategias de precalentado. No incluye invalidación, red real ni producción.
 
-    ## Criterios de evaluación
+    ## Evaluation criteria
     - C1: la estrategia elegida define cuándo se paga la espera de precalentado.
     - C2: cada estrategia declara al menos una fuente consultable.
 
-    ## Riesgos de adopción
+    ## Adoption risks
     Una de las fuentes consultadas ya no es recuperable, lo que debilita la trazabilidad.
   unreachable-source-cache-warmer/notes/landscape.md: |
     ---
@@ -100,20 +100,20 @@ artifacts:
         alternative: precalentado
     ---
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Se comparan el precalentado en el arranque y el precalentado perezoso [cf. S1].
     Una nota de taller archivada describía una tercera variante intermedia [cf. S2].
 
-    ## Madurez
+    ## Maturity
     El precalentado en el arranque agrega una espera fija antes de aceptar pedidos [S1].
 
-    ## Costos
+    ## Costs
     El costo declarado por la nota archivada ya no puede reconstruirse desde la fuente [cf. S2].
 
-    ## Riesgos
+    ## Risks
     La estrategia perezosa concentra la espera en usuarios reales del primer pedido.
 
-    ## Contra-evidencia
+    ## Counter-evidence
     La única contra-evidencia disponible provenía de la nota archivada y hoy es irrecuperable.
   unreachable-source-cache-warmer/decision-memo.md: |
     ---
@@ -126,25 +126,25 @@ artifacts:
       - claim-0c2dab30fac3bdd962061789a6fa837fa57bbbcab5dd0bbf4b28fcafd8a9f7c5
     ---
 
-    ## Recomendación
-    En el contexto del precalentado inventado, ante una fuente que ya no es recuperable,
-    decidimos evaluar el precalentado en el arranque para lograr una espera predecible,
-    porque la evidencia recuperable solo cubre esa estrategia, aceptando el trade-off de
-    apoyarnos en una única fuente verificable.
+    ## Recommendation
+    In the context of the invented warmup, faced with a source that is no longer
+    retrievable, we decided to assess warming at startup to obtain a predictable wait,
+    because the retrievable evidence covers only that strategy, accepting the trade-off of
+    relying on a single verifiable source.
 
-    ## Alternativas evaluadas
+    ## Alternatives evaluated
     Precalentado en el arranque y precalentado perezoso al primer pedido.
 
-    ## Criterios de selección
+    ## Selection criteria
     Momento en el que se paga la espera y disponibilidad de evidencia verificable.
 
-    ## Riesgos y limitaciones
+    ## Risks and limitations
     Una de las dos fuentes es irrecuperable, así que la comparación queda incompleta.
 
-    ## Próximos pasos
+    ## Next steps
     Reemplazar la fuente irrecuperable antes de cualquier decisión de adopción.
 
-    ## Audiencia
+    ## Audience
     Equipo ficticio de plataforma interna.
   unreachable-source-cache-warmer/assets/playbook.md: |
     ---

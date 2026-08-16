@@ -6,6 +6,10 @@ Elige la tarea que necesitas resolver. El [README](../README.es.md) ofrece la
 presentación y el tour de cinco minutos; estas páginas mantienen cada contrato
 operativo detallado en una única fuente canónica.
 
+La documentación está en español, pero la herramienta habla inglés: los comandos,
+los mensajes y las secciones de los artefactos están en inglés. Una investigación
+creada antes de ese cambio requiere `sdr migrate`.
+
 ## Empezar y operar
 
 | Quiero... | Leer |

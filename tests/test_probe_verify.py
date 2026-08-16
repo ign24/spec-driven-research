@@ -15,7 +15,7 @@ from sdr.research import Research
 def _probe_research(tmp_path):
     r = Research.create(base=tmp_path, slug="eval-foo", title="t", question="q")
     r.artifact_path("brief.md").write_text(
-        "## Criterios de evaluación\n\n- C1: salida OK\n- C2: costo bajo\n", encoding="utf-8"
+        "## Evaluation criteria\n\n- C1: salida OK\n- C2: costo bajo\n", encoding="utf-8"
     )
     argv = json.dumps([sys.executable, "check.py"])
     r.artifact_path("probe/results.md").write_text(
@@ -32,11 +32,11 @@ def _probe_research(tmp_path):
               environment: clean
             ---
 
-            ## Resultados por criterio
+            ## Results by criterion
             - C1: cumple - output OK
             - C2: cumple - costo bajo
 
-            ## Reproducción
+            ## Reproduction
             ```bash
             python check.py
             ```
@@ -239,9 +239,9 @@ def test_ring_requires_current_verify_probe_hash(tmp_path):
     r.meta.stage = "transfer"
     r.artifact_path("decision-memo.md").write_text(
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: transfer\nring: adopt\naudience: equipo\n---\n\n"
-        "## Recomendación\nDecidimos adoptar Foo para soporte porque C1 y C2 cumplen, aceptando el trade-off de lock-in.\n\n"
-        "## Alternativas evaluadas\nFoo.\n\n## Criterios de selección\nC1, C2.\n\n"
-        "## Riesgos y limitaciones\nLock-in.\n\n## Próximos pasos\nPiloto.\n\n## Audiencia\nEquipo.\n",
+        "## Recommendation\nDecidimos adoptar Foo para soporte porque C1 y C2 cumplen, aceptando el trade-off de lock-in.\n\n"
+        "## Alternatives evaluated\nFoo.\n\n## Selection criteria\nC1, C2.\n\n"
+        "## Risks and limitations\nLock-in.\n\n## Next steps\nPiloto.\n\n## Audience\nEquipo.\n",
         encoding="utf-8",
     )
 

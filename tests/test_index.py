@@ -42,7 +42,7 @@ def test_write_index_rejects_output_symlink_escape(tmp_path):
     outside.write_text("keep", encoding="utf-8")
     (base / "INDEX.md").symlink_to(outside)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         index.write_index(base)
 
     assert outside.read_text(encoding="utf-8") == "keep"
@@ -55,7 +55,7 @@ def test_index_rejects_research_symlink_escape(tmp_path):
     Research.create(base=outside, slug="eval-a", title="Fuera", question="q")
     (base / "eval-a").symlink_to(outside / "eval-a", target_is_directory=True)
 
-    with pytest.raises(ValueError, match="fuera de la raíz"):
+    with pytest.raises(ValueError, match="outside the allowed root"):
         index.build_index(base)
 
 

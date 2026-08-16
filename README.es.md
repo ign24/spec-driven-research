@@ -92,6 +92,17 @@ transición que podría crear un commit.
 
 ## Instalación desde el código fuente
 
+> **La herramienta habla inglés.** Esta guía está en español, pero la interfaz de
+> línea de comandos, los mensajes y las plantillas de artefactos están en inglés,
+> igual que el resto de la documentación del proyecto. El español es una
+> traducción de la documentación, no un idioma de ejecución.
+>
+> **Cambio incompatible desde la v0.2.0.** Las secciones de los artefactos pasaron
+> de nombres en español (`Pregunta`, `Criterios de evaluación`) a nombres en
+> inglés (`Question`, `Evaluation criteria`). Una investigación creada con una
+> versión anterior requiere `sdr migrate` antes de poder avanzar. La migración
+> reescribe solo los encabezados estructurales y deja intacto tu texto.
+
 SDR requiere Python 3.12 o posterior. No hay release en ningún índice de
 paquetes: SDR no se publica en PyPI y no se puede instalar desde un índice. La
 ruta admitida instala el repositorio canónico en una revisión explícita:

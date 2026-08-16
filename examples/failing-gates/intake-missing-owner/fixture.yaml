@@ -1,6 +1,6 @@
 slug: failing-intake-owner
-title: Fixture de intake inválido
-question: ¿El brief declara todos sus metadatos?
+title: Invalid intake fixture
+question: Does the brief declare all of its metadata?
 mode: light
 stage: intake
 expected_check: frontmatter

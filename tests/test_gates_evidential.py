@@ -60,19 +60,19 @@ def _make(tmp_path, mode="full"):
 def _note(sources_yaml: str, body: str = "") -> str:
     default_body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo vs Bar [S1].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         No se encontraron señales contrarias tras buscar benchmarks negativos.
         """
     ).strip()
@@ -87,7 +87,7 @@ def _note(sources_yaml: str, body: str = "") -> str:
     )
 
 
-# --- explore: tiers y triangulación ---------------------------------------
+# --- explore: tiers and triangulation --------------------------------------
 
 
 def _ok_sources() -> str:
@@ -120,22 +120,22 @@ def test_explore_v2_fails_without_counter_evidence(tmp_path):
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo vs Bar.
 
-        ## Madurez
+        ## Maturity
         Estable.
 
-        ## Costos
+        ## Costs
         Bajo.
 
-        ## Riesgos
+        ## Risks
         Lock-in.
         """
     ).strip()
     (r.root / "notes" / "n1.md").write_text(_note(_ok_sources(), body=body), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
-    assert any("Contra-evidencia" in f.detail for f in report.failures)
+    assert any("Counter-evidence" in f.detail for f in report.failures)
 
 
 def test_explore_v1_does_not_require_counter_evidence(tmp_path):
@@ -143,22 +143,22 @@ def test_explore_v1_does_not_require_counter_evidence(tmp_path):
     r.meta.schema_version = 1
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo vs Bar.
 
-        ## Madurez
+        ## Maturity
         Estable.
 
-        ## Costos
+        ## Costs
         Bajo.
 
-        ## Riesgos
+        ## Risks
         Lock-in.
         """
     ).strip()
     (r.root / "notes" / "n1.md").write_text(_note(_ok_sources(), body=body), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
-    assert not any("Contra-evidencia" in f.detail for f in report.failures)
+    assert not any("Counter-evidence" in f.detail for f in report.failures)
 
 
 def test_claim_citation_coverage_fails_unknown_source_marker(tmp_path):
@@ -169,19 +169,19 @@ def test_claim_citation_coverage_fails_unknown_source_marker(tmp_path):
     )
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo tiene soporte estable [S9].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in [S1].
 
-        ## Contra-evidencia
+        ## Counter-evidence
         No se encontraron señales contrarias [S2].
         """
     ).strip()
@@ -194,19 +194,19 @@ def test_claim_citation_coverage_fails_unknown_source_marker_in_heading(tmp_path
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas [S9]
+        ## Alternatives evaluated [S9]
         Foo tiene soporte estable [S1].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in [S1].
 
-        ## Contra-evidencia
+        ## Counter-evidence
         No se encontraron señales contrarias [cf.S2].
         """
     ).strip()
@@ -226,19 +226,19 @@ def test_claim_citation_coverage_fails_unknown_contextual_source_marker(tmp_path
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo tiene soporte estable [cf. S9].
 
-        ## Madurez
+        ## Maturity
         Estable [cf. S1].
 
-        ## Costos
+        ## Costs
         Bajo [cf. S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         No se encontraron señales contrarias [cf. S2].
         """
     ).strip()
@@ -259,19 +259,19 @@ def test_claim_citation_coverage_allows_contextual_only_note(tmp_path):
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo se compara con Bar [cf. S1].
 
-        ## Madurez
+        ## Maturity
         El contexto de adopción es estable [cf. S1].
 
-        ## Costos
+        ## Costs
         El análisis de costos es favorable [cf. S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in [cf. S1].
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -288,19 +288,19 @@ def test_claim_citation_coverage_allows_one_factual_with_contextual_references(t
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo reduce latencia [S1] en el contexto comparado [cf. S2].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -317,19 +317,19 @@ def test_claim_citation_coverage_rejects_multiple_factual_markers_actionably(tmp
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo reduce latencia [S1] y costo [S2].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -340,10 +340,10 @@ def test_claim_citation_coverage_rejects_multiple_factual_markers_actionably(tmp
     failure = next(
         result
         for result in report.failures
-        if result.check == "claim_citation_coverage" and "divida la oración" in result.detail
+        if result.check == "claim_citation_coverage" and "split the sentence" in result.detail
     )
     assert "n1.md" in failure.detail
-    assert "línea" in failure.detail
+    assert "line" in failure.detail
     assert "[S1]" in failure.detail and "[S2]" in failure.detail
 
 
@@ -351,20 +351,20 @@ def test_claim_citation_coverage_rejects_multiline_sentence_with_two_factual_mar
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo reduce latencia [S1]
         y también reduce costo [S2].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -375,9 +375,9 @@ def test_claim_citation_coverage_rejects_multiline_sentence_with_two_factual_mar
     failure = next(
         result
         for result in report.failures
-        if result.check == "claim_citation_coverage" and "divida la oración" in result.detail
+        if result.check == "claim_citation_coverage" and "split the sentence" in result.detail
     )
-    assert "líneas" in failure.detail
+    assert "lines" in failure.detail
     assert "[S1]" in failure.detail and "[S2]" in failure.detail
 
 
@@ -385,19 +385,19 @@ def test_claim_citation_coverage_uses_same_contextual_variants_as_claim_parser(t
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo se compara con Bar [CF.s1].
 
-        ## Madurez
+        ## Maturity
         El contexto es estable [cf.   S1].
 
-        ## Costos
+        ## Costs
         El análisis es favorable [cF   .   s2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf.S2].
         """
     ).strip()
@@ -414,23 +414,23 @@ def test_claim_citation_coverage_ignores_markers_in_frontmatter_and_code(tmp_pat
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo se compara con Bar [cf. S1] y muestra `[S8]` como ejemplo.
 
         ```markdown
         Referencia de ejemplo [S9].
         ```
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         Lock-in.
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -452,21 +452,21 @@ def test_claim_citation_coverage_ignores_indented_code_and_url_destinations(tmp_
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         [Foo es estable [S1]](https://example.com/[S9]).
 
             Ejemplo de código [S8].
 
-        ## Madurez
+        ## Maturity
         Estable [S1].
 
-        ## Costos
+        ## Costs
         Bajo [S2].
 
-        ## Riesgos
+        ## Risks
         <https://example.com/[S7]>
 
-        ## Contra-evidencia
+        ## Counter-evidence
         Se revisó evidencia contraria [cf. S2].
         """
     ).strip()
@@ -485,33 +485,33 @@ def test_claim_citation_coverage_requires_citations_in_key_sections(tmp_path):
     r = _make(tmp_path)
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo vs Bar.
 
-        ## Madurez
+        ## Maturity
         Estable.
 
-        ## Costos
+        ## Costs
         Bajo.
 
-        ## Riesgos
+        ## Risks
         Lock-in [S1].
 
-        ## Contra-evidencia
+        ## Counter-evidence
         No se encontraron señales contrarias [S2].
         """
     ).strip()
     (r.root / "notes" / "n1.md").write_text(_note(_ok_sources(), body=body), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
     assert any(
-        f.check == "claim_citation_coverage" and "Alternativas evaluadas" in f.detail
+        f.check == "claim_citation_coverage" and "Alternatives evaluated" in f.detail
         for f in report.failures
     )
     assert any(
-        f.check == "claim_citation_coverage" and "Madurez" in f.detail for f in report.failures
+        f.check == "claim_citation_coverage" and "Maturity" in f.detail for f in report.failures
     )
     assert any(
-        f.check == "claim_citation_coverage" and "Costos" in f.detail for f in report.failures
+        f.check == "claim_citation_coverage" and "Costs" in f.detail for f in report.failures
     )
 
 
@@ -520,16 +520,16 @@ def test_claim_citation_coverage_is_not_required_in_schema_v1(tmp_path):
     r.meta.schema_version = 1
     body = textwrap.dedent(
         """
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo vs Bar.
 
-        ## Madurez
+        ## Maturity
         Estable.
 
-        ## Costos
+        ## Costs
         Bajo.
 
-        ## Riesgos
+        ## Risks
         Lock-in.
         """
     ).strip()
@@ -582,7 +582,7 @@ def test_source_dates_fails_when_source_is_stale_without_justification(tmp_path)
 
     report = gates.check_stage(r, stage="explore", offline=True)
 
-    assert any(f.check == "source_dates" and "vencida" in f.detail for f in report.failures)
+    assert any(f.check == "source_dates" and "is stale" in f.detail for f in report.failures)
 
 
 def test_source_dates_allows_date_justification(tmp_path):
@@ -596,7 +596,7 @@ def test_source_dates_allows_date_justification(tmp_path):
 
     report = gates.check_stage(r, stage="explore", offline=True)
 
-    assert not any(f.check == "source_dates" and "vencida" in f.detail for f in report.failures)
+    assert not any(f.check == "source_dates" and "is stale" in f.detail for f in report.failures)
 
 
 def test_explore_fails_without_t1_source(tmp_path):
@@ -657,7 +657,7 @@ def test_redirect_final_host_does_not_count_as_a_distinct_declared_host(tmp_path
     result = next(item for item in report.results if item.check == "source_triangulation")
 
     assert not result.passed
-    assert "1 hosts declarados distintos" in result.detail
+    assert "1 distinct declared hosts" in result.detail
     assert "independ" not in result.detail.lower()
     assert "organiz" not in result.detail.lower()
 
@@ -692,7 +692,7 @@ def test_distinct_declared_hosts_count_even_when_redirects_share_a_final_host(tm
     result = next(item for item in report.results if item.check == "source_triangulation")
 
     assert result.passed
-    assert result.detail == "2 hosts declarados distintos"
+    assert result.detail == "2 distinct declared hosts"
 
 
 def test_same_declared_github_host_counts_once(tmp_path):
@@ -704,8 +704,7 @@ def test_same_declared_github_host_counts_once(tmp_path):
     (r.root / "notes" / "n1.md").write_text(_note(sources), encoding="utf-8")
     report = gates.check_stage(r, stage="explore", offline=True)
     assert any(
-        f.check == "source_triangulation" and "hosts declarados" in f.detail
-        for f in report.failures
+        f.check == "source_triangulation" and "declared hosts" in f.detail for f in report.failures
     )
 
 
@@ -799,7 +798,7 @@ def test_links_broken_fails_when_online(tmp_path):
     assert any(f.check == "links_resolve" and "bench" in f.detail for f in report.failures)
 
 
-# --- probe: cross-reference y reproducibilidad -----------------------------
+# --- probe: cross-reference and reproducibility ----------------------------
 
 
 def _brief_with_criteria(r, ids):
@@ -814,7 +813,7 @@ def _brief_with_criteria(r, ids):
         timebox: 3
         ---
 
-        ## Criterios de evaluación
+        ## Evaluation criteria
         __CRITERIA__
         """
     ).lstrip()
@@ -828,8 +827,8 @@ def test_probe_fails_when_a_criterion_has_no_result(tmp_path):
     _brief_with_criteria(r, ["C1", "C2", "C3"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\nC1 cumple. C2 parcial.\n\n"
-        "## Reproducción\n```bash\npython bench.py\n```\n"
+        "## Results by criterion\nC1 cumple. C2 parcial.\n\n"
+        "## Reproduction\n```bash\npython bench.py\n```\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -842,8 +841,8 @@ def test_probe_passes_with_all_criteria_and_repro(tmp_path):
     _brief_with_criteria(r, ["C1", "C2"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\nC1 cumple, C2 no cumple.\n\n"
-        "## Reproducción\n```bash\npython bench.py\n```\n"
+        "## Results by criterion\nC1 cumple, C2 no cumple.\n\n"
+        "## Reproduction\n```bash\npython bench.py\n```\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -855,8 +854,8 @@ def test_probe_fails_when_referenced_artifact_is_missing(tmp_path):
     _brief_with_criteria(r, ["C1", "C2"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\nC1 cumple, C2 no cumple. Evidencia: [salida](probe/output.json).\n\n"
-        "## Reproducción\n```bash\npython bench.py > probe/output.json\n```\n"
+        "## Results by criterion\nC1 cumple, C2 no cumple. Evidencia: [salida](probe/output.json).\n\n"
+        "## Reproduction\n```bash\npython bench.py > probe/output.json\n```\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -873,8 +872,8 @@ def test_probe_passes_when_referenced_artifact_exists(tmp_path):
     r.artifact_path("probe/output.json").write_text('{"ok": true}', encoding="utf-8")
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\nC1 cumple, C2 no cumple. Evidencia: `probe/output.json`.\n\n"
-        "## Reproducción\n```bash\npython bench.py > probe/output.json\n```\n"
+        "## Results by criterion\nC1 cumple, C2 no cumple. Evidencia: `probe/output.json`.\n\n"
+        "## Reproduction\n```bash\npython bench.py > probe/output.json\n```\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -886,8 +885,8 @@ def test_probe_fails_without_reproducible_block(tmp_path):
     _brief_with_criteria(r, ["C1", "C2"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\nC1 cumple, C2 no cumple.\n\n"
-        "## Reproducción\nCorrer el script manualmente.\n"
+        "## Results by criterion\nC1 cumple, C2 no cumple.\n\n"
+        "## Reproduction\nCorrer el script manualmente.\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -900,9 +899,9 @@ def test_probe_fails_with_benchmark_table_without_repro_command(tmp_path):
     _brief_with_criteria(r, ["C1", "C2"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\n"
+        "## Results by criterion\n"
         "| criterio | resultado |\n|---|---|\n| C1 | 120ms |\n| C2 | 8 USD |\n\n"
-        "## Reproducción\nLos resultados salen de una corrida local documentada.\n"
+        "## Reproduction\nLos resultados salen de una corrida local documentada.\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
@@ -915,16 +914,16 @@ def test_probe_passes_with_benchmark_table_and_repro_command(tmp_path):
     _brief_with_criteria(r, ["C1", "C2"])
     results = (
         "---\nresearch: eval-foo\ndate: 2026-07-03\nstage: probe\nverify:\n  action: run\n  command: python bench.py\n  expect: OK\n---\n\n"
-        "## Resultados por criterio\n"
+        "## Results by criterion\n"
         "| criterio | resultado |\n|---|---|\n| C1 | 120ms |\n| C2 | 8 USD |\n\n"
-        "## Reproducción\n```bash\npython bench.py --json\n```\n"
+        "## Reproduction\n```bash\npython bench.py --json\n```\n"
     )
     r.artifact_path("probe/results.md").write_text(results, encoding="utf-8")
     report = gates.check_stage(r, stage="probe")
     assert all(x.passed for x in report.results if x.check == "benchmark_reproducible")
 
 
-# --- transfer: y-statement y ring acoplado a evidencia ---------------------
+# --- transfer: y-statement and ring coupled to evidence --------------------
 
 
 def _memo(ring: str, recommendation: str, evidence_claim_ids: list[str] | None = None) -> str:
@@ -939,22 +938,22 @@ def _memo(ring: str, recommendation: str, evidence_claim_ids: list[str] | None =
         __EVIDENCE_CLAIM_IDS__
         ---
 
-        ## Recomendación
+        ## Recommendation
         {recommendation}
 
-        ## Alternativas evaluadas
+        ## Alternatives evaluated
         Foo, Bar.
 
-        ## Criterios de selección
+        ## Selection criteria
         Costo y madurez.
 
-        ## Riesgos y limitaciones
+        ## Risks and limitations
         Lock-in.
 
-        ## Próximos pasos
+        ## Next steps
         Piloto.
 
-        ## Audiencia
+        ## Audience
         Equipo técnico.
         """
     ).lstrip()
@@ -1022,8 +1021,8 @@ def _append_forward_compatible_claim(r: Research) -> None:
 
 def _complete_recommendation() -> str:
     return (
-        "Decidimos evaluar Foo para soporte técnico, porque la evidencia de C1 y C2 "
-        "muestra ajuste parcial, aceptando el trade-off de no adoptarlo todavía."
+        "We decide to evaluate Foo for technical support, because the C1 and C2 evidence "
+        "shows a partial fit, accepting the trade-off of not adopting it yet."
     )
 
 
@@ -1044,7 +1043,7 @@ def test_transfer_adopt_requires_probe_validated(tmp_path):
     )
     report = gates.check_stage(r, stage="transfer")
     assert any(f.check == "ring_backed_by_evidence" for f in report.failures)
-    # Con probe validado y verify-probe vigente, el mismo memo pasa el check de ring.
+    # With a validated probe and a current verify-probe, the same memo passes the ring check.
     r.artifact_path("probe/results.md").write_text("ok", encoding="utf-8")
     r.meta.validation["probe"] = "deadbeef"
     r.meta.verify_probe = {"result": "pass", "probe_hash": probe_verify.hash_probe_dir(r)}
@@ -1056,7 +1055,7 @@ def test_transfer_adopt_requires_probe_validated(tmp_path):
 def test_transfer_fails_without_y_statement(tmp_path):
     r = _make(tmp_path, mode="light")
     r.artifact_path("decision-memo.md").write_text(
-        _memo("assess", "Recomendamos usar Foo."), encoding="utf-8"
+        _memo("assess", "We recommend using Foo."), encoding="utf-8"
     )
     report = gates.check_stage(r, stage="transfer")
     assert not report.passed
@@ -1066,7 +1065,7 @@ def test_transfer_fails_without_y_statement(tmp_path):
 def test_transfer_keyword_only_y_statement_fails(tmp_path):
     r = _make(tmp_path, mode="light")
     r.artifact_path("decision-memo.md").write_text(
-        _memo("assess", "En el contexto de X decidimos Y aceptando Z."), encoding="utf-8"
+        _memo("assess", "In the context of X we decide Y accepting Z."), encoding="utf-8"
     )
     report = gates.check_stage(r, stage="transfer")
     assert not report.passed
@@ -1231,7 +1230,7 @@ def test_gate_boundary_never_imports_or_reads_cross_investigation_derivations() 
     assert "load_ledger" in lineage_source
 
 
-# --- reuse: metadata de asset ---------------------------------------------
+# --- reuse: asset metadata ------------------------------------------------
 
 
 def test_reuse_requires_type_and_audience(tmp_path):
@@ -1272,4 +1271,60 @@ def test_reuse_rejects_non_public_asset_vocabulary(tmp_path):
     )
     assert any(
         "audience" in failure.detail and "externa" in failure.detail for failure in report.failures
+    )
+
+
+@pytest.mark.parametrize(
+    ("missing", "recommendation"),
+    (
+        (
+            "decision",
+            "To evaluate Foo for support, because C1 and C2 show a partial fit, "
+            "accepting the trade-off of not adopting it yet.",
+        ),
+        (
+            "context",
+            "We decide on Foo, because C1 and C2 show a partial fit, "
+            "accepting the risk of an incomplete rollout.",
+        ),
+        (
+            "evidence",
+            "We decide to evaluate Foo for technical support, "
+            "accepting the trade-off of not adopting it yet.",
+        ),
+        (
+            "downside",
+            "We decide to evaluate Foo for technical support, because the C1 and C2 "
+            "evidence shows a partial fit.",
+        ),
+    ),
+)
+def test_transfer_y_statement_rejects_each_missing_clause(tmp_path, missing, recommendation):
+    r = _make(tmp_path, mode="light")
+    r.artifact_path("decision-memo.md").write_text(
+        _memo("assess", recommendation), encoding="utf-8"
+    )
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert any(f.check == "y_statement" for f in report.failures), (
+        f"a recommendation missing its {missing} clause must fail the gate"
+    )
+
+
+def test_transfer_y_statement_tolerates_a_line_wrap_inside_a_clause(tmp_path):
+    r = _make(tmp_path, mode="light")
+    single_line = (
+        "In the context of support, we decide to evaluate Foo for the team, "
+        "because the C1 and C2 evidence is partial, accepting the trade-off "
+        "of not adopting it yet."
+    )
+    memo = _memo("assess", single_line)
+    wrapped = memo.replace("we decide", "we\ndecide").replace("accepting the", "accepting\nthe")
+    r.artifact_path("decision-memo.md").write_text(wrapped, encoding="utf-8")
+
+    report = gates.check_stage(r, stage="transfer")
+
+    assert all(x.passed for x in report.results if x.check == "y_statement"), (
+        "a clause split across a line wrap is ordinary prose, not a missing clause"
     )

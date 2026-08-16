@@ -1,4 +1,4 @@
-"""Verificación textual determinista de claims contra snapshots locales."""
+"""Deterministic textual verification of claims against local snapshots."""
 
 from __future__ import annotations
 
@@ -71,16 +71,16 @@ class VerificationItem:
 
     @property
     def verdict(self) -> str:
-        """Alias transitorio para consumidores anteriores al ledger v2."""
+        """Transitional alias for consumers that predate the v2 ledger."""
         return self.state
 
     @property
     def resolved(self) -> bool:
-        """Compatibilidad de lectura con reportes anteriores."""
+        """Read compatibility with earlier reports."""
         return self.state == "human_reviewed"
 
     def to_dict(self) -> dict[str, Any]:
-        """Representa exclusivamente los campos persistibles del item v2."""
+        """Represent only the persistable fields of the v2 item."""
         result: dict[str, Any] = {
             "claim_id": self.claim_id,
             "note_path": self.note_path,
@@ -137,8 +137,8 @@ def verify_explore_claims(
     complete: object | None = None,
     persist: bool = True,
 ) -> VerificationReport:
-    """Verifica claims solo con snapshots locales y persiste un ledger v2."""
-    del complete  # Compatibilidad temporal de firma; nunca se invoca.
+    """Verify claims from local snapshots only and persist a v2 ledger."""
+    del complete  # Temporary signature compatibility; never invoked.
     path = _ledger_path(research)
     if persist:
         with ledger_directory_lock(path):
@@ -276,7 +276,7 @@ def _verify_explore_claims(research: Research, *, path: Path, persist: bool) -> 
     if persist:
         save_ledger(path, ledger)
     failures = [
-        f"{item.claim_id}: {item.state} en {item.source_id}"
+        f"{item.claim_id}: {item.state} in {item.source_id}"
         for item in items
         if item.state not in _PASSING_STATES
     ]
@@ -284,13 +284,13 @@ def _verify_explore_claims(research: Research, *, path: Path, persist: bool) -> 
 
 
 def resolve_claim(research: Research, claim_id: str, *, reason: str, by: str = "") -> None:
-    """Registra una revisión humana ligada a la identidad vigente del claim."""
+    """Record a human review bound to the current identity of the claim."""
     reason = reason.strip()
     by = by.strip()
     if not reason:
-        raise ValueError("resolve-claim requiere un motivo no vacío en --reason")
+        raise ValueError("resolve-claim requires a non-empty reason in --reason")
     if not by:
-        raise ValueError("resolve-claim requiere un actor no vacío en --by")
+        raise ValueError("resolve-claim requires a non-empty actor in --by")
     path = _ledger_path(research)
     with ledger_directory_lock(path):
         ledger = load_ledger(path)
@@ -300,14 +300,14 @@ def resolve_claim(research: Research, claim_id: str, *, reason: str, by: str = "
         current = next((item for item in report.items if item.claim_id == claim_id), None)
         if current is None:
             raise ValueError(
-                f"el claim activo {claim_id} no existe; "
-                "ejecute sdr verify-claims y use un ID vigente"
+                f"active claim {claim_id} does not exist; "
+                "run sdr verify-claims and use a current ID"
             )
         state = current.state
         if state not in {"not_anchored", "unverifiable"}:
             raise ValueError(
-                f"el claim {claim_id} tiene estado {state}; solo not_anchored o unverifiable "
-                "admiten revisión humana"
+                f"claim {claim_id} has state {state}; only not_anchored or unverifiable "
+                "accept human review"
             )
         existing_claim = next(
             (item for item in ledger["claims"] if item.get("claim_id") == claim_id), None
@@ -591,8 +591,8 @@ def _ensure_no_duplicate_active_resolutions(resolutions: list[dict[str, Any]]) -
     ]
     if len(active_ids) != len(set(active_ids)):
         raise ValueError(
-            "el ledger contiene resoluciones activas duplicadas; "
-            "corríjalo sin aplicar orden last-wins"
+            "the ledger contains duplicate active resolutions; "
+            "fix it instead of applying last-wins ordering"
         )
 
 

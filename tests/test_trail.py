@@ -181,5 +181,5 @@ def test_extra_path_outside_containing_repo_is_rejected_without_staging(git_repo
     result = trail.commit_transition(r, "archive", extra_paths=[outside])
 
     assert not result.committed
-    assert "fuera del repositorio" in result.warning
+    assert "outside the repository" in result.warning
     assert _status(git_repo) == "?? research/\n"

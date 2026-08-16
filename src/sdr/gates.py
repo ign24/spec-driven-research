@@ -1,9 +1,9 @@
-"""Motor de gates: capas estructural y evidencial de validación.
+"""Gate engine: the structural and evidential layers of validation.
 
-Evalúa las reglas declarativas del schema contra los artefactos de una etapa y
-produce un reporte accionable pass/fail por regla. Los checks evidenciales
-(tiers de fuentes, triangulación, enlaces, cross-reference brief-probe, etc.)
-se registran por nombre y se resuelven desde `ArtifactSpec.checks`.
+Evaluates the schema's declarative rules against a stage's artifacts and produces
+an actionable pass/fail report per rule. The evidential checks (source tiers,
+triangulation, links, brief-probe cross-reference, and so on) are registered by
+name and resolved from `ArtifactSpec.checks`.
 """
 
 from __future__ import annotations
@@ -84,7 +84,7 @@ class SourceExpiry:
 
 
 def extract_criteria_ids(text: str) -> list[str]:
-    """IDs de criterio (C1, C2, ...) únicos, en orden de aparición."""
+    """Unique criterion IDs (C1, C2, ...) in order of appearance."""
     seen: dict[str, None] = {}
     for match in _CRITERION_ID_RE.findall(text or ""):
         seen.setdefault(match, None)
@@ -92,7 +92,7 @@ def extract_criteria_ids(text: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Estructura
+# Structure
 # ---------------------------------------------------------------------------
 
 
@@ -100,7 +100,7 @@ def _check_single_file(research: Research, spec: schema.ArtifactSpec) -> list[Ga
     results: list[GateResult] = []
     path = research.artifact_path(spec.primary_file)
     if not path.exists():
-        return [GateResult("structure", False, f"falta {spec.primary_file}")]
+        return [GateResult("structure", False, f"missing {spec.primary_file}")]
     try:
         art = parse_artifact(path)
     except DuplicateFrontmatterKeyError as exc:
@@ -115,18 +115,18 @@ def _check_collection(research: Research, spec: schema.ArtifactSpec) -> list[Gat
     directory = research.artifact_path(spec.collection_dir or "")
     files = sorted(directory.glob("*.md")) if directory.is_dir() else []
     if not files:
-        return [GateResult("structure", False, f"{spec.collection_dir}/ no contiene artefactos")]
+        return [GateResult("structure", False, f"{spec.collection_dir}/ contains no artifacts")]
     arts = []
     for path in files:
         art = parse_artifact(path)
         rel = f"{spec.collection_dir}/{path.name}"
         results.extend(_check_frontmatter(art, spec.frontmatter_required, rel))
         arts.append(art)
-    # Las secciones obligatorias se cubren en conjunto entre los artefactos.
+    # The required sections are covered collectively across the artifacts.
     for section in spec.required_sections:
         if not any(art.has_content(section) for art in arts):
             results.append(
-                GateResult("structure", False, f"ningún artefacto cubre la sección {section!r}")
+                GateResult("structure", False, f"no artifact covers section {section!r}")
             )
     return results
 
@@ -139,7 +139,7 @@ def _check_frontmatter(art: Artifact, required: tuple[str, ...], rel: str) -> li
             continue
         if value in (None, "", [], {}):
             results.append(
-                GateResult("frontmatter", False, f"{rel}: falta frontmatter {field_name!r}")
+                GateResult("frontmatter", False, f"{rel}: missing frontmatter {field_name!r}")
             )
     return results
 
@@ -149,13 +149,13 @@ def _check_sections(art: Artifact, required: tuple[str, ...], rel: str) -> list[
     for section in required:
         if not art.has_content(section):
             results.append(
-                GateResult("section", False, f"{rel}: sección {section!r} vacía o ausente")
+                GateResult("section", False, f"{rel}: section {section!r} is empty or missing")
             )
     return results
 
 
 # ---------------------------------------------------------------------------
-# Checks evidenciales (registro por nombre)
+# Evidential checks (registered by name)
 # ---------------------------------------------------------------------------
 
 
@@ -168,7 +168,7 @@ class CheckContext:
 
 
 def _iter_sources(research: Research) -> list[dict[str, Any]]:
-    """Normaliza las fuentes declaradas en las notas de explore."""
+    """Normalize the sources declared in the explore notes."""
     directory = research.artifact_path("notes")
     sources: list[dict[str, Any]] = []
     if not directory.is_dir():
@@ -239,19 +239,19 @@ def _org(url: str, aliases: dict[str, str] | None = None) -> str:
 def _check_min_evaluation_criteria(ctx: CheckContext) -> list[GateResult]:
     brief = ctx.research.artifact_path("brief.md")
     if not brief.exists():
-        return [GateResult("min_evaluation_criteria", False, "falta brief.md")]
+        return [GateResult("min_evaluation_criteria", False, "missing brief.md")]
     art = parse_artifact(brief)
-    ids = extract_criteria_ids(art.section("Criterios de evaluación") or "")
+    ids = extract_criteria_ids(art.section(schema.SECTION_EVALUATION_CRITERIA) or "")
     if len(ids) < schema.MIN_EVALUATION_CRITERIA:
         return [
             GateResult(
                 "min_evaluation_criteria",
                 False,
-                f"se requieren al menos {schema.MIN_EVALUATION_CRITERIA} criterios "
-                f"con ID (C1, C2, ...); se encontraron {len(ids)}",
+                f"at least {schema.MIN_EVALUATION_CRITERIA} criteria with an ID "
+                f"(C1, C2, ...) are required; found {len(ids)}",
             )
         ]
-    return [GateResult("min_evaluation_criteria", True, f"{len(ids)} criterios")]
+    return [GateResult("min_evaluation_criteria", True, f"{len(ids)} criteria")]
 
 
 def _check_source_tiers(ctx: CheckContext) -> list[GateResult]:
@@ -264,19 +264,19 @@ def _check_source_tiers(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "source_tiers",
                     False,
-                    f"{src.get('note')}: fuente {src.get('url')} sin tier válido (T1/T2/T3)",
+                    f"{src.get('note')}: source {src.get('url')} has no valid tier (T1/T2/T3)",
                 )
             )
-    # Al menos una fuente T1 por alternativa declarada (o global si no se declara).
+    # At least one T1 source per declared alternative (or globally when none is declared).
     by_alt: dict[str, list[str]] = {}
     for src in sources:
         by_alt.setdefault(src.get("alternative", "__global__"), []).append(src.get("tier"))
     for alt, tiers in by_alt.items():
         if "T1" not in tiers:
-            label = "el conjunto" if alt == "__global__" else f"la alternativa {alt!r}"
-            results.append(GateResult("source_tiers", False, f"{label} no tiene ninguna fuente T1"))
+            label = "the source set" if alt == "__global__" else f"alternative {alt!r}"
+            results.append(GateResult("source_tiers", False, f"{label} has no T1 source"))
     if not results:
-        results.append(GateResult("source_tiers", True, f"{len(sources)} fuentes con tier"))
+        results.append(GateResult("source_tiers", True, f"{len(sources)} sources with a tier"))
     return results
 
 
@@ -290,7 +290,7 @@ def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "source_dates",
                     False,
-                    f"{src.get('note')}: fuente {src.get('url')} sin date",
+                    f"{src.get('note')}: source {src.get('url')} has no date",
                 )
             )
             continue
@@ -302,7 +302,7 @@ def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
                     GateResult(
                         "source_dates",
                         False,
-                        f"{src.get('note')}: fuente {src.get('url')} con date inválida",
+                        f"{src.get('note')}: source {src.get('url')} has an invalid date",
                     )
                 )
                 continue
@@ -312,12 +312,12 @@ def _check_source_dates(ctx: CheckContext) -> list[GateResult]:
                     GateResult(
                         "source_dates",
                         False,
-                        f"{src.get('note')}: fuente {src.get('url')} vencida para {expiry.tier} "
-                        f"({expiry.age_days} días > {expiry.max_age_days})",
+                        f"{src.get('note')}: source {src.get('url')} is stale for {expiry.tier} "
+                        f"({expiry.age_days} days > {expiry.max_age_days})",
                     )
                 )
     if not results:
-        results.append(GateResult("source_dates", True, f"{len(sources)} fuentes con date"))
+        results.append(GateResult("source_dates", True, f"{len(sources)} sources with a date"))
     return results
 
 
@@ -372,12 +372,12 @@ def _check_tier_plausibility(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "tier_plausibility",
                     False,
-                    f"{src.get('note')}: fuente {src.get('url')} declara {declared} "
-                    f"pero deriva {derived}; agregue tier_justification si corresponde",
+                    f"{src.get('note')}: source {src.get('url')} declares {declared} "
+                    f"but derives {derived}; add tier_justification if it applies",
                 )
             )
     if not results:
-        results.append(GateResult("tier_plausibility", True, "tiers plausibles"))
+        results.append(GateResult("tier_plausibility", True, "plausible tiers"))
     return results
 
 
@@ -409,7 +409,7 @@ def _check_source_triangulation(ctx: CheckContext) -> list[GateResult]:
     groups: dict[str, set[str]] = {}
     if has_alternatives:
         for src in sources:
-            label = str(src.get("alternative") or "__sin_alternativa__")
+            label = str(src.get("alternative") or "__no_alternative__")
             groups.setdefault(label, set())
             if src.get("url"):
                 groups[label].add(_hostname(src["url"]))
@@ -420,35 +420,33 @@ def _check_source_triangulation(ctx: CheckContext) -> list[GateResult]:
     for label, declared_hosts in groups.items():
         declared_hosts.discard("")
         if len(declared_hosts) < schema.MIN_DISTINCT_DECLARED_HOSTS:
-            target = "el conjunto" if label == "__global__" else f"la alternativa {label!r}"
+            target = "the source set" if label == "__global__" else f"alternative {label!r}"
             results.append(
                 GateResult(
                     "source_triangulation",
                     False,
-                    f"{target} requiere >= {schema.MIN_DISTINCT_DECLARED_HOSTS} hosts declarados "
-                    f"distintos; hay {len(declared_hosts)} hosts declarados distintos",
+                    f"{target} requires >= {schema.MIN_DISTINCT_DECLARED_HOSTS} distinct "
+                    f"declared hosts; there are {len(declared_hosts)} distinct declared hosts",
                 )
             )
     if not results:
         total = sum(len(declared_hosts) for declared_hosts in groups.values())
-        results.append(
-            GateResult("source_triangulation", True, f"{total} hosts declarados distintos")
-        )
+        results.append(GateResult("source_triangulation", True, f"{total} distinct declared hosts"))
     return results
 
 
 def _check_links_resolve(ctx: CheckContext) -> list[GateResult]:
     if ctx.offline:
-        return [GateResult("links_resolve", False, "omitido (--offline)", skipped=True)]
+        return [GateResult("links_resolve", False, "skipped (--offline)", skipped=True)]
     results: list[GateResult] = []
     for src in _iter_sources(ctx.research):
         url = src.get("url")
         if url and not ctx.url_checker(url):
             results.append(
-                GateResult("links_resolve", False, f"{src.get('note')}: enlace roto {url}")
+                GateResult("links_resolve", False, f"{src.get('note')}: broken link {url}")
             )
     if not results:
-        results.append(GateResult("links_resolve", True, "enlaces verificados"))
+        results.append(GateResult("links_resolve", True, "links verified"))
     return results
 
 
@@ -467,7 +465,7 @@ def _check_claim_citation_coverage(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "claim_citation_coverage",
                     False,
-                    f"{path.name}: marcador {reference.marker} sin fuente declarada "
+                    f"{path.name}: marker {reference.marker} has no declared source "
                     f"{reference.source_id}",
                 )
             )
@@ -475,18 +473,22 @@ def _check_claim_citation_coverage(ctx: CheckContext) -> list[GateResult]:
             extract_claims(markdown, note_path=f"notes/{path.name}")
         except ValueError as exc:
             results.append(GateResult("claim_citation_coverage", False, str(exc)))
-        for section in ("Alternativas evaluadas", "Madurez", "Costos"):
+        for section in (
+            schema.SECTION_ALTERNATIVES,
+            schema.SECTION_MATURITY,
+            schema.SECTION_COSTS,
+        ):
             content = art.section(section) or ""
             if content.strip() and not extract_references(content):
                 results.append(
                     GateResult(
                         "claim_citation_coverage",
                         False,
-                        f"{path.name}: sección {section!r} requiere al menos una cita [S<n>]",
+                        f"{path.name}: section {section!r} requires at least one [S<n>] citation",
                     )
                 )
     if not results:
-        results.append(GateResult("claim_citation_coverage", True, "citas inline cubiertas"))
+        results.append(GateResult("claim_citation_coverage", True, "inline citations covered"))
     return results
 
 
@@ -494,8 +496,10 @@ def _check_criteria_cross_reference(ctx: CheckContext) -> list[GateResult]:
     brief = ctx.research.artifact_path("brief.md")
     results_file = ctx.research.artifact_path("probe/results.md")
     if not brief.exists() or not results_file.exists():
-        return [GateResult("criteria_cross_reference", False, "falta brief.md o probe/results.md")]
-    criteria_text = parse_artifact(brief).section("Criterios de evaluación") or ""
+        return [
+            GateResult("criteria_cross_reference", False, "missing brief.md or probe/results.md")
+        ]
+    criteria_text = parse_artifact(brief).section(schema.SECTION_EVALUATION_CRITERIA) or ""
     brief_ids = set(extract_criteria_ids(criteria_text))
     results_text = results_file.read_text(encoding="utf-8")
     reported = set(extract_criteria_ids(results_text))
@@ -505,25 +509,25 @@ def _check_criteria_cross_reference(ctx: CheckContext) -> list[GateResult]:
             GateResult(
                 "criteria_cross_reference",
                 False,
-                f"criterios del brief sin resultado en probe: {sorted(missing)}",
+                f"brief criteria without a probe result: {sorted(missing)}",
             )
         ]
-    return [GateResult("criteria_cross_reference", True, f"{len(brief_ids)} criterios cubiertos")]
+    return [GateResult("criteria_cross_reference", True, f"{len(brief_ids)} criteria covered")]
 
 
 def _check_benchmark_reproducible(ctx: CheckContext) -> list[GateResult]:
     results_file = ctx.research.artifact_path("probe/results.md")
     if not results_file.exists():
-        return [GateResult("benchmark_reproducible", False, "falta probe/results.md")]
+        return [GateResult("benchmark_reproducible", False, "missing probe/results.md")]
     art = parse_artifact(results_file)
-    repro = art.section("Reproducción") or ""
+    repro = art.section(schema.SECTION_REPRODUCTION) or ""
     fences = len(_CODE_FENCE_RE.findall(repro))
     if not repro.strip() or fences < 2:
         return [
             GateResult(
                 "benchmark_reproducible",
                 False,
-                "la sección Reproducción debe incluir comandos/código en un bloque",
+                f"section {schema.SECTION_REPRODUCTION!r} must include commands or code in a block",
             )
         ]
     if ctx.research.meta.schema_version >= 2:
@@ -551,16 +555,16 @@ def _check_benchmark_reproducible(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "benchmark_reproducible",
                     False,
-                    "probe/results.md debe declarar verify: {action: run, argv, expect}",
+                    "probe/results.md must declare verify: {action: run, argv, expect}",
                 )
             ]
-    return [GateResult("benchmark_reproducible", True, "prueba reproducible")]
+    return [GateResult("benchmark_reproducible", True, "reproducible probe")]
 
 
 def _check_probe_artifacts_exist(ctx: CheckContext) -> list[GateResult]:
     results_file = ctx.research.artifact_path("probe/results.md")
     if not results_file.exists():
-        return [GateResult("probe_artifacts_exist", False, "falta probe/results.md")]
+        return [GateResult("probe_artifacts_exist", False, "missing probe/results.md")]
     text = results_file.read_text(encoding="utf-8")
     refs = set(_MARKDOWN_LINK_PROBE_RE.findall(text)) | set(_INLINE_PROBE_PATH_RE.findall(text))
     refs.discard("probe/results.md")
@@ -570,47 +574,53 @@ def _check_probe_artifacts_exist(ctx: CheckContext) -> list[GateResult]:
             GateResult(
                 "probe_artifacts_exist",
                 False,
-                f"artefactos referenciados inexistentes: {missing}",
+                f"referenced artifacts do not exist: {missing}",
             )
         ]
-    return [GateResult("probe_artifacts_exist", True, f"{len(refs)} artefactos referenciados")]
+    return [GateResult("probe_artifacts_exist", True, f"{len(refs)} referenced artifacts")]
 
 
 def _check_y_statement(ctx: CheckContext) -> list[GateResult]:
     memo = ctx.research.artifact_path("decision-memo.md")
     if not memo.exists():
-        return [GateResult("y_statement", False, "falta decision-memo.md")]
-    rec = (parse_artifact(memo).section("Recomendación") or "").lower()
-    has_decision = "decidimos" in rec
-    has_context = " para " in f" {rec} " or "contexto" in rec
-    has_evidence = any(token in rec for token in ("porque", "evidencia", "basado en", "según"))
-    has_downside = "aceptando" in rec and any(
+        return [GateResult("y_statement", False, "missing decision-memo.md")]
+    # Collapse whitespace before matching: a clause split across a line wrap is ordinary
+    # prose, and failing it would report a missing clause the author actually wrote.
+    rec = " ".join(
+        (parse_artifact(memo).section(schema.SECTION_RECOMMENDATION) or "").lower().split()
+    )
+    has_decision = "we decide" in rec
+    has_context = " to " in f" {rec} " or "context" in rec
+    has_evidence = any(
+        token in rec for token in ("because", "evidence", "based on", "according to")
+    )
+    has_downside = "accepting" in rec and any(
         token in rec
-        for token in ("trade-off", "riesgo", "limitación", "costo", "downside", "no adopt")
+        for token in ("trade-off", "risk", "limitation", "cost", "downside", "not adopt")
     )
     if not (has_decision and has_context and has_evidence and has_downside):
         return [
             GateResult(
                 "y_statement",
                 False,
-                "la recomendación debe seguir el formato Y-statement "
-                "(decidimos, contexto/para, evidencia/porque, aceptando trade-off)",
+                "the recommendation must follow the Y-statement format "
+                "(we decide, context/to, evidence/because, accepting trade-off)",
             )
         ]
-    return [GateResult("y_statement", True, "recomendación en formato Y-statement")]
+    return [GateResult("y_statement", True, "recommendation in Y-statement format")]
 
 
 def _check_ring_backed_by_evidence(ctx: CheckContext) -> list[GateResult]:
     memo = ctx.research.artifact_path("decision-memo.md")
     if not memo.exists():
-        return [GateResult("ring_backed_by_evidence", False, "falta decision-memo.md")]
+        return [GateResult("ring_backed_by_evidence", False, "missing decision-memo.md")]
     ring = str(parse_artifact(memo).frontmatter.get("ring", "")).lower()
     if ring not in schema.RECOMMENDATION_RINGS:
         return [
             GateResult(
                 "ring_backed_by_evidence",
                 False,
-                f"ring inválido: {ring!r}; use uno de {schema.RECOMMENDATION_RINGS}",
+                f"invalid ring: {ring!r}; use one of {schema.RECOMMENDATION_RINGS}",
             )
         ]
     mode = ctx.research.meta.mode
@@ -619,7 +629,7 @@ def _check_ring_backed_by_evidence(ctx: CheckContext) -> list[GateResult]:
             GateResult(
                 "ring_backed_by_evidence",
                 False,
-                f"sin etapa probe (modo light) el anillo máximo es 'assess', no {ring!r}",
+                f"without a probe stage (light mode) the maximum ring is 'assess', not {ring!r}",
             )
         ]
     if ring in schema.RINGS_REQUIRING_PROBE and "probe" not in ctx.research.meta.validation:
@@ -627,7 +637,7 @@ def _check_ring_backed_by_evidence(ctx: CheckContext) -> list[GateResult]:
             GateResult(
                 "ring_backed_by_evidence",
                 False,
-                f"el anillo {ring!r} exige una etapa probe aprobada con resultados",
+                f"ring {ring!r} requires an approved probe stage with results",
             )
         ]
     if ring in schema.RINGS_REQUIRING_PROBE and ctx.research.meta.schema_version >= 2:
@@ -640,16 +650,16 @@ def _check_ring_backed_by_evidence(ctx: CheckContext) -> list[GateResult]:
                 GateResult(
                     "ring_backed_by_evidence",
                     False,
-                    f"el anillo {ring!r} exige sdr verify-probe vigente y en verde",
+                    f"ring {ring!r} requires a current and passing sdr verify-probe",
                 )
             ]
-    return [GateResult("ring_backed_by_evidence", True, f"anillo {ring!r} respaldado")]
+    return [GateResult("ring_backed_by_evidence", True, f"ring {ring!r} backed by evidence")]
 
 
 def _check_evidence_claim_ids(ctx: CheckContext) -> list[GateResult]:
     memo = ctx.research.artifact_path("decision-memo.md")
     if not memo.exists():
-        return [GateResult("evidence_claim_ids", False, "falta decision-memo.md")]
+        return [GateResult("evidence_claim_ids", False, "missing decision-memo.md")]
     frontmatter = parse_artifact(memo).frontmatter
     if "evidence_claim_ids" not in frontmatter and ctx.research.meta.schema_version < 2:
         return [
@@ -712,31 +722,31 @@ def _check_asset_metadata(ctx: CheckContext) -> list[GateResult]:
     directory = ctx.research.artifact_path("assets")
     files = sorted(directory.glob("*.md")) if directory.is_dir() else []
     if not files:
-        return [GateResult("asset_metadata", False, "assets/ no contiene ningún asset")]
+        return [GateResult("asset_metadata", False, "assets/ contains no asset")]
     results: list[GateResult] = []
     for path in files:
         fm = parse_artifact(path).frontmatter
         asset_type = fm.get("type")
         audience = fm.get("audience")
         if not asset_type:
-            results.append(GateResult("asset_metadata", False, f"{path.name}: falta 'type'"))
+            results.append(GateResult("asset_metadata", False, f"{path.name}: missing 'type'"))
         elif asset_type not in schema.ASSET_TYPES:
             results.append(
                 GateResult(
                     "asset_metadata",
                     False,
-                    f"{path.name}: type inválido {asset_type!r}; use uno de {schema.ASSET_TYPES}",
+                    f"{path.name}: invalid type {asset_type!r}; use one of {schema.ASSET_TYPES}",
                 )
             )
         if not audience:
-            results.append(GateResult("asset_metadata", False, f"{path.name}: falta 'audience'"))
+            results.append(GateResult("asset_metadata", False, f"{path.name}: missing 'audience'"))
         elif audience not in schema.ASSET_AUDIENCES:
             results.append(
                 GateResult(
                     "asset_metadata",
                     False,
-                    f"{path.name}: audience inválido {audience!r}; "
-                    f"use uno de {schema.ASSET_AUDIENCES}",
+                    f"{path.name}: invalid audience {audience!r}; "
+                    f"use one of {schema.ASSET_AUDIENCES}",
                 )
             )
     if not results:
@@ -780,7 +790,7 @@ def check_stage(
     offline: bool = False,
     url_checker: Callable[[str], bool] | None = None,
 ) -> GateReport:
-    """Ejecuta las capas estructural y evidencial de la etapa indicada."""
+    """Run the structural and evidential layers for the given stage."""
     stage = stage or research.meta.stage
     spec = schema.artifact_for(stage, schema_version=research.meta.schema_version)
     report = GateReport(stage=stage)
