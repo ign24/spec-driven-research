@@ -59,9 +59,10 @@ este agente y ejecuta las comprobaciones documentadas. No sobrescribas archivos
 existentes ni crees commits.
 ```
 
-> **Software alfa, disponible solo desde el código fuente.** No hay release en GitHub
-> ni en PyPI. Instálalo desde el código fuente canónico en GitHub. Las
-> interfaces y los contratos de artefactos pueden cambiar antes del primer release.
+> **Software alfa.** SDR se publica como releases de GitHub etiquetadas.
+> No hay release en PyPI: instálalo desde el código fuente canónico en
+> GitHub en una revisión explícita. Las interfaces y los contratos de
+> artefactos todavía pueden cambiar entre releases.
 
 ## Tour sintético de cinco minutos
 

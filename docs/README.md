@@ -31,7 +31,8 @@ in one canonical place.
 | Understand alpha availability and the absence of a package-index route | [Releasing](releasing.md) |
 | Propose or implement a framework change | [Contributing](../CONTRIBUTING.md) |
 
-SDR is currently alpha and source-only. There is no GitHub release and no
-package-index release; installation from a package index is not available. The
+SDR is currently alpha. Releases are published as GitHub releases on tagged
+revisions; there is no package-index release and installation from a package
+index is not available. The
 [root README](../README.md#install-from-source) contains the canonical
 revision-pinned installation command.

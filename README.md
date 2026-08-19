@@ -57,9 +57,10 @@ and the project-local skills for this agent and run the documented checks. Do
 not overwrite existing files or create commits.
 ```
 
-> **Alpha, source-only software.** SDR has no GitHub release and no PyPI release.
-> Install it from the canonical GitHub source. Interfaces and artifact contracts
-> can still change before the first public release.
+> **Alpha software.** SDR is published as tagged GitHub releases.
+> There is no PyPI release: install it from the canonical GitHub
+> source at an explicit revision. Interfaces and artifact contracts
+> can still change between releases.
 
 ## Five-minute synthetic tour
 

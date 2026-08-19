@@ -213,7 +213,7 @@ def test_validator_requires_reciprocal_links_for_each_pair(tmp_path: Path) -> No
             "README.md",
             "Alpha",
             "Pre-release",
-            "source-only-alpha",
+            "alpha-availability",
             "alpha",
         ),
         (
