@@ -107,11 +107,11 @@ PAIR_CONTRACTS = {
             "human-approved decision",
             "reusable asset",
         ),
-        "source-only-alpha": (
+        "alpha-availability": (
             "alpha",
-            "source checkout|source-only",
-            "no GitHub release",
+            "tagged GitHub releases|GitHub releases",
             "no PyPI release|or PyPI release|does not publish to PyPI",
+            "canonical GitHub source|explicit revision",
         ),
         "evidence-boundaries": (
             "does not prove source truth|guarantee that cited material is true",
@@ -135,11 +135,11 @@ PAIR_CONTRACTS = {
             "decisión con aprobación humana|decisión aprobada por una persona",
             "activo reutilizable",
         ),
-        "source-only-alpha": (
+        "alpha-availability": (
             "alfa|alpha",
-            "checkout del código fuente|solo desde el código fuente",
-            "no hay release en GitHub",
-            "no hay release en PyPI|ni en PyPI|no publica en PyPI",
+            "releases de GitHub|release en GitHub",
+            "no tiene release en PyPI|no hay release en PyPI|ni en PyPI|no publica en PyPI",
+            "código fuente canónico|revisión explícita",
         ),
         "evidence-boundaries": (
             "no demuestra la verdad de las fuentes|garantía de veracidad",
