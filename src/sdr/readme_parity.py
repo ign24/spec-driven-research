@@ -110,7 +110,6 @@ PAIR_CONTRACTS = {
         "alpha-availability": (
             "alpha",
             "tagged GitHub releases|GitHub releases",
-            "no PyPI release|or PyPI release|does not publish to PyPI",
             "canonical GitHub source|explicit revision",
         ),
         "evidence-boundaries": (
@@ -138,7 +137,6 @@ PAIR_CONTRACTS = {
         "alpha-availability": (
             "alfa|alpha",
             "releases de GitHub|release en GitHub",
-            "no tiene release en PyPI|no hay release en PyPI|ni en PyPI|no publica en PyPI",
             "código fuente canónico|revisión explícita",
         ),
         "evidence-boundaries": (

@@ -58,9 +58,9 @@ not overwrite existing files or create commits.
 ```
 
 > **Alpha software.** SDR is published as tagged GitHub releases.
-> There is no PyPI release: install it from the canonical GitHub
-> source at an explicit revision. Interfaces and artifact contracts
-> can still change between releases.
+> Install it from the canonical GitHub source at an explicit
+> revision. Interfaces and artifact contracts can still change
+> between releases.
 
 ## Five-minute synthetic tour
 
@@ -97,9 +97,8 @@ commit-producing transition.
 > requires `sdr migrate` before it can advance. Migration rewrites only the
 > structural headings and leaves your own prose untouched.
 
-SDR requires Python 3.12 or newer. No package-index release exists: SDR is not
-published to PyPI and cannot be installed from a package index. The supported
-route installs the canonical repository at an explicit revision:
+SDR requires Python 3.12 or newer. The supported route installs the canonical
+repository at an explicit revision:
 
 ```bash
 uv tool install "git+https://github.com/ign24/spec-driven-research@v0.3.0"
@@ -119,7 +118,7 @@ uv tool install "git+https://github.com/ign24/spec-driven-research@${REVISION}"
 From an existing checkout, `uv tool install .` is the isolated-tool equivalent.
 `python -m pip install .` also installs that checkout. Contributors should use
 `uv sync --locked --all-extras --dev`; snapshot extraction is the optional
-`snapshot` extra. These are source installs, not package-index installation.
+`snapshot` extra.
 
 ## Choose a mode
 

@@ -70,8 +70,8 @@ contract. `tests/test_examples_e2e.py` runs the maintained synthetic light and
 full fixtures offline and verifies their final states without modifying them.
 `sdr.readme_parity` verifies concept coverage across all three bilingual pairs:
 the root READMEs, documentation homes, and beginner guides. It also resolves
-their local links and fixture references and rejects package-index installation
-claims. It derives the canonical repository coordinate from `[project.urls]` in
+their local links and fixture references and rejects installation claims that do
+not match the supported route. It derives the canonical repository coordinate from `[project.urls]` in
 `pyproject.toml`, reports any documented repository URL that names a different
 coordinate with its file, line, and documented value, and reports a documented
 git install that does not pin an explicit revision. A URL that reaches the
@@ -135,7 +135,7 @@ go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
 6. Build artifacts and run the public-tree audit before publication.
 7. Inspect package metadata and wheel contents for private material.
 8. Verify integration statuses remain honest; `documented` is not E2E-tested.
-9. Follow [Releasing](releasing.md); no package-index publishing route exists.
+9. Follow [Releasing](releasing.md) for the supported acquisition route.
 
 ## Public content audit
 

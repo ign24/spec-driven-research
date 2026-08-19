@@ -178,6 +178,6 @@ def test_linux_only_evidence_and_security_release_policies_are_explicit() -> Non
     for field in ("owner", "justification", "expires", "compensating controls"):
         assert field in security.lower()
     assert "no active exceptions" in security.lower()
-    assert "Trusted Publishing" in releasing
-    assert "OIDC" in releasing
-    assert "not enabled" in releasing
+    assert "uv tool install" in releasing
+    assert "explicit revision" in releasing
+    assert "No publication credential" in releasing

@@ -32,10 +32,9 @@ creada antes de ese cambio requiere `sdr migrate`.
 | --- | --- |
 | Instalar skills de SDR para un agente documentado | [Integraciones](integrations.md) |
 | Ejecutar gates de contribución y documentación | [Mantenimiento y validación](validation.md) |
-| Entender el estado alfa y la ausencia de ruta por índice de paquetes | [Releasing](releasing.md) |
+| Entender el estado alfa y la política de release | [Releasing](releasing.md) |
 | Proponer o implementar un cambio del framework | [Contribuir](../CONTRIBUTING.md) |
 
-SDR está en estado alfa y disponible solo desde el código fuente. No hay release
-en GitHub ni en ningún índice de paquetes; la instalación desde un índice no
-está disponible. El [README raíz](../README.es.md#instalación-desde-el-código-fuente)
+SDR está en estado alfa. Las releases se publican como releases de GitHub en
+revisiones etiquetadas. El [README raíz](../README.es.md#instalación-desde-el-código-fuente)
 contiene el comando canónico de instalación fijado a una revisión.

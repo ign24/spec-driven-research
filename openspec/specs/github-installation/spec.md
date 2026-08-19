@@ -41,7 +41,7 @@ supported route, and MUST NOT claim or imply that installation from a package in
 #### Scenario: Install instructions name a revision
 - **WHEN** a reader follows the documented installation instructions
 - **THEN** the instructions install from the canonical repository at an explicit revision
-- **THEN** the instructions state that no package-index release exists
+- **THEN** the instructions do not present any other acquisition route as available
 
 ### Requirement: Verified installation from a repository revision
 The project MUST verify by execution that installing from a pinned repository revision produces a

@@ -28,11 +28,9 @@ in one canonical place.
 | --- | --- |
 | Install SDR skills for a documented coding agent | [Integrations](integrations.md) |
 | Run contributor and documentation gates | [Maintenance and validation](validation.md) |
-| Understand alpha availability and the absence of a package-index route | [Releasing](releasing.md) |
+| Understand alpha availability and the release policy | [Releasing](releasing.md) |
 | Propose or implement a framework change | [Contributing](../CONTRIBUTING.md) |
 
 SDR is currently alpha. Releases are published as GitHub releases on tagged
-revisions; there is no package-index release and installation from a package
-index is not available. The
-[root README](../README.md#install-from-source) contains the canonical
-revision-pinned installation command.
+revisions. The [root README](../README.md#install-from-source) contains the
+canonical revision-pinned installation command.

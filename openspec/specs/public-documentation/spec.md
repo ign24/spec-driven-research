@@ -74,7 +74,7 @@ English and Spanish root READMEs MUST show the same prominent local banner, intr
 - **WHEN** a reader opens either root README
 - **THEN** they see the same local banner before the detailed content
 - **THEN** they can identify what outcome SDR produces before reading the complete control reference
-- **THEN** they can see that SDR is an alpha installed from source with no GitHub or package-index release
+- **THEN** they can see that SDR is alpha software published as tagged GitHub releases
 - **THEN** they can start the synthetic light tour and reach the corresponding documentation home
 
 ### Requirement: Bilingual documentation home
@@ -98,8 +98,8 @@ SDR MUST provide equivalent English and Spanish beginner guides for the complete
 ### Requirement: Honest onboarding claims
 Onboarding documentation MUST match current acquisition, compatibility, Git, evidence, release, and integration evidence and MUST NOT claim unavailable package-index publication or unrecorded agent verification.
 
-#### Scenario: Public package publication is disabled
-- **WHEN** release policy states that package-index publication is not enabled
+#### Scenario: The reader looks for an acquisition route
+- **WHEN** onboarding documentation presents how to obtain SDR
 - **THEN** onboarding uses the canonical source repository
 - **THEN** package-index installation, release badges, and availability claims fail validation
 
